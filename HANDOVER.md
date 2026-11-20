@@ -87,7 +87,7 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 
 ## Status / næste skridt
 - [x] Repo oprettet + Claude-adgang bekræftet (klonet OK).
-- [ ] Opret nyt claude.ai-projekt **"Zeekr Garage"**; flyt arbejdet dertil (dette dokument er broen).
+- [x] Nyt claude.ai-projekt **"Zeekr Garage"** oprettet; arbejdet flyttet dertil (dette dokument er broen).
 - [x] Domæne zeekr-garage.dk registreret.
 - [ ] Byg skive 1.
 
