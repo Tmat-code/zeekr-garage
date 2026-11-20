@@ -209,9 +209,9 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 
 **Roadmap (resten af bugherrers panel — ikke bygget endnu):**
 - **Zeekr-rapport** (skærm 2,3,6) — PDF/CSV-eksport, "markér sendt", delta siden sidst (+N stemmer), rapport-log. (`zeekr_reports`-tabellen findes allerede i init — udvides.)
-- **Aktivitet** (skærm 8,9) — grafer (hændelser pr. time/ugedag/dag), afledt af created_at på issues/confirmations.
+- ~~**Aktivitet** (skærm 8,9)~~ **BYGGET 20-11-2026:** `/admin/aktivitet` — stat-tiles (hændelser/stemmer/nye meldinger) + søjlegrafer pr. time/ugedag/30 dage, afledt af created_at (dansk tid, `Intl` → Europe/Copenhagen). `lib/queries-admin.ts:getAktivitet()`, `components/admin/BarGraf.tsx`. Link i Værkstedet-header.
 - **Adgange** (skærm 5) — moderator-invitationer. Tilpasses Supabase: invitation sætter rolle på kontoen efter signup (ikke eget password).
-- **Mistænkelig aktivitet** (skærm 10) — tilpasses: stemmer er konto-baserede (RLS, én pr. konto), ikke browser-fingerprints som bugherrer.
+- ~~**Mistænkelig aktivitet** (skærm 10)~~ **DROPPET** (brugerens beslutning 20-11-2026): fup-skærmen giver ikke mening her — stemmer er konto-bundne (én pr. konto, DB-håndhævet), ikke browser-baserede som bugherrer. Intet fup-panel.
 - **Oprydning** (skærm 11) — slet test-stemmer før en dato (`confirmations_delete_admin` er på plads).
 
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
