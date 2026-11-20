@@ -208,7 +208,7 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 - `app/page.tsx`: banner øverst på forsiden når aktiv.
 
 **Roadmap (resten af bugherrers panel — ikke bygget endnu):**
-- **Zeekr-rapport** (skærm 2,3,6) — PDF/CSV-eksport, "markér sendt", delta siden sidst (+N stemmer), rapport-log. (`zeekr_reports`-tabellen findes allerede i init — udvides.)
+- ~~**Zeekr-rapport** (skærm 2,3,6)~~ **BYGGET 20-11-2026** — porteret fra bugherrer. Se eget afsnit "## Zeekr-rapport (porteret fra bugherrer)" nederst.
 - ~~**Aktivitet** (skærm 8,9)~~ **BYGGET 20-11-2026:** `/admin/aktivitet` — stat-tiles (hændelser/stemmer/nye meldinger) + søjlegrafer pr. time/ugedag/30 dage, afledt af created_at (dansk tid, `Intl` → Europe/Copenhagen). `lib/queries-admin.ts:getAktivitet()`, `components/admin/BarGraf.tsx`. Link i Værkstedet-header.
 - ~~**Adgange** (skærm 5)~~ **BYGGET 20-11-2026:** `/admin/adgange` — giv adgang via email (findes brugeren → rolle sættes nu; ellers pending invitation, rolle sættes automatisk ved signup via opdateret `handle_new_user`-trigger). Liste over personer med rolle + afventende invitationer; skift/fjern rolle; kan ikke ændre egen adgang (lockout-værn). Migration `supabase/migrations/20261120160000_adgange.sql`: `pending_invitations`-tabel + RPC'er `admin_brugere`/`admin_saet_rolle`/`admin_inviter`/`admin_fjern_invitation` (security definer, er_admin-gated) + trigger-opdatering. **Skal køres i Studio.** `components/admin/AdgangePanel.tsx`, link i header.
 - ~~**Mistænkelig aktivitet** (skærm 10)~~ **DROPPET** (brugerens beslutning 20-11-2026): fup-skærmen giver ikke mening her — stemmer er konto-bundne (én pr. konto, DB-håndhævet), ikke browser-baserede som bugherrer. Intet fup-panel.
@@ -235,6 +235,19 @@ Admin-panelet var færdigt, men bruger-siden haltede. To huller (brugerens obser
 - **Min garage** (`/garage` + `MinGarageForm`): ret bilen senere. Link i header for indloggede.
 - **Stemme bil-baseret:** `ConfirmButton` omskrevet — ét klik, bruger `getMyCar()`. Ingen bil → "registrér"-boks (til /garage), kan ikke stemme. Bil men meldingen rammer ikke din model → disabled ("Rammer ikke din X"). Variant-picker'en fra forrige commit er FJERNET (overflødig: man stemmer kun på sin egen bil). `varianter`-prop fjernet fra board/meld/detalje; `getVarianter` bruges nu kun af oprettelse + Min garage, `getVariantFordeling` af detalje.
 - `MinBil`-type i `lib/types.ts`.
+
+## Zeekr-rapport (porteret fra bugherrer) — bygget 20-11-2026
+Admin-eksport af fejl/ønsker til Zeekr som PDF/CSV, med oversættelse, delta-sporing og log. `/admin/rapport` (link 📮 Rapport i Værkstedet-header). Analyseret direkte i bugherrer-repoet.
+
+**PDF — `pdfkit` (ren Node, ingen Chromium).** Faldgruben bugherrer havde løst: pdfkit's AFM-fontfiler kom ikke med i Next standalone-build. Fix i `next.config.mjs`: `serverComponentsExternalPackages:['pdfkit']` + `outputFileTracingIncludes` for `/api/admin/rapport/pdf` → `node_modules/pdfkit/js/data/**`. Route har `runtime='nodejs'`. Verificeret: 15 AFM-filer havner i `.next/standalone/...`. Layout: grafit+kobber (ikke bugherrers gul/sort).
+
+**Oversættelse — selvhostet LibreTranslate** (`lib/oversaet.ts`). POST `${LIBRETRANSLATE_URL}/translate`. da→en direkte; da→sv pivoterer via engelsk. Cache i `oversaettelser`-tabel (issue_id+sprog+kilde_hash). Klumper af 5 (undgå cold-timeout, 30s). **Graceful: ingen `LIBRETRANSLATE_URL` → kun dansk, intet brækker.** `LIBRETRANSLATE_URL` **skal sættes i Coolify** (peg på Pixa-LibreTranslate, fx `http://192.168.1.18:5000`). `.env.example` opdateret. "Test oversættelse"-knap kører live-diagnose (`oversaetDiagnose`).
+
+**Sendt-sporing + delta.** `issues.sidst_sendt_dato` + `sidst_sendt_stemmer`. "Dan Zeekr-rapport" (kun admin) sætter dem til nu/aktuelt stemmetal + gemmer snapshot i `rapport_markering` → "Fortryd sidste" ruller tilbage. Delta: "NY" (aldrig sendt) / "+N siden sidst". `rapport_log` = revisionslog over downloads.
+
+**Filer:** migration `supabase/migrations/20261120200000_rapport.sql` (kolonner + `rapport_log`/`rapport_markering`/`oversaettelser` + RPC'er `rapport_fejl`/`dan_rapport_markering`/`fortryd_markering`/`rapport_overblik`, security definer, admin-gated på mutationer). **Skal køres i Studio** (forudsætter variant-migrationen). `lib/rapport.ts` (fetchers), `lib/rapport-i18n.ts` (da/en/sv ramme + status), `lib/oversaet.ts`, `app/api/admin/rapport/{pdf,csv}/route.ts`, `app/admin/rapport/{page,actions}.tsx`, `components/admin/RapportPanel.tsx`. pdfkit + @types/pdfkit tilføjet til package.json.
+
+**Forskelle fra bugherrer:** zeekr-garage har eksplicit status (ingen `beregnStatus`); "biler bekræftet" = variant-fordeling fra konto-bundne bekræftelser (ikke browser-votes); multi-model (`modeller` som komma-liste). Notifikationer af følgere ved "sendt" er IKKE porteret (følg-funktionen findes ikke endnu).
 
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.

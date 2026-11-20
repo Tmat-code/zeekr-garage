@@ -38,6 +38,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/admin/rapport" className="btn-ghost !py-1.5 text-sm">
+            📮 Rapport
+          </Link>
           <Link href="/admin/aktivitet" className="btn-ghost !py-1.5 text-sm">
             📈 Aktivitet
           </Link>
