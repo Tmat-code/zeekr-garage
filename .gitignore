@@ -26,3 +26,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Genereret import-SQL (indeholder rigtige brugerdata — holdes ude af public repo)
+supabase/imports/
