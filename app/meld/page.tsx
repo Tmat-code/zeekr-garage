@@ -1,5 +1,11 @@
 import { redirect } from 'next/navigation';
-import { getModels, getIssues, getMyConfirmedIssueIds, getCurrentUser } from '@/lib/queries';
+import {
+  getModels,
+  getIssues,
+  getMyConfirmedIssueIds,
+  getCurrentUser,
+  getVarianter,
+} from '@/lib/queries';
 import type { IssueType } from '@/lib/config';
 import MeldFlow from '@/components/MeldFlow';
 
@@ -16,10 +22,11 @@ export default async function MeldSide({
 
   const tp = searchParams?.type;
   const initialType: IssueType | null = tp === 'fejl' || tp === 'oenske' ? tp : null;
-  const [models, issues, mineSet] = await Promise.all([
+  const [models, issues, mineSet, varianter] = await Promise.all([
     getModels(),
     getIssues(),
     getMyConfirmedIssueIds(),
+    getVarianter(),
   ]);
 
   return (
@@ -31,6 +38,7 @@ export default async function MeldSide({
       <MeldFlow
         issues={issues}
         models={models}
+        varianter={varianter}
         myConfirmedIds={[...mineSet]}
         initialType={initialType}
       />

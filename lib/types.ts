@@ -8,6 +8,11 @@ export type Model = {
   display_order: number;
 };
 
+// Variant/trim pr. model (fx "Long Range RWD").
+export type Variant = { id: string; name: string };
+// model_id -> dens varianter (til "mig med"-flowet).
+export type VariantMap = Record<string, Variant[]>;
+
 // En fejl som den vises paa boardet: med koblede modeller og optalte bekraeftelser.
 export type IssueRow = {
   id: string;

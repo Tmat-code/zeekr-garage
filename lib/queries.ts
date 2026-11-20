@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
-import type { IssueRow, Model, Kommentar } from '@/lib/types';
+import type { IssueRow, Model, Kommentar, VariantMap } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
@@ -72,6 +72,39 @@ export async function getIssueDetalje(id: string): Promise<IssueRow | null> {
   const { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
   if (error || !data) return null;
   return mapIssue(data);
+}
+
+// --- Varianter pr. model (til "mig med"-flowet) ---
+export async function getVarianter(): Promise<VariantMap> {
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('variants')
+    .select('id, name, model_id')
+    .order('display_order', { ascending: true });
+  const map: VariantMap = {};
+  for (const r of (data ?? []) as any[]) {
+    (map[r.model_id] ??= []).push({ id: r.id, name: r.name });
+  }
+  return map;
+}
+
+// --- Variant-fordeling på en melding (til detalje-siden) ---
+export async function getVariantFordeling(
+  issueId: string,
+): Promise<{ navn: string; antal: number }[]> {
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('confirmations')
+    .select('variant_id, variants ( name )')
+    .eq('issue_id', issueId);
+  const m = new Map<string, number>();
+  for (const r of (data ?? []) as any[]) {
+    const navn = r.variants?.name ?? 'Uden variant';
+    m.set(navn, (m.get(navn) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([navn, antal]) => ({ navn, antal }))
+    .sort((a, b) => b.antal - a.antal);
 }
 
 // --- Kommentarer på en melding ("Byggemøde") ---

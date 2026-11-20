@@ -4,6 +4,8 @@ import {
   getIssueDetalje,
   getComments,
   getMyConfirmedIssueIds,
+  getVarianter,
+  getVariantFordeling,
 } from '@/lib/queries';
 import { adminKontekst } from '@/lib/admin';
 import { TYPE_META } from '@/lib/config';
@@ -22,11 +24,13 @@ function daDato(iso: string): string {
 }
 
 export default async function MeldingSide({ params }: { params: { id: string } }) {
-  const [issue, kommentarer, mineSet, ctx] = await Promise.all([
+  const [issue, kommentarer, mineSet, ctx, varianter, fordeling] = await Promise.all([
     getIssueDetalje(params.id),
     getComments(params.id),
     getMyConfirmedIssueIds(),
     adminKontekst(),
+    getVarianter(),
+    getVariantFordeling(params.id),
   ]);
 
   if (!issue) notFound();
@@ -80,6 +84,7 @@ export default async function MeldingSide({ params }: { params: { id: string } }
         <ConfirmButton
           issueId={issue.id}
           models={issue.models.map((m) => ({ id: m.id, name: m.name }))}
+          varianter={varianter}
           initialCount={issue.confirmations}
           initialConfirmed={mineSet.has(issue.id)}
           isLoggedIn={isLoggedIn}
@@ -88,10 +93,20 @@ export default async function MeldingSide({ params }: { params: { id: string } }
         <div>
           <p className="font-semibold text-grafit-900">Oplever du også dette?</p>
           <p className="text-sm text-grafit-500">
-            Bekræft med din model — jo flere ejere, jo tungere vejer fejlen over for Zeekr.
+            Bekræft med din variant — jo flere ejere, jo tungere vejer fejlen over for Zeekr.
           </p>
         </div>
       </div>
+
+      {fordeling.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {fordeling.map((f) => (
+            <span key={f.navn} className="chip bg-grafit-100 text-grafit-700">
+              {f.navn}: <span className="tabular-nums font-semibold">{f.antal}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Byggemøde */}
       <Kommentarer

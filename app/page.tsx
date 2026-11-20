@@ -5,6 +5,7 @@ import {
   getMyConfirmedIssueIds,
   getCurrentUser,
   getForsideBesked,
+  getVarianter,
 } from '@/lib/queries';
 import FejlBoard from '@/components/FejlBoard';
 import ForsideOverblik from '@/components/ForsideOverblik';
@@ -13,12 +14,13 @@ import ForsideOverblik from '@/components/ForsideOverblik';
 export const dynamic = 'force-dynamic';
 
 export default async function Forside() {
-  const [models, issues, mineSet, user, besked] = await Promise.all([
+  const [models, issues, mineSet, user, besked, varianter] = await Promise.all([
     getModels(),
     getIssues(),
     getMyConfirmedIssueIds(),
     getCurrentUser(),
     getForsideBesked(),
+    getVarianter(),
   ]);
 
   const tal = {
@@ -65,6 +67,7 @@ export default async function Forside() {
         <FejlBoard
           issues={issues}
           models={models}
+          varianter={varianter}
           myConfirmedIds={[...mineSet]}
           isLoggedIn={!!user}
         />

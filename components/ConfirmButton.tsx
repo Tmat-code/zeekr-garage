@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import type { VariantMap } from '@/lib/types';
 
 type ModelLite = { id: string; name: string };
+type Step = 'idle' | 'model' | 'variant';
 
 export default function ConfirmButton({
   issueId,
   models,
+  varianter,
   initialCount,
   initialConfirmed,
   isLoggedIn,
@@ -16,6 +19,7 @@ export default function ConfirmButton({
 }: {
   issueId: string;
   models: ModelLite[];
+  varianter: VariantMap;
   initialCount: number;
   initialConfirmed: boolean;
   isLoggedIn: boolean;
@@ -24,10 +28,10 @@ export default function ConfirmButton({
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
   const [confirmed, setConfirmed] = useState(initialConfirmed);
-  const [picking, setPicking] = useState(false);
+  const [step, setStep] = useState<Step>('idle');
+  const [valgtModel, setValgtModel] = useState<ModelLite | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Ikke logget ind: knappen fører til login (læsning er fri, bidrag kræver konto).
   if (!isLoggedIn) {
     return (
       <button
@@ -42,10 +46,11 @@ export default function ConfirmButton({
     );
   }
 
-  async function bekraeft(modelId: string) {
+  async function bekraeft(modelId: string, variantId: string | null) {
     if (busy) return;
     setBusy(true);
-    setPicking(false);
+    setStep('idle');
+    setValgtModel(null);
     setConfirmed(true);
     setCount((c) => c + 1);
     try {
@@ -54,9 +59,12 @@ export default function ConfirmButton({
         data: { user },
       } = await sb.auth.getUser();
       if (!user) throw new Error('ingen bruger');
-      const { error } = await sb
-        .from('confirmations')
-        .insert({ issue_id: issueId, model_id: modelId, user_id: user.id });
+      const { error } = await sb.from('confirmations').insert({
+        issue_id: issueId,
+        model_id: modelId,
+        user_id: user.id,
+        variant_id: variantId,
+      });
       if (error) throw error;
       router.refresh();
     } catch {
@@ -94,11 +102,32 @@ export default function ConfirmButton({
     }
   }
 
+  // Når en model er valgt: spring variant-valg over hvis 0-1 variant.
+  function vaelgModel(m: ModelLite) {
+    const vs = varianter[m.id] ?? [];
+    if (vs.length > 1) {
+      setValgtModel(m);
+      setStep('variant');
+    } else {
+      bekraeft(m.id, vs[0]?.id ?? null);
+    }
+  }
+
   function klik() {
     if (confirmed) return fjern();
-    if (models.length <= 1) return bekraeft(models[0]?.id);
-    setPicking((p) => !p);
+    if (step !== 'idle') {
+      setStep('idle');
+      setValgtModel(null);
+      return;
+    }
+    if (models.length > 1) {
+      setStep('model');
+    } else if (models.length === 1) {
+      vaelgModel(models[0]);
+    }
   }
+
+  const varianterForValgt = valgtModel ? (varianter[valgtModel.id] ?? []) : [];
 
   return (
     <div className="relative shrink-0">
@@ -117,17 +146,36 @@ export default function ConfirmButton({
         <span className="text-[10px] text-grafit-400">{confirmed ? 'stemt' : 'mig med'}</span>
       </button>
 
-      {picking && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-48 rounded-lg border border-grafit-200 bg-white p-2 shadow-lg">
+      {step === 'model' && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-grafit-200 bg-white p-2 shadow-lg">
           <p className="px-1 pb-1 text-xs font-semibold text-grafit-500">Hvilken model har du?</p>
           <div className="flex flex-col gap-1">
             {models.map((m) => (
               <button
                 key={m.id}
-                onClick={() => bekraeft(m.id)}
+                onClick={() => vaelgModel(m)}
                 className="rounded-md px-2 py-1.5 text-left text-sm text-grafit-800 hover:bg-kobber-50 hover:text-kobber-700"
               >
                 {m.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === 'variant' && valgtModel && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-grafit-200 bg-white p-2 shadow-lg">
+          <p className="px-1 pb-1 text-xs font-semibold text-grafit-500">
+            🚗 Hvilken {valgtModel.name.replace('Zeekr ', '')} har du?
+          </p>
+          <div className="flex flex-col gap-1">
+            {varianterForValgt.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => bekraeft(valgtModel.id, v.id)}
+                className="rounded-md px-2 py-1.5 text-left text-sm text-grafit-800 hover:bg-kobber-50 hover:text-kobber-700"
+              >
+                {v.name}
               </button>
             ))}
           </div>

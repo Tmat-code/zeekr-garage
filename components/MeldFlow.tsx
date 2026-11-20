@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { IssueRow, Model } from '@/lib/types';
+import type { IssueRow, Model, VariantMap } from '@/lib/types';
 import type { IssueType } from '@/lib/config';
 import { PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
@@ -13,11 +13,13 @@ type Trin = 'vaelg' | 'soeg' | 'tjek' | 'formular';
 export default function MeldFlow({
   issues,
   models,
+  varianter,
   myConfirmedIds,
   initialType = null,
 }: {
   issues: IssueRow[];
   models: Model[];
+  varianter: VariantMap;
   myConfirmedIds: string[];
   initialType?: IssueType | null;
 }) {
@@ -167,6 +169,7 @@ export default function MeldFlow({
                         <ConfirmButton
                           issueId={i.id}
                           models={i.models.map((m) => ({ id: m.id, name: m.name }))}
+                          varianter={varianter}
                           initialCount={i.confirmations}
                           initialConfirmed={mine.has(i.id)}
                           isLoggedIn

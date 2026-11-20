@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { IssueRow, Model } from '@/lib/types';
+import type { IssueRow, Model, VariantMap } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
 import { TYPE_META } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
@@ -14,11 +14,13 @@ type TypeFilter = 'alle' | 'fejl' | 'oenske';
 export default function FejlBoard({
   issues,
   models,
+  varianter,
   myConfirmedIds,
   isLoggedIn,
 }: {
   issues: IssueRow[];
   models: Model[];
+  varianter: VariantMap;
   myConfirmedIds: string[];
   isLoggedIn: boolean;
 }) {
@@ -131,6 +133,7 @@ export default function FejlBoard({
               <ConfirmButton
                 issueId={i.id}
                 models={i.models.map((m) => ({ id: m.id, name: m.name }))}
+                varianter={varianter}
                 initialCount={i.confirmations}
                 initialConfirmed={mine.has(i.id)}
                 isLoggedIn={isLoggedIn}
