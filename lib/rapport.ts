@@ -82,7 +82,7 @@ export async function getRapportKommentarer(
   const sb = supabaseServer();
   const { data } = await sb
     .from('comments')
-    .select('issue_id, body, profiles ( display_name )')
+    .select('issue_id, body, author_navn, profiles ( display_name )')
     .in('issue_id', issueIds)
     .eq('is_solution', false)
     .order('created_at', { ascending: true });
@@ -94,7 +94,7 @@ export async function getRapportKommentarer(
   const map: Record<string, { navn: string; tekst: string }[]> = {};
   rows.forEach((r, i) => {
     (map[r.issue_id] ??= []).push({
-      navn: r.profiles?.display_name ?? 'Ejer',
+      navn: r.profiles?.display_name ?? r.author_navn ?? 'Ejer',
       tekst: oversatte[i] ?? r.body,
     });
   });

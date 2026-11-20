@@ -4,6 +4,7 @@ import type { IssueRow, Model, Kommentar, VariantMap, MinBil } from '@/lib/types
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
+       legacy_stemmer,
        issue_models ( models ( id, slug, name, platform ) ),
        confirmations ( count ),
        comments ( count )`;
@@ -13,9 +14,9 @@ function mapIssue(row: any): IssueRow {
     .map((im: any) => im.models)
     .filter(Boolean)
     .map((m: any) => ({ id: m.id, slug: m.slug, name: m.name, platform: m.platform }));
-  const confirmations = Array.isArray(row.confirmations)
-    ? (row.confirmations[0]?.count ?? 0)
-    : 0;
+  const liveConf = Array.isArray(row.confirmations) ? (row.confirmations[0]?.count ?? 0) : 0;
+  // Vist stemmetal = live konto-bekræftelser + importeret legacy-baseline.
+  const confirmations = liveConf + (row.legacy_stemmer ?? 0);
   const comments = Array.isArray(row.comments) ? (row.comments[0]?.count ?? 0) : 0;
   return {
     id: row.id,
@@ -118,15 +119,21 @@ export async function getVariantFordeling(
   issueId: string,
 ): Promise<{ navn: string; antal: number }[]> {
   const sb = supabaseServer();
-  const { data } = await sb
-    .from('confirmations')
-    .select('variant_id, variants ( name )')
-    .eq('issue_id', issueId);
+  const [{ data: live }, { data: issue }] = await Promise.all([
+    sb.from('confirmations').select('variant_id, variants ( name )').eq('issue_id', issueId),
+    sb.from('issues').select('legacy_biler').eq('id', issueId).single(),
+  ]);
+
   const m = new Map<string, number>();
-  for (const r of (data ?? []) as any[]) {
+  for (const r of (live ?? []) as any[]) {
     const navn = r.variants?.name ?? 'Uden variant';
     m.set(navn, (m.get(navn) ?? 0) + 1);
   }
+  // Importeret legacy-fordeling lægges oveni.
+  for (const b of ((issue?.legacy_biler ?? []) as any[])) {
+    if (b?.variant) m.set(b.variant, (m.get(b.variant) ?? 0) + Number(b.n ?? 0));
+  }
+
   return [...m.entries()]
     .map(([navn, antal]) => ({ navn, antal }))
     .sort((a, b) => b.antal - a.antal);
@@ -137,7 +144,7 @@ export async function getComments(issueId: string): Promise<Kommentar[]> {
   const sb = supabaseServer();
   const { data, error } = await sb
     .from('comments')
-    .select('id, body, is_solution, created_at, author_id, profiles ( display_name )')
+    .select('id, body, is_solution, created_at, author_id, author_navn, profiles ( display_name )')
     .eq('issue_id', issueId)
     .order('created_at', { ascending: true });
 
@@ -148,7 +155,7 @@ export async function getComments(issueId: string): Promise<Kommentar[]> {
     is_solution: r.is_solution,
     created_at: r.created_at,
     author_id: r.author_id,
-    author_navn: r.profiles?.display_name ?? null,
+    author_navn: r.profiles?.display_name ?? r.author_navn ?? null,
   }));
 }
 

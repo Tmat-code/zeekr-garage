@@ -249,6 +249,13 @@ Admin-eksport af fejl/ønsker til Zeekr som PDF/CSV, med oversættelse, delta-sp
 
 **Forskelle fra bugherrer:** zeekr-garage har eksplicit status (ingen `beregnStatus`); "biler bekræftet" = variant-fordeling fra konto-bundne bekræftelser (ikke browser-votes); multi-model (`modeller` som komma-liste). Notifikationer af følgere ved "sendt" er IKKE porteret (følg-funktionen findes ikke endnu).
 
+## Legacy-import fra bugherrer (støtte bygget 20-11-2026, import afventer data)
+Migration `supabase/migrations/20261120210000_legacy_import.sql`: `issues.legacy_stemmer` + `legacy_biler` (jsonb variant-fordeling) + `legacy_bugherrer_id` (unik, idempotent re-import) + `comments.author_navn`. rapport_fejl/dan_rapport_markering/rapport_overblik opdateret så stemmer+variant = **live + legacy**. Display: `mapIssue` viser live+legacy; `getVariantFordeling` fletter; kommentarer viser `author_navn` når `author_id` er null. **Skal køres i Studio.**
+
+**Bugherrers datamodel** (fra repo-analyse): `fejl` (titel, bilmodel=single model-tekst, softwareversion, beskrivelse, status, stemmer=count, type fejl/oenske), `stemmer_log` (browser-token + `ejer_variant` nullable = 7GT-variant), `kommentarer` (navn, tekst). Ingen brugerkonti.
+
+**Sync-strategi (brugerens spørgsmål):** INGEN løbende sync. Bugherrer forbliver kilde indtil cutover. Importen er **re-kørbar** (upsert på `legacy_bugherrer_id`): kør den igen når et friskt snapshot ønskes, og til sidst ved cutover. Live-data født i garage (`legacy_bugherrer_id` null) røres ikke. Importerede kommentarer (`author_id` null) erstattes ved re-import; live-kommentarer bevares. **Mangler for at importere:** bugherrers `bygherrer.db` (fra Coolify-volume) + så genereres import-SQL.
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.
