@@ -28,6 +28,7 @@
 - **Custom Next.js + Supabase** = fejl-/issue-boardet + Zeekr-rapporterne. Kronjuvelen og differentieringen — Torbens egen bygning (portfolio til Zeekr).
 - Ét domæne, ét login (Discourse SSO), samme tema → føles som ét site.
 - Design: lækkert, rent, automotive. **Undgå "Claude-agtige" grøn/blå farver.** Renere end den annonce-rodede Fora/Polestar-platform (= inspiration for struktur, ikke for reklamer/affiliate).
+- **Bekræftet 20-11-2026:** Discourse valgt til forum-delen (ikke custom, ikke hosted platform). Forum-UX-reference = polestar-forum.com (kategorier pr. model som rygrad). Rækkefølge: fejl-board (skive 1) bygges FØRST, forum bagefter. App-palet valgt: grafit + kobber (væk fra både Claude- og Zeekr-farver).
 
 ## Stack & hosting
 - Next.js (genbrug bugherrers stack), TypeScript.
@@ -117,8 +118,19 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Kerneskema som migrations-SQL (syntaks-valideret).
   - [x] Undersøgt Supabase på Pixa — ingen instans var fri (se ovenfor).
   - [x] Oprettet ny dedikeret Supabase-instans (A) + anvendt migration + seed. Verificeret.
-  - [ ] App-skal (genbrug bugherrers Next.js/TS) + Supabase-klient mod den nye instans.
-  - [ ] Fejl-board multi-model: meld → bekræft → stem (UI).
+  - [x] App-skal (Next.js 14/TS/Tailwind) + Supabase-klienter (@supabase/ssr). `npm run build` grønt.
+  - [x] Fejl-board multi-model: offentlig læsning, modelfilter, platform-signal, meld → bekræft/stem (login-styret).
+  - [ ] Deploy til Pixa (Coolify-app) + offentlig Supabase-URL (Cloudflare Tunnel) så login/skriv virker udefra.
+
+## App (skive 1) — struktur
+- Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
+- Datalag: `@supabase/ssr`. `lib/supabase/server.ts` (auth + SSR, bruger `SUPABASE_INTERNAL_URL` hvis sat), `client.ts` (browser, public URL), `middleware.ts` (token-refresh).
+- `lib/queries.ts`: modeller, issues m. koblede modeller + optalte bekræftelser, brugerens egne bekræftelser.
+- Sider: `/` (board), `/meld` (login-gated), `/login` (konto: email+password), `/om`, `/auth/callback`, `/logout`.
+- Komponenter: `FejlBoard` (filter/søg/sortér), `ConfirmButton` ("mig med" m. modelvalg), `MeldForm`, `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
+- RLS styrer alt: læsning fri, skrivning kun egne rækker (authenticated).
+- **Deploy-noter:** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` skal gives som **build-args** i Coolify (bages ind ved build). Anon-key hentes fra Supabase-servicens Environment Variables (`SERVICE_SUPABASEANON_KEY`). Browser-URL skal kunne nås udefra (Cloudflare Tunnel) ELLER på LAN via `http://192.168.1.18:8002` (Kong serverer /rest + /auth med anon-key uden basic-auth; kun Studio-ruten er basic-auth-beskyttet). SSR kan bruge intern Kong-URL via `SUPABASE_INTERNAL_URL`.
+- Åbent: Supabase-auth kræver evt. SMTP (GoTrue) for email-bekræftelse, ellers slå auto-confirm til for at password-signup virker uden mail.
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
