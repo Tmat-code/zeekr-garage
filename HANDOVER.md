@@ -123,7 +123,7 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Fuldt bugherrer-flow på `/meld`: trin-indikator, type-valg (fejl/ønske), søg-først, genstart-tjek, softwareversion + telefon-felter.
   - [x] **Deployet til Pixa — LIVE på `http://192.168.1.18:3003`** (LAN). Board læser de 6 modeller fra den nye Supabase. ✅
   - [x] **Auto-deploy via n8n-poller** (se afsnit nedenfor) — push → deploy, ingen manuel redeploy. Repo gjort offentligt. Verificeret end-to-end 20-11-2026 (commit `bdd144e` deployet via API-kilde).
-  - [x] **Offentlig adgang udefra opsat 20-11-2026** (se "Offentlig adgang (Cloudflare Tunnel)"-afsnittet). zeekr-garage.dk tilføjet som Cloudflare-zone + DNSSEC fjernet hos Simply; tunnel "pixa" udvidet med app + www + api; Coolify build-arg skiftet til public Supabase-URL + intern SSR-URL; redeployet. Verificeret udefra (SSR-board + auth-endpoint).
+  - [x] **Offentlig adgang udefra opsat 20-11-2026** (se "Offentlig adgang (Cloudflare Tunnel)"-afsnittet). zeekr-garage.dk tilføjet som Cloudflare-zone + DNSSEC fjernet hos Simply; tunnel "pixa" udvidet med app + www + api; Coolify build-arg skiftet til public Supabase-URL + intern SSR-URL; redeployet. **Verificeret udefra end-to-end:** login persisterer, melding kan oprettes (skriv), log-ud lander på forsiden — efter 2 bugfixes (cookie-`storageKey` + `0.0.0.0`-redirect).
   - [ ] **← NÆSTE: Skive 2+.** Zeekr-rapporter, Discourse-opsætning + SSO + tematisering, Q&A/guides, AI-dedup + flag-kø. Valgfrit først: SMTP (Resend) til rigtige email-bekræftelser (ellers kører auto-confirm fint).
 
 ## App (skive 1) — struktur
