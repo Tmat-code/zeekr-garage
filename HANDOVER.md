@@ -120,7 +120,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Oprettet ny dedikeret Supabase-instans (A) + anvendt migration + seed. Verificeret.
   - [x] App-skal (Next.js 14/TS/Tailwind) + Supabase-klienter (@supabase/ssr). `npm run build` grønt.
   - [x] Fejl-board multi-model: offentlig læsning, modelfilter, platform-signal, meld → bekræft/stem (login-styret).
-  - [ ] Deploy til Pixa (Coolify-app) + offentlig Supabase-URL (Cloudflare Tunnel) så login/skriv virker udefra.
+  - [x] **Deployet til Pixa — LIVE på `http://192.168.1.18:3003`** (LAN). Board læser de 6 modeller fra den nye Supabase. ✅
+  - [ ] Offentlig adgang udefra (Cloudflare Tunnel på app + Supabase-URL) + rigtigt domæne zeekr-garage.dk.
 
 ## App (skive 1) — struktur
 - Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
@@ -131,6 +132,14 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - RLS styrer alt: læsning fri, skrivning kun egne rækker (authenticated).
 - **Deploy-noter:** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` skal gives som **build-args** i Coolify (bages ind ved build). Anon-key hentes fra Supabase-servicens Environment Variables (`SERVICE_SUPABASEANON_KEY`). Browser-URL skal kunne nås udefra (Cloudflare Tunnel) ELLER på LAN via `http://192.168.1.18:8002` (Kong serverer /rest + /auth med anon-key uden basic-auth; kun Studio-ruten er basic-auth-beskyttet). SSR kan bruge intern Kong-URL via `SUPABASE_INTERNAL_URL`.
 - Åbent: Supabase-auth kræver evt. SMTP (GoTrue) for email-bekræftelse, ellers slå auto-confirm til for at password-signup virker uden mail.
+
+## Deploy (Coolify-app) — opsat 20-11-2026
+- Coolify-app `zeekr-garage:main-rpcqm0klit7tcvzms7syizxv`, kilde = GitHub App (`troubled-teira…`), repo Tmat-code/zeekr-garage, branch main, build = Dockerfile. **Auto-deploy on push** er slået til.
+- **LIVE på LAN:** `http://192.168.1.18:3003` (host-port-mapping 3003:3000 i "Edit Networking → Port mappings"). Brugte 3003 fordi 3000/3001/3002 var optaget.
+- Build-args i Coolify (Buildtime+Runtime): `NEXT_PUBLIC_SUPABASE_URL=http://192.168.1.18:8002`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon JWT>`. Browseren når Supabase på 8002 (Kong serverer /rest + /auth med anon-key, CORS `*`).
+- **Auto-confirm slået til:** Supabase-servicens env `ENABLE_EMAIL_AUTOCONFIRM=true` (→ GOTRUE_MAILER_AUTOCONFIRM), Supabase genstartet. Så konto-oprettelse virker uden mail-server.
+- Coolify gav også en sslip.io-URL via proxy (port 80), men den peger på WAN-IP (usikker på LAN) — derfor host-porten 3003 til LAN-brug.
+- **Næste for offentlig adgang:** Cloudflare Tunnel til både app og Supabase-API (så `NEXT_PUBLIC_SUPABASE_URL` bliver en public https-URL), og peg zeekr-garage.dk derhen. SMTP til rigtige bekræftelses-mails (ellers behold auto-confirm).
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
