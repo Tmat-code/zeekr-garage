@@ -29,7 +29,7 @@ export async function getIssues(): Promise<IssueRow[]> {
   const { data, error } = await sb
     .from('issues')
     .select(
-      `id, type, title, description, category, severity, status, created_at,
+      `id, type, title, description, category, severity, status, software_version, created_at,
        issue_models ( models ( id, slug, name, platform ) ),
        confirmations ( count )`,
     )
@@ -56,7 +56,7 @@ export async function getIssues(): Promise<IssueRow[]> {
       created_at: row.created_at,
       models,
       confirmations,
-      software_version: null,
+      software_version: row.software_version ?? null,
     };
   });
 }

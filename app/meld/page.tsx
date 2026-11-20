@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getModels, getIssues, getMyConfirmedIssueIds, getCurrentUser } from '@/lib/queries';
-import { erGyldigType } from '@/lib/config';
+import type { IssueType } from '@/lib/config';
 import MeldFlow from '@/components/MeldFlow';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,8 @@ export default async function MeldSide({
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/meld');
 
-  const initialType = erGyldigType(searchParams?.type);
+  const tp = searchParams?.type;
+  const initialType: IssueType | null = tp === 'fejl' || tp === 'oenske' ? tp : null;
   const [models, issues, mineSet] = await Promise.all([
     getModels(),
     getIssues(),

@@ -69,7 +69,7 @@ Platform-feltet lader systemet foreslå relaterede modeller og vise fx "fejl ram
 - `profiles` (udvider Supabase auth-users; SSO-koblet til Discourse)
 - `cars` (user, model, variant, softwareversion)
 - `models` (6 ovenfor + platform)
-- `issues` (titel, beskrivelse, kategori, alvorlighed, status: ny → bekræftet → sendt til Zeekr → løst i OTA)
+- `issues` (titel, beskrivelse, kategori, alvorlighed, status: ny → bekræftet → sendt til Zeekr → løst i OTA; `type` fejl/ønske; `software_version`, `phone_model`, `phone_os`)
 - `issue_models` (kobling — fejl ↔ flere modeller)
 - `confirmations` (user, issue, model, softwareversion = "jeg har også det her")
 - `software_versions` (model/platform, version, udgivet)
@@ -120,6 +120,7 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Oprettet ny dedikeret Supabase-instans (A) + anvendt migration + seed. Verificeret.
   - [x] App-skal (Next.js 14/TS/Tailwind) + Supabase-klienter (@supabase/ssr). `npm run build` grønt.
   - [x] Fejl-board multi-model: offentlig læsning, modelfilter, platform-signal, meld → bekræft/stem (login-styret).
+  - [x] Fuldt bugherrer-flow på `/meld`: trin-indikator, type-valg (fejl/ønske), søg-først, genstart-tjek, softwareversion + telefon-felter.
   - [x] **Deployet til Pixa — LIVE på `http://192.168.1.18:3003`** (LAN). Board læser de 6 modeller fra den nye Supabase. ✅
   - [ ] Offentlig adgang udefra (Cloudflare Tunnel på app + Supabase-URL) + rigtigt domæne zeekr-garage.dk.
 
@@ -127,9 +128,11 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
 - Datalag: `@supabase/ssr`. `lib/supabase/server.ts` (auth + SSR, bruger `SUPABASE_INTERNAL_URL` hvis sat), `client.ts` (browser, public URL), `middleware.ts` (token-refresh).
 - `lib/queries.ts`: modeller, issues m. koblede modeller + optalte bekræftelser, brugerens egne bekræftelser.
-- Sider: `/` (board m. type-filter Alle/Fejl/Ønsker + modelfilter), `/meld` (login-gated, **søg-først-flow**: søg eksisterende før ny oprettes; fejl ELLER ønske), `/login` (konto: email+password), `/om`, `/auth/callback`, `/logout`.
+- Sider: `/` (board m. type-filter Alle/Fejl/Ønsker + modelfilter), `/meld` (login-gated, **fuldt bugherrer-flow**, se nedenfor), `/login` (konto: email+password), `/om`, `/auth/callback`, `/logout`.
 - **Meldingstyper:** fejl + ønske (bugherrer-paritet). Samme maskineri, kun `issues.type` (enum `issue_type`) adskiller. Migration `supabase/migrations/20261120110000_issue_type.sql` — anvendt på Pixa-instansen.
-- Komponenter: `FejlBoard` (filter/søg/sortér), `ConfirmButton` ("mig med" m. modelvalg), `MeldForm`, `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
+- **/meld-flow (bugherrer-paritet, `MeldFlow.tsx`):** trin-indikator + 4 trin — (1) **vælg** type (to kort: Fejl / Ønske; springes over hvis `?type=` i URL), (2) **søg** eksisterende (ordmatch filtreret på type, viser match m. "mig med" så dubletter undgås), (3) **tjek** genstart/OTA (kun fejl — bugherrers "Fejl-40"-trin), (4) **udfyld** (`MeldForm`). Ønske springer "tjek" over (Søg → Udfyld).
+- **Issue-felter (migration `20261120113000_issue_fields.sql`, anvendt på Pixa):** `software_version` (påkrævet for fejl, mono-chip på board-kort), `phone_model` + `phone_os` (valgfri, kun fejl — telefon-boks i formular). Fanget pr. melding, jf. "model + softwareversion"-princippet.
+- Komponenter: `FejlBoard` (filter/søg/sortér, type-badge, softwareversion-chip), `MeldFlow` (4-trins-flow), `MeldForm` (type-bevidst: felter/ordlyd skifter på fejl vs. ønske), `ConfirmButton` ("mig med" m. modelvalg), `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
 - RLS styrer alt: læsning fri, skrivning kun egne rækker (authenticated).
 - **Deploy-noter:** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` skal gives som **build-args** i Coolify (bages ind ved build). Anon-key hentes fra Supabase-servicens Environment Variables (`SERVICE_SUPABASEANON_KEY`). Browser-URL skal kunne nås udefra (Cloudflare Tunnel) ELLER på LAN via `http://192.168.1.18:8002` (Kong serverer /rest + /auth med anon-key uden basic-auth; kun Studio-ruten er basic-auth-beskyttet). SSR kan bruge intern Kong-URL via `SUPABASE_INTERNAL_URL`.
 - Åbent: Supabase-auth kræver evt. SMTP (GoTrue) for email-bekræftelse, ellers slå auto-confirm til for at password-signup virker uden mail.

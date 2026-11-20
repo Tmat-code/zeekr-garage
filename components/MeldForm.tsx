@@ -22,6 +22,9 @@ export default function MeldForm({
   const [titel, setTitel] = useState(initialTitle);
   const [beskrivelse, setBeskrivelse] = useState('');
   const [kategori, setKategori] = useState('');
+  const [softwareVersion, setSoftwareVersion] = useState('');
+  const [phoneModel, setPhoneModel] = useState('');
+  const [phoneOs, setPhoneOs] = useState('');
   const [severity, setSeverity] = useState<Severity>('middel');
   const [valgte, setValgte] = useState<string[]>([]);
   const [fejl, setFejl] = useState('');
@@ -38,6 +41,8 @@ export default function MeldForm({
     if (titel.trim().length < 5) return setFejl(`Giv ${ting} en kort, tydelig titel.`);
     if (beskrivelse.trim().length < 10) return setFejl(`Beskriv ${ting} lidt mere.`);
     if (valgte.length === 0) return setFejl(`Vælg mindst én model ${erOenske ? 'ønsket gælder' : 'fejlen rammer'}.`);
+    if (!erOenske && softwareVersion.trim().length < 2)
+      return setFejl('Skriv hvilken softwareversion (OTA) du er på — det er vigtigt for bevis på tværs.');
 
     setBusy(true);
     try {
@@ -56,6 +61,9 @@ export default function MeldForm({
           title: titel.trim(),
           description: beskrivelse.trim(),
           category: kategori.trim() || null,
+          software_version: softwareVersion.trim() || null,
+          phone_model: phoneModel.trim() || null,
+          phone_os: phoneOs.trim() || null,
           severity,
           created_by: user.id,
         })
@@ -103,6 +111,19 @@ export default function MeldForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
+          <label htmlFor="sw" className="label">
+            Softwareversion (OTA){' '}
+            {erOenske && <span className="font-normal text-grafit-400">(valgfri)</span>}
+          </label>
+          <input
+            id="sw"
+            value={softwareVersion}
+            onChange={(e) => setSoftwareVersion(e.target.value)}
+            placeholder="fx OS 1.3.0"
+            className="input font-mono"
+          />
+        </div>
+        <div>
           <label htmlFor="kat" className="label">Kategori <span className="font-normal text-grafit-400">(valgfri)</span></label>
           <input
             id="kat"
@@ -112,7 +133,10 @@ export default function MeldForm({
             className="input"
           />
         </div>
-        {!erOenske && (
+      </div>
+
+      {!erOenske && (
+        <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="sev" className="label">Alvorlighed</label>
             <select
@@ -126,8 +150,43 @@ export default function MeldForm({
               ))}
             </select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Telefon — kun relevant for fejl (CarPlay / Android Auto / app) */}
+      {!erOenske && (
+        <div className="rounded-xl border border-dashed border-grafit-300 p-4">
+          <p className="text-sm font-semibold text-grafit-700">
+            Telefon <span className="font-normal text-grafit-400">— valgfrit</span>
+          </p>
+          <p className="mt-0.5 text-xs text-grafit-500">
+            Udfyld kun hvis fejlen handler om telefonen (CarPlay, Android Auto, Bluetooth, appen).
+            Det hjælper med at finde mønstre på tværs af telefoner.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="pm" className="label">Telefonmodel</label>
+              <input
+                id="pm"
+                value={phoneModel}
+                onChange={(e) => setPhoneModel(e.target.value)}
+                placeholder="fx iPhone 15 Pro / Samsung S24"
+                className="input"
+              />
+            </div>
+            <div>
+              <label htmlFor="pos" className="label">Telefonens OS</label>
+              <input
+                id="pos"
+                value={phoneOs}
+                onChange={(e) => setPhoneOs(e.target.value)}
+                placeholder="fx iOS 18.1 / Android 15"
+                className="input"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         <span className="label">{erOenske ? 'Hvilke modeller gælder ønsket?' : 'Hvilke modeller rammer fejlen?'}</span>

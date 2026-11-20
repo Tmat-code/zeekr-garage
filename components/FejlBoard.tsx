@@ -145,6 +145,9 @@ export default function FejlBoard({
                     </span>
                   ))}
                   <PlatformSignal platforms={i.models.map((m) => m.platform)} />
+                  {i.software_version && (
+                    <span className="chip bg-grafit-100 font-mono text-grafit-600">{i.software_version}</span>
+                  )}
                   {i.type === 'fejl' && <SeverityTag severity={i.severity} />}
                   {(i.status === 'sendt_til_zeekr' || i.status === 'loest_i_ota' || i.status === 'bekraeftet') && (
                     <StatusTag status={i.status} />
