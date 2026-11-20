@@ -88,7 +88,7 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 ## Repo-struktur (skive 1)
 - `supabase/migrations/20261120090000_init.sql` — kerneskema: 10 tabeller, enums, triggers (auto-profil ved signup, updated_at), RLS (offentlig læsning, login for at bidrage, VIN privat i `car_private`), 20 policies. Syntaks-valideret mod Postgres.
 - `supabase/seed.sql` — de 6 DK-modeller + platform. Idempotent.
-- Databasen anvendes IKKE endnu — afventer at vi identificerer den rigtige Supabase-instans på Pixa (se nedenfor).
+- **Anvendt på Pixa 20-11-2026** (ny dedikeret instans, se nedenfor). Verificeret: 10 tabeller, 10 m. RLS, 20 policies, 6 modeller.
 
 ## Pixa / Supabase-situation (undersøgt i Coolify 20-11-2026)
 - Claude når Pixa via Coolifys browser-UI (http://192.168.1.18:8000) og Coolifys container-terminal (= "direkte" Pixa-adgang). Claudes egen cloud-sandbox er netværks-låst og kan IKKE nå Pixa/LAN; Supabase-cloud-API'et i Claude ser kun cloud-projektet `talentry-platform`.
@@ -96,8 +96,13 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - **De 2 Supabase-instanser — identificeret:**
   - `supabase-attv9fy0cugo7ol0athiobws` — label **"Karvia"**. Står **Degraded** (⚠️ bør kigges på separat).
   - `supabase-asmzli3ytzonaxou4fmfalee` — ulabelet, men **IKKE ledig**: den er jobtavle + Lejesyns instans. Tabeller i `public`: `job_opslag` (**655 rækker** — jobtavles live-data), `syn` (0 rækker — Lejesyn, ingen data endnu). `auth.users` = 0 på hele instansen (ingen bruger Supabase-auth endnu). "Changes pending" i Coolify.
-- **Konklusion:** ingen af de 2 instanser er fri. Pixa har ~5,5 GiB RAM tilgængelig (af 13 GiB) → plads til en ny dedikeret instans.
-- **Åben beslutning (A/B):** (A) ny dedikeret Supabase-instans til Zeekr Garage i Coolify — ren adskillelse, ~1–1,5 GiB RAM. (B) eget Postgres-schema `zeekr` i den eksisterende jobtavle/lejesyn-instans — letvægt, men deler stack + `auth.users` med de apps. Anbefaling: A (portfolio-kronjuvel, rører ikke jobtavles live-DB).
+- **Konklusion:** ingen af de 2 instanser var fri. Pixa havde ~5,5 GiB RAM tilgængelig (af 13 GiB) → plads til en ny.
+- **BESLUTTET: A** (ny dedikeret instans). Oprettet i Coolify 20-11-2026:
+  - Service: `supabase-zdmeluhkaf6buop6l6vlhj2s`, tagget **`zeekr-garage`** i Coolify (beskrivelses-feltet ville ikke gemme i denne Coolify-version — brug tagget til at genkende den).
+  - Running, alle containere healthy. Netværk: "Use the stack network only" (ingen ekstern domæne endnu).
+  - Migration + seed anvendt via Coolify-terminal → db-container (`psql`). Overført som base64 + sha256-verificeret (byte-perfekt), da repoet er privat.
+  - **App'en forbinder internt:** da instansen kun er på stack-netværket, forbinder Next.js-appen (når den kører på Pixa) via Kong-gateway'ens interne service-navn, ikke en public URL. Connection-detaljer (URL/anon-key/service-key) hentes fra servicens Environment Variables i Coolify når app-skallen bygges.
+- Karvias Supabase (`supabase-attv9fy0…`) står stadig **Degraded** — separat opgave, ikke rørt.
 
 ## Status / næste skridt
 - [x] Repo oprettet + Claude-adgang bekræftet (klonet OK).
@@ -105,9 +110,9 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - [x] Domæne zeekr-garage.dk registreret.
 - [ ] Byg skive 1:
   - [x] Kerneskema som migrations-SQL (syntaks-valideret).
-  - [x] Undersøgt Supabase på Pixa — ingen instans er fri (se ovenfor).
-  - [ ] Beslut A/B (ny instans vs. `zeekr`-schema) → anvend migration + seed.
-  - [ ] App-skal (genbrug bugherrers Next.js/TS) + Supabase-klient.
+  - [x] Undersøgt Supabase på Pixa — ingen instans var fri (se ovenfor).
+  - [x] Oprettet ny dedikeret Supabase-instans (A) + anvendt migration + seed. Verificeret.
+  - [ ] App-skal (genbrug bugherrers Next.js/TS) + Supabase-klient mod den nye instans.
   - [ ] Fejl-board multi-model: meld → bekræft → stem (UI).
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
