@@ -65,6 +65,37 @@ export async function gemRedigering(
   revalider();
 }
 
+// --- Oprydning: fjern bekræftelser (stemmer) før en dato (kun admin) ---
+function gyldigDato(dato: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dato);
+}
+
+export async function taelBekraeftelserFoer(dato: string): Promise<number> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!gyldigDato(dato)) throw new Error('Ugyldig dato.');
+  const sb = supabaseServer();
+  const { count, error } = await sb
+    .from('confirmations')
+    .select('*', { count: 'exact', head: true })
+    .lt('created_at', `${dato}T00:00:00.000Z`);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export async function fjernBekraeftelserFoer(dato: string): Promise<number> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!gyldigDato(dato)) throw new Error('Ugyldig dato.');
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from('confirmations')
+    .delete()
+    .lt('created_at', `${dato}T00:00:00.000Z`)
+    .select('id');
+  if (error) throw new Error(error.message);
+  revalider();
+  return (data ?? []).length;
+}
+
 // --- Forside-besked (kun admin) ---
 export async function gemForsideBesked(message: string, active: boolean): Promise<void> {
   if (!(await erAdmin())) throw new Error('Kun admin kan ændre forside-beskeden.');

@@ -212,7 +212,7 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 - ~~**Aktivitet** (skærm 8,9)~~ **BYGGET 20-11-2026:** `/admin/aktivitet` — stat-tiles (hændelser/stemmer/nye meldinger) + søjlegrafer pr. time/ugedag/30 dage, afledt af created_at (dansk tid, `Intl` → Europe/Copenhagen). `lib/queries-admin.ts:getAktivitet()`, `components/admin/BarGraf.tsx`. Link i Værkstedet-header.
 - **Adgange** (skærm 5) — moderator-invitationer. Tilpasses Supabase: invitation sætter rolle på kontoen efter signup (ikke eget password).
 - ~~**Mistænkelig aktivitet** (skærm 10)~~ **DROPPET** (brugerens beslutning 20-11-2026): fup-skærmen giver ikke mening her — stemmer er konto-bundne (én pr. konto, DB-håndhævet), ikke browser-baserede som bugherrer. Intet fup-panel.
-- **Oprydning** (skærm 11) — slet test-stemmer før en dato (`confirmations_delete_admin` er på plads).
+- ~~**Oprydning** (skærm 11)~~ **BYGGET 20-11-2026:** `OprydningPanel` på `/admin` — vælg dato, "Vis antal", dernæst "Fjern N stemmer" (slet bekræftelser før dato via `confirmations_delete_admin`). Server actions `taelBekraeftelserFoer`/`fjernBekraeftelserFoer` (erAdmin-gated). Ingen migration. Nyttig til at rydde test-stemmer før cutover-import.
 
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.

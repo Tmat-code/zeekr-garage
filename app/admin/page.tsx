@@ -3,6 +3,7 @@ import { getAdminStats, getSenesteAktivitet } from '@/lib/queries-admin';
 import Overblik from '@/components/admin/Overblik';
 import ModereringsTabel from '@/components/admin/ModereringsTabel';
 import ForsideBeskedEditor from '@/components/admin/ForsideBeskedEditor';
+import OprydningPanel from '@/components/admin/OprydningPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,8 @@ export default async function AdminForside() {
         </div>
         <ModereringsTabel issues={issues} />
       </section>
+
+      <OprydningPanel />
     </div>
   );
 }
