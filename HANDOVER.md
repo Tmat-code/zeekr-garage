@@ -145,6 +145,12 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - Coolify gav også en sslip.io-URL via proxy (port 80), men den peger på WAN-IP (usikker på LAN) — derfor host-porten 3003 til LAN-brug.
 - **Næste for offentlig adgang:** Cloudflare Tunnel til både app og Supabase-API (så `NEXT_PUBLIC_SUPABASE_URL` bliver en public https-URL), og peg zeekr-garage.dk derhen. SMTP til rigtige bekræftelses-mails (ellers behold auto-confirm).
 
+## Auto-deploy via n8n-poller (opsat 20-11-2026)
+Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
+- **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.
+- **Genbrugt fra bugherrer:** Coolify API-token `n8n-deploy` (Deploy-ret, deployer alle apps på teamet) + Allowed-IPs (private ranges). Ingen ny token/credential.
+- **Repo gjort OFFENTLIGT 20-11-2026:** krævet for at den uautentificerede GET virker (GitHub giver 404 på private repos uden token). Repoet er tjekket rent — ingen committede hemmeligheder (`.env` git-ignoreret, kun `.env.example`-skabelon). Alle nøgler bor i Coolify. Offentligt repo støtter også portfolio-vinklen (Zeekr kan se kvaliteten).
+
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
 - bugherrer er SQLite; her bruges Supabase/Postgres. "Genbrug bugherrer" = app-laget (Next.js/TS, UI, deploy-flow), ikke data-laget.
