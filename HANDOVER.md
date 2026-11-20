@@ -85,11 +85,26 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - **Skive 1:** custom Next.js + Supabase — login (SSO-klar) + modeller/platforme + fejl-board multi-model (meld → bekræft → stem). Dybest set bugherrer genfødt på ny stack + flere modeller.
 - Senere skiver: Zeekr-rapporter · Discourse-opsætning + SSO + tematisering · Q&A/guides · AI-dedup + flag-kø.
 
+## Repo-struktur (skive 1)
+- `supabase/migrations/20261120090000_init.sql` — kerneskema: 10 tabeller, enums, triggers (auto-profil ved signup, updated_at), RLS (offentlig læsning, login for at bidrage, VIN privat i `car_private`), 20 policies. Syntaks-valideret mod Postgres.
+- `supabase/seed.sql` — de 6 DK-modeller + platform. Idempotent.
+- Databasen anvendes IKKE endnu — afventer at vi identificerer den rigtige Supabase-instans på Pixa (se nedenfor).
+
+## Pixa / Supabase-situation (afklaret 20-11-2026)
+- Supabase-værktøjet (cloud-API) i Claude ser KUN cloud-projektet `talentry-platform`. De 2 selvhostede instanser på Pixa er bag Cloudflare Tunnel og kan ikke nås herfra via cloud-API.
+- Pixa kører 2 selvhostede Supabase-instanser i Coolify: den ene er Karvias, den anden er ulabelet/ledig (sandsynligvis default-install).
+- **Blokerer anvendelse mod Pixa:** identificér den ulabelede instans (Coolify/Studio) FØR vi kører migration — ellers risiko for at ramme Karvias DB. Zeekr Garage kan enten overtage den ledige instans eller få en ny i Coolify.
+
 ## Status / næste skridt
 - [x] Repo oprettet + Claude-adgang bekræftet (klonet OK).
 - [x] Nyt claude.ai-projekt **"Zeekr Garage"** oprettet; arbejdet flyttet dertil (dette dokument er broen).
 - [x] Domæne zeekr-garage.dk registreret.
-- [ ] Byg skive 1.
+- [ ] Byg skive 1:
+  - [x] Kerneskema som migrations-SQL (syntaks-valideret).
+  - [ ] Identificér ulabelet Supabase-instans på Pixa → anvend migration + seed.
+  - [ ] App-skal (genbrug bugherrers Next.js/TS) + Supabase-klient.
+  - [ ] Fejl-board multi-model: meld → bekræft → stem (UI).
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
+- bugherrer er SQLite; her bruges Supabase/Postgres. "Genbrug bugherrer" = app-laget (Next.js/TS, UI, deploy-flow), ikke data-laget.
