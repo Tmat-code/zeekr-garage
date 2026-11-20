@@ -59,6 +59,11 @@ Platform-feltet lader systemet foreslå relaterede modeller og vise fx "fejl ram
 - Spørgsmål & guides
 - Om — med uofficielt-disclaimer
 
+## Adgang — BESLUTTET: åbent
+- Alt indhold er **offentligt læsbart** (også for Google og besøgende) — fejl-board, forum, guides, Zeekr-rapporter. Login kræves kun for at *bidrage* (melde, bekræfte/stemme, skrive, kommentere). Begrundelse: vækst/migration fra FB, SEO, og at Zeekr kan se kvaliteten uden at oprette en konto.
+- Personlige detaljer (VIN, præcise bil-data) er **valgfrie/private**, selvom resten er offentligt. Rapporter til Zeekr er samlede/anonymiserede.
+- Teknisk: Discourse-kategorier sat til "læs frit, login for at skrive"; custom fejl-board-sider offentlige (SSR, SEO), handlinger låst bag login.
+
 ## Datamodel (custom-delen, kerne)
 - `profiles` (udvider Supabase auth-users; SSO-koblet til Discourse)
 - `cars` (user, model, variant, softwareversion)
@@ -83,9 +88,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 ## Status / næste skridt
 - [x] Repo oprettet + Claude-adgang bekræftet (klonet OK).
 - [ ] Opret nyt claude.ai-projekt **"Zeekr Garage"**; flyt arbejdet dertil (dette dokument er broen).
-- [ ] Bekræft registrering af zeekr-garage.dk.
+- [x] Domæne zeekr-garage.dk registreret.
 - [ ] Byg skive 1.
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
-- "Browse frit / login kun for at bidrage" — **foreslået, ikke endeligt bekræftet.**
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
