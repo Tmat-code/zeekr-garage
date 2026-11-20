@@ -11,6 +11,8 @@ export async function middleware(request: NextRequest) {
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {
+    // Samme storageKey som client.ts/server.ts — ellers matcher cookien ikke.
+    auth: { storageKey: 'sb-zeekr-garage-auth' },
     cookies: {
       getAll() {
         return request.cookies.getAll();

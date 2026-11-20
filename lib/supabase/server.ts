@@ -12,6 +12,9 @@ export function supabaseServer() {
   const cookieStore = cookies();
 
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // Skal matche browser-klientens storageKey (client.ts), ellers finder
+    // serveren ikke session-cookien naar URL'erne er forskellige.
+    auth: { storageKey: 'sb-zeekr-garage-auth' },
     cookies: {
       getAll() {
         return cookieStore.getAll();
