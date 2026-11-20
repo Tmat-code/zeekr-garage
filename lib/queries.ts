@@ -1,6 +1,34 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
-import type { IssueRow, Model } from '@/lib/types';
+import type { IssueRow, Model, Kommentar } from '@/lib/types';
+
+// Fælles select + mapper, så board og detalje-side viser det samme.
+const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
+       issue_models ( models ( id, slug, name, platform ) ),
+       confirmations ( count )`;
+
+function mapIssue(row: any): IssueRow {
+  const models = (row.issue_models ?? [])
+    .map((im: any) => im.models)
+    .filter(Boolean)
+    .map((m: any) => ({ id: m.id, slug: m.slug, name: m.name, platform: m.platform }));
+  const confirmations = Array.isArray(row.confirmations)
+    ? (row.confirmations[0]?.count ?? 0)
+    : 0;
+  return {
+    id: row.id,
+    type: (row.type ?? 'fejl') as IssueType,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    severity: row.severity as Severity,
+    status: row.status as Status,
+    created_at: row.created_at,
+    models,
+    confirmations,
+    software_version: row.software_version ?? null,
+  };
+}
 
 // --- Modeller ---
 export async function getModels(): Promise<Model[]> {
@@ -28,37 +56,39 @@ export async function getIssues(): Promise<IssueRow[]> {
   const sb = supabaseServer();
   const { data, error } = await sb
     .from('issues')
-    .select(
-      `id, type, title, description, category, severity, status, software_version, created_at,
-       issue_models ( models ( id, slug, name, platform ) ),
-       confirmations ( count )`,
-    )
+    .select(ISSUE_SELECT)
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
+  return data.map(mapIssue);
+}
 
-  return data.map((row: any): IssueRow => {
-    const models = (row.issue_models ?? [])
-      .map((im: any) => im.models)
-      .filter(Boolean)
-      .map((m: any) => ({ id: m.id, slug: m.slug, name: m.name, platform: m.platform }));
-    const confirmations = Array.isArray(row.confirmations)
-      ? (row.confirmations[0]?.count ?? 0)
-      : 0;
-    return {
-      id: row.id,
-      type: (row.type ?? 'fejl') as IssueType,
-      title: row.title,
-      description: row.description,
-      category: row.category,
-      severity: row.severity as Severity,
-      status: row.status as Status,
-      created_at: row.created_at,
-      models,
-      confirmations,
-      software_version: row.software_version ?? null,
-    };
-  });
+// --- Enkelt melding (til detalje-siden) ---
+export async function getIssueDetalje(id: string): Promise<IssueRow | null> {
+  const sb = supabaseServer();
+  const { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
+  if (error || !data) return null;
+  return mapIssue(data);
+}
+
+// --- Kommentarer på en melding ("Byggemøde") ---
+export async function getComments(issueId: string): Promise<Kommentar[]> {
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from('comments')
+    .select('id, body, is_solution, created_at, author_id, profiles ( display_name )')
+    .eq('issue_id', issueId)
+    .order('created_at', { ascending: true });
+
+  if (error || !data) return [];
+  return (data as any[]).map((r) => ({
+    id: r.id,
+    body: r.body,
+    is_solution: r.is_solution,
+    created_at: r.created_at,
+    author_id: r.author_id,
+    author_navn: r.profiles?.display_name ?? null,
+  }));
 }
 
 // --- Den aktuelle brugers egne bekraeftelser (til "stemt"-markering) ---

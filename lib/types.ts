@@ -25,3 +25,13 @@ export type IssueRow = {
   // Seneste softwareversion nogen har bekraeftet paa (valgfri visning).
   software_version: string | null;
 };
+
+// En kommentar ("Byggemøde") paa en melding.
+export type Kommentar = {
+  id: string;
+  body: string;
+  is_solution: boolean;
+  created_at: string;
+  author_id: string | null;
+  author_navn: string | null;
+};

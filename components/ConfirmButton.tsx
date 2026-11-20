@@ -12,12 +12,14 @@ export default function ConfirmButton({
   initialCount,
   initialConfirmed,
   isLoggedIn,
+  naeste = '/',
 }: {
   issueId: string;
   models: ModelLite[];
   initialCount: number;
   initialConfirmed: boolean;
   isLoggedIn: boolean;
+  naeste?: string;
 }) {
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
@@ -29,7 +31,7 @@ export default function ConfirmButton({
   if (!isLoggedIn) {
     return (
       <button
-        onClick={() => router.push('/login?naeste=/')}
+        onClick={() => router.push(`/login?naeste=${encodeURIComponent(naeste)}`)}
         className="flex w-16 shrink-0 flex-col items-center rounded-lg border border-grafit-300 bg-white py-2 text-grafit-700 transition-colors hover:border-kobber-500 hover:text-kobber-700"
         aria-label="Log ind for at bekræfte denne fejl"
       >

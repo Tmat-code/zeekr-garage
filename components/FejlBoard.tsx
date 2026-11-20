@@ -136,7 +136,11 @@ export default function FejlBoard({
                 isLoggedIn={isLoggedIn}
               />
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-grafit-900">{i.title}</h3>
+                <h3 className="font-semibold text-grafit-900">
+                  <Link href={`/melding/${i.id}`} className="hover:text-kobber-700 hover:underline">
+                    {i.title}
+                  </Link>
+                </h3>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                   <span className={`chip ${TYPE_META[i.type].chip}`}>{TYPE_META[i.type].badge}</span>
                   {i.models.map((m) => (

@@ -1,0 +1,107 @@
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import {
+  getIssueDetalje,
+  getComments,
+  getMyConfirmedIssueIds,
+} from '@/lib/queries';
+import { adminKontekst } from '@/lib/admin';
+import { TYPE_META } from '@/lib/config';
+import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
+import ConfirmButton from '@/components/ConfirmButton';
+import Kommentarer from '@/components/Kommentarer';
+
+export const dynamic = 'force-dynamic';
+
+function daDato(iso: string): string {
+  return new Date(iso).toLocaleDateString('da-DK', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+export default async function MeldingSide({ params }: { params: { id: string } }) {
+  const [issue, kommentarer, mineSet, ctx] = await Promise.all([
+    getIssueDetalje(params.id),
+    getComments(params.id),
+    getMyConfirmedIssueIds(),
+    adminKontekst(),
+  ]);
+
+  if (!issue) notFound();
+
+  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const isLoggedIn = !!ctx.user;
+  const naeste = `/melding/${issue.id}`;
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <Link href="/" className="text-sm text-grafit-500 hover:text-kobber-700">
+        ← Tilbage til listen
+      </Link>
+
+      {/* Badges */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+        <span className={`chip ${TYPE_META[issue.type].chip}`}>{TYPE_META[issue.type].badge}</span>
+        {(issue.status === 'sendt_til_zeekr' ||
+          issue.status === 'loest_i_ota' ||
+          issue.status === 'bekraeftet') && <StatusTag status={issue.status} />}
+        {issue.models.map((m) => (
+          <span key={m.slug} className="chip bg-grafit-100 text-grafit-700">
+            {m.name.replace('Zeekr ', '')}
+          </span>
+        ))}
+        <PlatformSignal platforms={issue.models.map((m) => m.platform)} />
+        {issue.software_version && (
+          <span className="chip bg-grafit-100 font-mono text-grafit-600">
+            {issue.software_version}
+          </span>
+        )}
+        {issue.type === 'fejl' && <SeverityTag severity={issue.severity} />}
+      </div>
+
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-grafit-900">{issue.title}</h1>
+      <p className="mt-1 text-sm text-grafit-500">
+        Meldt {daDato(issue.created_at)} · {issue.confirmations}{' '}
+        {issue.confirmations === 1 ? 'bekræftelse' : 'bekræftelser'}
+      </p>
+
+      {/* Beskrivelse */}
+      <div className="mt-5 rounded-2xl border border-grafit-200 bg-white p-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-grafit-400">
+          {issue.type === 'fejl' ? 'Sådan opleves fejlen' : 'Ønsket'}
+        </h2>
+        <p className="mt-2 whitespace-pre-line text-grafit-800">{issue.description}</p>
+      </div>
+
+      {/* Stem */}
+      <div className="mt-4 flex items-center gap-4 rounded-2xl border border-grafit-200 bg-white p-5">
+        <ConfirmButton
+          issueId={issue.id}
+          models={issue.models.map((m) => ({ id: m.id, name: m.name }))}
+          initialCount={issue.confirmations}
+          initialConfirmed={mineSet.has(issue.id)}
+          isLoggedIn={isLoggedIn}
+          naeste={naeste}
+        />
+        <div>
+          <p className="font-semibold text-grafit-900">Oplever du også dette?</p>
+          <p className="text-sm text-grafit-500">
+            Bekræft med din model — jo flere ejere, jo tungere vejer fejlen over for Zeekr.
+          </p>
+        </div>
+      </div>
+
+      {/* Byggemøde */}
+      <Kommentarer
+        issueId={issue.id}
+        kommentarer={kommentarer}
+        megId={ctx.user?.id ?? null}
+        erModerator={erModerator}
+        isLoggedIn={isLoggedIn}
+        naeste={naeste}
+      />
+    </div>
+  );
+}

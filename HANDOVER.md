@@ -219,7 +219,14 @@ Admin-panelet var færdigt, men bruger-siden haltede. To huller (brugerens obser
 
 **Forside-overblik (bygget 20-11-2026):** `components/ForsideOverblik.tsx` — 4 nøgletal (Meldinger / Bekræftet af ejere / Sendt til Zeekr / Løst, afledt af `issues`-arrayet i `app/page.tsx`, ingen ekstra query) + tre "sådan virker det"-kort (Søg først / Bekræft sammen / Send til Zeekr). Hero trimmet. Dette er samtidig landing-page'en i hybrid-form.
 
-**Kommentarer / "Byggemøde" (under opbygning):** login-styret til v1 (konsistent med konto-model, ingen captcha). Formål: en "fejl" kan være en **fejl 40** (betjeningsfejl — brugeren kender ikke bilens funktion); fællesskabet svarer, admin "markér som løsning", så den fanges før rapporten til Zeekr. Kræver detalje-side pr. melding (fandtes ikke — board'et var inline uden link). Anonyme kommentarer (navn + captcha) og "Følg denne fejl" (email uden konto) er parkeret til senere.
+**Kommentarer / "Byggemøde" + detalje-side (bygget 20-11-2026):** login-styret v1. Formål: en "fejl" kan være en **fejl 40** (betjeningsfejl); fællesskabet svarer, moderator "markér som løsning", så den fanges før rapporten til Zeekr.
+- Migration `supabase/migrations/20261120170000_kommentarer.sql`: `comments`-tabel (issue_id, author_id, body, is_solution) + RLS (læs alle; authenticated skriver egne; forfatter retter/sletter egne; moderator retter/sletter/markerer alle) + touch-trigger. **Skal køres i Studio.**
+- `app/melding/[id]/page.tsx` — ny detalje-side: badges, titel, "Meldt {dato} · N bekræftelser", beskrivelse, stor stem-knap (genbrugt `ConfirmButton` m. ny `naeste`-prop til login-redirect), og Byggemøde.
+- `components/Kommentarer.tsx` — tråd + skrivefelt (login-gated) + moderering (markér som løsning / ret / slet). Kun én løsning pr. melding (server action nulstiller de andre).
+- `app/melding/actions.ts` — `tilfoejKommentar`/`retKommentar`/`sletKommentar`/`markerLoesning`.
+- `lib/queries.ts` — `getIssueDetalje()` + `getComments()` (delt `ISSUE_SELECT`/`mapIssue` med board'et). `lib/types.ts`: `Kommentar`.
+- `components/FejlBoard.tsx` — board-titler linker nu til `/melding/[id]`.
+- Parkeret: anonyme kommentarer (navn + captcha) og "Følg denne fejl" (email uden konto).
 
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
