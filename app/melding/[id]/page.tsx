@@ -4,7 +4,7 @@ import {
   getIssueDetalje,
   getComments,
   getMyConfirmedIssueIds,
-  getVarianter,
+  getMyCar,
   getVariantFordeling,
 } from '@/lib/queries';
 import { adminKontekst } from '@/lib/admin';
@@ -24,12 +24,12 @@ function daDato(iso: string): string {
 }
 
 export default async function MeldingSide({ params }: { params: { id: string } }) {
-  const [issue, kommentarer, mineSet, ctx, varianter, fordeling] = await Promise.all([
+  const [issue, kommentarer, mineSet, ctx, userCar, fordeling] = await Promise.all([
     getIssueDetalje(params.id),
     getComments(params.id),
     getMyConfirmedIssueIds(),
     adminKontekst(),
-    getVarianter(),
+    getMyCar(),
     getVariantFordeling(params.id),
   ]);
 
@@ -83,8 +83,8 @@ export default async function MeldingSide({ params }: { params: { id: string } }
       <div className="mt-4 flex items-center gap-4 rounded-2xl border border-grafit-200 bg-white p-5">
         <ConfirmButton
           issueId={issue.id}
-          models={issue.models.map((m) => ({ id: m.id, name: m.name }))}
-          varianter={varianter}
+          issueModelIds={issue.models.map((m) => m.id)}
+          userCar={userCar}
           initialCount={issue.confirmations}
           initialConfirmed={mineSet.has(issue.id)}
           isLoggedIn={isLoggedIn}

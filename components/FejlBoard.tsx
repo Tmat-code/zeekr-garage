@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { IssueRow, Model, VariantMap } from '@/lib/types';
+import type { IssueRow, Model, MinBil } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
 import { TYPE_META } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
@@ -14,13 +14,13 @@ type TypeFilter = 'alle' | 'fejl' | 'oenske';
 export default function FejlBoard({
   issues,
   models,
-  varianter,
+  userCar,
   myConfirmedIds,
   isLoggedIn,
 }: {
   issues: IssueRow[];
   models: Model[];
-  varianter: VariantMap;
+  userCar: MinBil | null;
   myConfirmedIds: string[];
   isLoggedIn: boolean;
 }) {
@@ -132,8 +132,8 @@ export default function FejlBoard({
             <li key={i.id} className="kort flex items-start gap-4 p-4 sm:p-5">
               <ConfirmButton
                 issueId={i.id}
-                models={i.models.map((m) => ({ id: m.id, name: m.name }))}
-                varianter={varianter}
+                issueModelIds={i.models.map((m) => m.id)}
+                userCar={userCar}
                 initialCount={i.confirmations}
                 initialConfirmed={mine.has(i.id)}
                 isLoggedIn={isLoggedIn}

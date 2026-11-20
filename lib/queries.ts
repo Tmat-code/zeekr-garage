@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
-import type { IssueRow, Model, Kommentar, VariantMap } from '@/lib/types';
+import type { IssueRow, Model, Kommentar, VariantMap, MinBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
@@ -72,6 +72,31 @@ export async function getIssueDetalje(id: string): Promise<IssueRow | null> {
   const { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
   if (error || !data) return null;
   return mapIssue(data);
+}
+
+// --- Brugerens egen bil (til ét-kliks "mig med") ---
+export async function getMyCar(): Promise<MinBil | null> {
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await sb
+    .from('profiles')
+    .select(
+      'car_model_id, car_variant_id, model:models!profiles_car_model_id_fkey ( name ), variant:variants!profiles_car_variant_id_fkey ( name )',
+    )
+    .eq('id', user.id)
+    .single();
+
+  if (!data?.car_model_id) return null;
+  return {
+    modelId: data.car_model_id,
+    variantId: data.car_variant_id ?? null,
+    modelName: (data as any).model?.name ?? '',
+    variantName: (data as any).variant?.name ?? null,
+  };
 }
 
 // --- Varianter pr. model (til "mig med"-flowet) ---

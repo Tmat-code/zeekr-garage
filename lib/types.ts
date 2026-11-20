@@ -13,6 +13,14 @@ export type Variant = { id: string; name: string };
 // model_id -> dens varianter (til "mig med"-flowet).
 export type VariantMap = Record<string, Variant[]>;
 
+// Brugerens registrerede bil (til ét-kliks "mig med").
+export type MinBil = {
+  modelId: string;
+  variantId: string | null;
+  modelName: string;
+  variantName: string | null;
+};
+
 // En fejl som den vises paa boardet: med koblede modeller og optalte bekraeftelser.
 export type IssueRow = {
   id: string;

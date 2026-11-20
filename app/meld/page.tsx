@@ -4,7 +4,7 @@ import {
   getIssues,
   getMyConfirmedIssueIds,
   getCurrentUser,
-  getVarianter,
+  getMyCar,
 } from '@/lib/queries';
 import type { IssueType } from '@/lib/config';
 import MeldFlow from '@/components/MeldFlow';
@@ -22,11 +22,11 @@ export default async function MeldSide({
 
   const tp = searchParams?.type;
   const initialType: IssueType | null = tp === 'fejl' || tp === 'oenske' ? tp : null;
-  const [models, issues, mineSet, varianter] = await Promise.all([
+  const [models, issues, mineSet, userCar] = await Promise.all([
     getModels(),
     getIssues(),
     getMyConfirmedIssueIds(),
-    getVarianter(),
+    getMyCar(),
   ]);
 
   return (
@@ -38,7 +38,7 @@ export default async function MeldSide({
       <MeldFlow
         issues={issues}
         models={models}
-        varianter={varianter}
+        userCar={userCar}
         myConfirmedIds={[...mineSet]}
         initialType={initialType}
       />

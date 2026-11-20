@@ -3,10 +3,18 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import type { Model, VariantMap } from '@/lib/types';
+import BilVaelger, { type BilValg } from '@/components/BilVaelger';
 
 type Mode = 'ind' | 'opret' | 'glemt';
 
-export default function LoginForm() {
+export default function LoginForm({
+  models,
+  varianter,
+}: {
+  models: Model[];
+  varianter: VariantMap;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const naeste = params.get('naeste') || '/';
@@ -15,6 +23,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [kode, setKode] = useState('');
   const [navn, setNavn] = useState('');
+  const [bil, setBil] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
   const [fejl, setFejl] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,6 +61,19 @@ export default function LoginForm() {
       }
 
       if (mode === 'opret') {
+        // Bil-valg skal udfyldes (medmindre "ejer ikke endnu").
+        const varianterForModel = bil.modelId ? (varianter[bil.modelId] ?? []) : [];
+        if (!bil.ejerIkke) {
+          if (!bil.modelId) {
+            setBusy(false);
+            return setFejl('Vælg din model — eller markér "Ejer ikke en Zeekr endnu".');
+          }
+          if (varianterForModel.length > 1 && !bil.variantId) {
+            setBusy(false);
+            return setFejl('Vælg din variant.');
+          }
+        }
+
         const { data, error } = await sb.auth.signUp({
           email,
           password: kode,
@@ -65,6 +87,14 @@ export default function LoginForm() {
           setInfo('Konto oprettet — tjek din mail for at bekræfte, så er du klar.');
           setBusy(false);
           return;
+        }
+        // Gem bilen på profilen (hvis ejer).
+        if (!bil.ejerIkke && bil.modelId && data.user) {
+          const variantId = bil.variantId || varianterForModel[0]?.id || null;
+          await sb
+            .from('profiles')
+            .update({ car_model_id: bil.modelId, car_variant_id: variantId })
+            .eq('id', data.user.id);
         }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password: kode });
@@ -114,10 +144,23 @@ export default function LoginForm() {
       )}
 
       {mode === 'opret' && (
-        <div>
-          <label htmlFor="navn" className="label">Visningsnavn</label>
-          <input id="navn" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder="Sådan vises du i community'et" className="input" />
-        </div>
+        <>
+          <div>
+            <label htmlFor="navn" className="label">Visningsnavn</label>
+            <input id="navn" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder="Sådan vises du i community'et" className="input" />
+          </div>
+
+          <div>
+            <label className="label">Din bil</label>
+            <BilVaelger models={models} varianter={varianter} value={bil} onChange={setBil} />
+            <p className="mt-2 text-xs text-grafit-500">
+              Hvorfor spørger vi? Din bil knytter dine &quot;mig med&quot;-stemmer til en rigtig
+              model og variant, så fejl-rapporterne til Zeekr bliver præcise. Ejer du ikke en Zeekr
+              endnu, kan du stadig læse og følge med — du kan bare ikke stemme, før din bil er
+              registreret. Du kan altid rette den under Min garage.
+            </p>
+          </div>
+        </>
       )}
 
       <div>

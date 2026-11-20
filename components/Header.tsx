@@ -35,6 +35,12 @@ export default async function Header() {
           )}
           {user ? (
             <div className="flex items-center gap-2 pl-1">
+              <Link
+                href="/garage"
+                className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100"
+              >
+                🚗 Min garage
+              </Link>
               <span className="hidden max-w-[160px] truncate text-xs text-grafit-500 sm:inline">
                 {user.email}
               </span>
