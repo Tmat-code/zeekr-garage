@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { SITE } from '@/lib/config';
-import { getCurrentUser } from '@/lib/queries';
+import { adminKontekst } from '@/lib/admin';
 
 export default async function Header() {
-  const user = await getCurrentUser();
+  const { user, rolle } = await adminKontekst();
+  const erModerator = rolle === 'admin' || rolle === 'moderator';
 
   return (
     <header className="sticky top-0 z-40 border-b border-grafit-200 bg-white/90 backdrop-blur">
@@ -24,6 +25,14 @@ export default async function Header() {
           <Link href="/om" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
             Om
           </Link>
+          {erModerator && (
+            <Link
+              href="/admin"
+              className="rounded-lg px-3 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
+            >
+              🔧 Værkstedet
+            </Link>
+          )}
           {user ? (
             <div className="flex items-center gap-2 pl-1">
               <span className="hidden max-w-[160px] truncate text-xs text-grafit-500 sm:inline">

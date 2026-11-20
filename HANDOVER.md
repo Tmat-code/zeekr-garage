@@ -181,6 +181,33 @@ Glemt-password virker nu via Resend-SMTP. Magic-link-login er bevidst **ikke** t
 ## Stave-rettelse æ/ø/å (20-11-2026)
 Bruger-synlige labels var skrevet med ASCII-digrafer (Hoej, Bekraeftet, Loest, uafhaengigt) fra et tidligere trin. Rettet til rigtige tegn: `lib/config.ts` (severity `Høj`, status `Bekræftet`/`Løst i OTA`, DISCLAIMER `uafhængigt`), `lib/tid.ts` (`i går`, `måned`/`måneder`, `år`), `app/layout.tsx` (meta-beskrivelse). **Kun display-strenge** — enum-værdier (`hoej`,`bekraeftet`,`loest_i_ota`,`oenske`), CSS-klasser (`bg-loest`) og variabelnavne er bevidst ASCII og urørte (DB/klasse-stabilitet). NB: `perl -CSD` dobbelt-encoder danske literaler — brug Python/Edit til æ/ø/å, ikke perl.
 
+## Admin / "Værkstedet" (roller + moderering) — opsat 20-11-2026
+Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendte 11 skærmbilleder som reference). **Fase 1 bygget:** fundament + moderering + overblik. Resten (nedenfor) er roadmap.
+
+**Arkitektur-valg (afviger bevidst fra bugherrers SQLite-model):**
+- **Ingen service_role i app'en.** Admin skriver via sin EGEN authenticated session (anon-key + JWT), styret af RLS. Afløser init-SQL'ens kommentar om service_role-moderering.
+- **Rolle på kontoen** (`profiles.role` = `admin`|`moderator`), ikke et parallelt password-/invitationssystem. Login er Supabase.
+- Migration `supabase/migrations/20261120140000_admin_roles.sql`: `profiles.role`-kolonne, `er_admin()`/`er_moderator()` (SQL, `security definer` → bypasser RLS internt, undgår rekursion), RLS-skrivepolitikker: `issues_update_mod`/`issues_delete_mod` (moderator retter/sletter alle), `issue_models_delete_mod`, `confirmations_delete_admin` (oprydning), `profiles_update_admin` (rolle-styring).
+- **Formand gøres til admin** med: `update public.profiles set role='admin' where id=(select id from auth.users where email='<formandens email>');` (kør i Supabase Studio SQL-editor på Zeekr-instansen).
+
+**Kode (fase 1):**
+- `lib/admin.ts` — `adminKontekst()` (user+rolle+navn i ét kald), `erAdmin()`, `erModerator()`.
+- `lib/queries-admin.ts` — `getAdminStats()` (tal til tiles), `getSenesteAktivitet()` (forenet feed: nye meldinger + bekræftelser).
+- `app/admin/layout.tsx` — server-gate (redirect til `/` hvis ikke moderator) + "🔧 Værkstedet"-header med rolle-badge.
+- `app/admin/page.tsx` — Overblik + Modereringstabel.
+- `app/admin/actions.ts` — server actions: `saetStatus`, `saetSeverity`, `markerLoest`, `sletMelding`, `gemRedigering` (alle `kraevModerator()`-gated).
+- `components/admin/Overblik.tsx` — 4 stat-tiles (meldinger, bekræftelser, åbne, løst) + seneste aktivitet.
+- `components/admin/ModereringsTabel.tsx` — client, sorteret efter stemmer: status/alvor-dropdowns, markér løst, redigér (inline), slet (bekræft-step).
+- `components/Header.tsx` — "🔧 Værkstedet"-link vises kun for moderator/admin.
+
+**Roadmap (resten af bugherrers panel — ikke bygget endnu):**
+- **Forside-besked** (banner-toggle, skærm 4) — kræver `site_announcement`-tabel + editor + visning på `/`.
+- **Zeekr-rapport** (skærm 2,3,6) — PDF/CSV-eksport, "markér sendt", delta siden sidst (+N stemmer), rapport-log. (`zeekr_reports`-tabellen findes allerede i init — udvides.)
+- **Aktivitet** (skærm 8,9) — grafer (hændelser pr. time/ugedag/dag), afledt af created_at på issues/confirmations.
+- **Adgange** (skærm 5) — moderator-invitationer. Tilpasses Supabase: invitation sætter rolle på kontoen efter signup (ikke eget password).
+- **Mistænkelig aktivitet** (skærm 10) — tilpasses: stemmer er konto-baserede (RLS, én pr. konto), ikke browser-fingerprints som bugherrer.
+- **Oprydning** (skærm 11) — slet test-stemmer før en dato (`confirmations_delete_admin` er på plads).
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.
