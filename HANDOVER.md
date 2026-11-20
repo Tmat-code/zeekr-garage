@@ -102,6 +102,11 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - Running, alle containere healthy. Netværk: "Use the stack network only" (ingen ekstern domæne endnu).
   - Migration + seed anvendt via Coolify-terminal → db-container (`psql`). Overført som base64 + sha256-verificeret (byte-perfekt), da repoet er privat.
   - **App'en forbinder internt:** da instansen kun er på stack-netværket, forbinder Next.js-appen (når den kører på Pixa) via Kong-gateway'ens interne service-navn, ikke en public URL. Connection-detaljer (URL/anon-key/service-key) hentes fra servicens Environment Variables i Coolify når app-skallen bygges.
+- **Studio-adgang (LAN):** Zeekr-instansens Kong er mappet til host-port **8002** → åbn `http://192.168.1.18:8002` i browseren. Beskyttet af Basic-auth = servicens **Supabase · Dashboard User/Password** (se felterne i Coolify). Selvhostet Supabase er én-projekt-per-stack, så hver instans har sit eget Studio:
+  - 8001 → Karvia-instansen
+  - 8002 → Zeekr Garage-instansen (vores)
+  - Jobtavle/lejesyn-instansen (`asmzli3…`) har ingen host-port (kun stack-netværk)
+  - Port tilføjet i compose: `ports: - "8002:8000"` på `supabase-kong`, redeployet.
 - Karvias Supabase (`supabase-attv9fy0…`) står **Degraded** — ifølge Torben pga. opgradering af Supabase til nyeste version (ikke en mystisk fejl). Ikke rørt. Den ulabelede er nu navngivet "Jobtavle og lejesyn" i Coolify; Zeekr-instansen "Zeekr-garage".
 
 ## Status / næste skridt
