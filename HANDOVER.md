@@ -122,7 +122,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Fejl-board multi-model: offentlig læsning, modelfilter, platform-signal, meld → bekræft/stem (login-styret).
   - [x] Fuldt bugherrer-flow på `/meld`: trin-indikator, type-valg (fejl/ønske), søg-først, genstart-tjek, softwareversion + telefon-felter.
   - [x] **Deployet til Pixa — LIVE på `http://192.168.1.18:3003`** (LAN). Board læser de 6 modeller fra den nye Supabase. ✅
-  - [ ] Offentlig adgang udefra (Cloudflare Tunnel på app + Supabase-URL) + rigtigt domæne zeekr-garage.dk.
+  - [x] **Auto-deploy via n8n-poller** (se afsnit nedenfor) — push → deploy, ingen manuel redeploy. Repo gjort offentligt. Verificeret end-to-end 20-11-2026 (commit `bdd144e` deployet via API-kilde).
+  - [ ] **← NÆSTE: Offentlig adgang udefra.** Cloudflare Tunnel på både app (host-port 3003) og Supabase-API (Kong, host-port 8002), så `NEXT_PUBLIC_SUPABASE_URL` bliver en public https-URL (fx `https://api.zeekr-garage.dk`). Peg `zeekr-garage.dk` på app-tunnelen. Opdatér build-args i Coolify til de nye public-URL'er → redeploy (sker nu auto via n8n ved næste push, eller manuelt). SMTP til rigtige bekræftelses-mails, ellers behold auto-confirm. Detaljer i "Deploy"-afsnittet.
 
 ## App (skive 1) — struktur
 - Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
