@@ -5,7 +5,8 @@ import type { IssueRow, Model, Kommentar } from '@/lib/types';
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
        issue_models ( models ( id, slug, name, platform ) ),
-       confirmations ( count )`;
+       confirmations ( count ),
+       comments ( count )`;
 
 function mapIssue(row: any): IssueRow {
   const models = (row.issue_models ?? [])
@@ -15,6 +16,7 @@ function mapIssue(row: any): IssueRow {
   const confirmations = Array.isArray(row.confirmations)
     ? (row.confirmations[0]?.count ?? 0)
     : 0;
+  const comments = Array.isArray(row.comments) ? (row.comments[0]?.count ?? 0) : 0;
   return {
     id: row.id,
     type: (row.type ?? 'fejl') as IssueType,
@@ -26,6 +28,7 @@ function mapIssue(row: any): IssueRow {
     created_at: row.created_at,
     models,
     confirmations,
+    comments,
     software_version: row.software_version ?? null,
   };
 }

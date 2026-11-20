@@ -228,6 +228,8 @@ Admin-panelet var færdigt, men bruger-siden haltede. To huller (brugerens obser
 - `components/FejlBoard.tsx` — board-titler linker nu til `/melding/[id]`.
 - Parkeret: anonyme kommentarer (navn + captcha) og "Følg denne fejl" (email uden konto).
 
+**Board-forbedringer (20-11-2026):** board-rækker har nu en eksplicit "Detaljer →"-knap (udover titel-linket), kommentar-tæller (💬 N) i badge-rækken, og detalje-siden framer bekræftelser som "🚗 N biler bekræftet". `comments ( count )` tilføjet til `ISSUE_SELECT` → `IssueRow.comments`. **"Biler bekræftet" = antal bekræftelser**, fordi "mig med" altid kræver at man vælger sin model (hver bekræftelse = én bil). ÅBENT: skal bekræftelse fange **variant/trim** (Privilege AWD / Long Range RWD / Core RWD) som bugherrer? Kræver variant-liste pr. model + kolonne på confirmations. Afventer brugerens svar.
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.

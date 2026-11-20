@@ -20,8 +20,10 @@ export type IssueRow = {
   created_at: string;
   // Modeller fejlen er tagget til (via issue_models).
   models: Pick<Model, 'id' | 'slug' | 'name' | 'platform'>[];
-  // Antal "mig med"-bekraeftelser i alt.
+  // Antal "mig med"-bekraeftelser i alt (= antal bekraeftede biler).
   confirmations: number;
+  // Antal kommentarer ("Byggemøde").
+  comments: number;
   // Seneste softwareversion nogen har bekraeftet paa (valgfri visning).
   software_version: string | null;
 };

@@ -127,7 +127,7 @@ export default function FejlBoard({
       ) : (
         <ul className="grid gap-3">
           {viste.map((i) => (
-            <li key={i.id} className="kort flex gap-4 p-4 sm:p-5">
+            <li key={i.id} className="kort flex items-start gap-4 p-4 sm:p-5">
               <ConfirmButton
                 issueId={i.id}
                 models={i.models.map((m) => ({ id: m.id, name: m.name }))}
@@ -157,8 +157,17 @@ export default function FejlBoard({
                     <StatusTag status={i.status} />
                   )}
                   <span className="text-grafit-400">· {relativTid(i.created_at)}</span>
+                  {i.comments > 0 && (
+                    <span className="text-grafit-400">· 💬 {i.comments}</span>
+                  )}
                 </div>
               </div>
+              <Link
+                href={`/melding/${i.id}`}
+                className="btn-ghost shrink-0 self-start !px-3 !py-1.5 text-sm"
+              >
+                Detaljer →
+              </Link>
             </li>
           ))}
         </ul>

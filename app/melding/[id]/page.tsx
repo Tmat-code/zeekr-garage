@@ -63,8 +63,8 @@ export default async function MeldingSide({ params }: { params: { id: string } }
 
       <h1 className="mt-3 text-2xl font-semibold tracking-tight text-grafit-900">{issue.title}</h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Meldt {daDato(issue.created_at)} · {issue.confirmations}{' '}
-        {issue.confirmations === 1 ? 'bekræftelse' : 'bekræftelser'}
+        Meldt {daDato(issue.created_at)} · 🚗 {issue.confirmations}{' '}
+        {issue.confirmations === 1 ? 'bil bekræftet' : 'biler bekræftet'}
       </p>
 
       {/* Beskrivelse */}
