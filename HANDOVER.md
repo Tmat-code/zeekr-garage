@@ -123,7 +123,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
   - [x] Fuldt bugherrer-flow på `/meld`: trin-indikator, type-valg (fejl/ønske), søg-først, genstart-tjek, softwareversion + telefon-felter.
   - [x] **Deployet til Pixa — LIVE på `http://192.168.1.18:3003`** (LAN). Board læser de 6 modeller fra den nye Supabase. ✅
   - [x] **Auto-deploy via n8n-poller** (se afsnit nedenfor) — push → deploy, ingen manuel redeploy. Repo gjort offentligt. Verificeret end-to-end 20-11-2026 (commit `bdd144e` deployet via API-kilde).
-  - [ ] **← NÆSTE: Offentlig adgang udefra.** Cloudflare Tunnel på både app (host-port 3003) og Supabase-API (Kong, host-port 8002), så `NEXT_PUBLIC_SUPABASE_URL` bliver en public https-URL (fx `https://api.zeekr-garage.dk`). Peg `zeekr-garage.dk` på app-tunnelen. Opdatér build-args i Coolify til de nye public-URL'er → redeploy (sker nu auto via n8n ved næste push, eller manuelt). SMTP til rigtige bekræftelses-mails, ellers behold auto-confirm. Detaljer i "Deploy"-afsnittet.
+  - [x] **Offentlig adgang udefra opsat 20-11-2026** (se "Offentlig adgang (Cloudflare Tunnel)"-afsnittet). zeekr-garage.dk tilføjet som Cloudflare-zone + DNSSEC fjernet hos Simply; tunnel "pixa" udvidet med app + www + api; Coolify build-arg skiftet til public Supabase-URL + intern SSR-URL; redeployet. Verificeret udefra (SSR-board + auth-endpoint).
+  - [ ] **← NÆSTE: Skive 2+.** Zeekr-rapporter, Discourse-opsætning + SSO + tematisering, Q&A/guides, AI-dedup + flag-kø. Valgfrit først: SMTP (Resend) til rigtige email-bekræftelser (ellers kører auto-confirm fint).
 
 ## App (skive 1) — struktur
 - Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
@@ -141,10 +142,23 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 ## Deploy (Coolify-app) — opsat 20-11-2026
 - Coolify-app `zeekr-garage:main-rpcqm0klit7tcvzms7syizxv`, kilde = GitHub App (`troubled-teira…`), repo Tmat-code/zeekr-garage, branch main, build = Dockerfile. **Auto-deploy on push** er slået til.
 - **LIVE på LAN:** `http://192.168.1.18:3003` (host-port-mapping 3003:3000 i "Edit Networking → Port mappings"). Brugte 3003 fordi 3000/3001/3002 var optaget.
-- Build-args i Coolify (Buildtime+Runtime): `NEXT_PUBLIC_SUPABASE_URL=http://192.168.1.18:8002`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon JWT>`. Browseren når Supabase på 8002 (Kong serverer /rest + /auth med anon-key, CORS `*`).
+- Build-args i Coolify (Buildtime+Runtime): `NEXT_PUBLIC_SUPABASE_URL=https://api.zeekr-garage.dk` (var `http://192.168.1.18:8002` i LAN-fasen — skiftet 20-11-2026), `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon JWT>`. Desuden runtime-env `SUPABASE_INTERNAL_URL=http://192.168.1.18:8002` så SSR læser Kong internt på LAN (ingen hairpin ud gennem tunnelen). Browseren når Supabase offentligt på `https://api.zeekr-garage.dk` (Kong serverer /rest + /auth med anon-key, CORS `*`).
 - **Auto-confirm slået til:** Supabase-servicens env `ENABLE_EMAIL_AUTOCONFIRM=true` (→ GOTRUE_MAILER_AUTOCONFIRM), Supabase genstartet. Så konto-oprettelse virker uden mail-server.
 - Coolify gav også en sslip.io-URL via proxy (port 80), men den peger på WAN-IP (usikker på LAN) — derfor host-porten 3003 til LAN-brug.
-- **Næste for offentlig adgang:** Cloudflare Tunnel til både app og Supabase-API (så `NEXT_PUBLIC_SUPABASE_URL` bliver en public https-URL), og peg zeekr-garage.dk derhen. SMTP til rigtige bekræftelses-mails (ellers behold auto-confirm).
+- **Offentlig adgang: GJORT 20-11-2026** — se afsnittet "Offentlig adgang (Cloudflare Tunnel)" nedenfor.
+
+## Offentlig adgang (Cloudflare Tunnel) — opsat 20-11-2026
+Siden er nu offentligt tilgængelig på **https://zeekr-garage.dk** (+ www + api). Vejen: DNS (Cloudflare) → Cloudflare edge → tunnel "pixa" → Pixa.
+
+- **Domæne/zone:** zeekr-garage.dk er registreret hos **Simply.com**, men var ikke tilføjet til Cloudflare. Tilføjet som zone (Free-plan). Nameserverne pegede allerede på Cloudflare (`javon.ns.cloudflare.com` + `kayleigh.ns.cloudflare.com`) fra et tidligere forsøg, så zonen blev **Active** med det samme. Konto: T.mathiasen@outlook.com.
+- **DNSSEC:** zonen var DNSSEC-signeret hos Simply. Da Cloudflare nu er autoritativ, blev DNSSEC **fjernet** hos Simply (DNS administration → Rediger DNSSEC → Fjern) — ellers fejler domænet DNSSEC-validering (SERVFAIL). Kan slås til igen via Cloudflare senere, hvis ønsket.
+- **Tunnel "pixa"** (samme tunnel som lejesyn/bugherrer/karvia). 3 nye routes, alle *Published application*, service = `http://192.168.1.18:<host-port>`, DNS-CNAME auto-oprettet (proxied):
+  - `zeekr-garage.dk` → `http://192.168.1.18:3003` (app)
+  - `www.zeekr-garage.dk` → `http://192.168.1.18:3003` (app; tilføjet fordi Safari auto-prepender "www")
+  - `api.zeekr-garage.dk` → `http://192.168.1.18:8002` (Supabase Kong)
+- **Coolify:** `NEXT_PUBLIC_SUPABASE_URL` skiftet til `https://api.zeekr-garage.dk` (build-arg → bages ind ved build, kræver redeploy) + ny runtime-env `SUPABASE_INTERNAL_URL=http://192.168.1.18:8002` (SSR internt). Redeployet manuelt (= 1 build oven i det n8n allerede havde kørt på samme commit; ikke dobbelt-firing).
+- **Verificeret udefra:** apex + www loader board'et via SSR (6 modeller), gyldigt SSL; klient-side auth når `api.zeekr-garage.dk` (GoTrue svarer korrekt på forkert login). **Mangler:** fuldt happy-path-login + melding med en rigtig konto (auto-confirm er til, så signup burde virke uden mail).
+- **Klient-cache-note:** rammer man et navn FØR dets DNS-record findes, kan det blive negativt cachet lokalt (Safari viste "kan ikke finde serveren" for www selv efter www var oppe; virkede i privat vindue). Fix: flush DNS / privat vindue / vent ~15–30 min. Kun den ene maskine, ikke nye besøgende.
 
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
