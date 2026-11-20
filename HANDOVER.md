@@ -90,10 +90,14 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - `supabase/seed.sql` — de 6 DK-modeller + platform. Idempotent.
 - Databasen anvendes IKKE endnu — afventer at vi identificerer den rigtige Supabase-instans på Pixa (se nedenfor).
 
-## Pixa / Supabase-situation (afklaret 20-11-2026)
-- Supabase-værktøjet (cloud-API) i Claude ser KUN cloud-projektet `talentry-platform`. De 2 selvhostede instanser på Pixa er bag Cloudflare Tunnel og kan ikke nås herfra via cloud-API.
-- Pixa kører 2 selvhostede Supabase-instanser i Coolify: den ene er Karvias, den anden er ulabelet/ledig (sandsynligvis default-install).
-- **Blokerer anvendelse mod Pixa:** identificér den ulabelede instans (Coolify/Studio) FØR vi kører migration — ellers risiko for at ramme Karvias DB. Zeekr Garage kan enten overtage den ledige instans eller få en ny i Coolify.
+## Pixa / Supabase-situation (undersøgt i Coolify 20-11-2026)
+- Claude når Pixa via Coolifys browser-UI (http://192.168.1.18:8000) og Coolifys container-terminal (= "direkte" Pixa-adgang). Claudes egen cloud-sandbox er netværks-låst og kan IKKE nå Pixa/LAN; Supabase-cloud-API'et i Claude ser kun cloud-projektet `talentry-platform`.
+- Coolify-projekt "My first project" / production, server `localhost` (= Pixa). 7 ressourcer: bugherrer, docker-image (Libretranslate), jobtavle, karvia, lejesyn, + 2 Supabase-services.
+- **De 2 Supabase-instanser — identificeret:**
+  - `supabase-attv9fy0cugo7ol0athiobws` — label **"Karvia"**. Står **Degraded** (⚠️ bør kigges på separat).
+  - `supabase-asmzli3ytzonaxou4fmfalee` — ulabelet, men **IKKE ledig**: den er jobtavle + Lejesyns instans. Tabeller i `public`: `job_opslag` (**655 rækker** — jobtavles live-data), `syn` (0 rækker — Lejesyn, ingen data endnu). `auth.users` = 0 på hele instansen (ingen bruger Supabase-auth endnu). "Changes pending" i Coolify.
+- **Konklusion:** ingen af de 2 instanser er fri. Pixa har ~5,5 GiB RAM tilgængelig (af 13 GiB) → plads til en ny dedikeret instans.
+- **Åben beslutning (A/B):** (A) ny dedikeret Supabase-instans til Zeekr Garage i Coolify — ren adskillelse, ~1–1,5 GiB RAM. (B) eget Postgres-schema `zeekr` i den eksisterende jobtavle/lejesyn-instans — letvægt, men deler stack + `auth.users` med de apps. Anbefaling: A (portfolio-kronjuvel, rører ikke jobtavles live-DB).
 
 ## Status / næste skridt
 - [x] Repo oprettet + Claude-adgang bekræftet (klonet OK).
@@ -101,7 +105,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - [x] Domæne zeekr-garage.dk registreret.
 - [ ] Byg skive 1:
   - [x] Kerneskema som migrations-SQL (syntaks-valideret).
-  - [ ] Identificér ulabelet Supabase-instans på Pixa → anvend migration + seed.
+  - [x] Undersøgt Supabase på Pixa — ingen instans er fri (se ovenfor).
+  - [ ] Beslut A/B (ny instans vs. `zeekr`-schema) → anvend migration + seed.
   - [ ] App-skal (genbrug bugherrers Next.js/TS) + Supabase-klient.
   - [ ] Fejl-board multi-model: meld → bekræft → stem (UI).
 
