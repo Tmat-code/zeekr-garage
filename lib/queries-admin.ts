@@ -141,6 +141,37 @@ export type Aktivitet = {
   roligstTime: number | null;
 };
 
+// =========================================================================
+// Adgange — personer med rolle + pending invitationer
+// =========================================================================
+export type AdgangBruger = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: string;
+  sidst_logget: string | null;
+  oprettet: string;
+};
+export type AdgangInvitation = { email: string; role: string; created_at: string };
+
+export async function getAdgange(): Promise<{
+  brugere: AdgangBruger[];
+  invitationer: AdgangInvitation[];
+}> {
+  const sb = supabaseServer();
+  const [b, inv] = await Promise.all([
+    sb.rpc('admin_brugere'),
+    sb
+      .from('pending_invitations')
+      .select('email, role, created_at')
+      .order('created_at', { ascending: false }),
+  ]);
+  return {
+    brugere: (b.data ?? []) as AdgangBruger[],
+    invitationer: (inv.data ?? []) as AdgangInvitation[],
+  };
+}
+
 export async function getAktivitet(): Promise<Aktivitet> {
   const sb = supabaseServer();
   const [iss, con] = await Promise.all([

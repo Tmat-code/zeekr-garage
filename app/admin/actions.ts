@@ -65,6 +65,36 @@ export async function gemRedigering(
   revalider();
 }
 
+// --- Adgange (kun admin) ---
+export async function inviterBruger(email: string, rolle: string): Promise<'sat' | 'inviteret'> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const e = email.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error('Ugyldig email.');
+  if (rolle !== 'admin' && rolle !== 'moderator') throw new Error('Ugyldig rolle.');
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('admin_inviter', { p_email: e, p_rolle: rolle });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+  return (data as 'sat' | 'inviteret') ?? 'inviteret';
+}
+
+export async function saetRolle(brugerId: string, rolle: string | null): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_saet_rolle', { p_bruger: brugerId, p_rolle: rolle });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+  revalidatePath('/admin');
+}
+
+export async function fjernInvitation(email: string): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_fjern_invitation', { p_email: email.toLowerCase() });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+}
+
 // --- Oprydning: fjern bekræftelser (stemmer) før en dato (kun admin) ---
 function gyldigDato(dato: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(dato);

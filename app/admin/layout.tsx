@@ -41,6 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/aktivitet" className="btn-ghost !py-1.5 text-sm">
             📈 Aktivitet
           </Link>
+          <Link href="/admin/adgange" className="btn-ghost !py-1.5 text-sm">
+            👥 Adgange
+          </Link>
           <Link href="/" className="btn-ghost !py-1.5 text-sm">
             ← Til forsiden
           </Link>
