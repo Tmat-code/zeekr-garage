@@ -10,12 +10,12 @@ export function relativTid(iso: string): string {
   const timer = Math.floor(min / 60);
   if (timer < 24) return `${timer}t siden`;
   const dage = Math.floor(timer / 24);
-  if (dage === 1) return 'i gaar';
+  if (dage === 1) return 'i går';
   if (dage < 7) return `${dage} dage siden`;
   const uger = Math.floor(dage / 7);
   if (uger < 5) return `${uger} ${uger === 1 ? 'uge' : 'uger'} siden`;
   const maaneder = Math.floor(dage / 30);
-  if (maaneder < 12) return `${maaneder} ${maaneder === 1 ? 'maaned' : 'maaneder'} siden`;
+  if (maaneder < 12) return `${maaneder} ${maaneder === 1 ? 'måned' : 'måneder'} siden`;
   const aar = Math.floor(dage / 365);
-  return `${aar} ${aar === 1 ? 'aar' : 'aar'} siden`;
+  return `${aar} ${aar === 1 ? 'år' : 'år'} siden`;
 }

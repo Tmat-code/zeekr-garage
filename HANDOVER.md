@@ -178,6 +178,9 @@ Glemt-password virker nu via Resend-SMTP. Magic-link-login er bevidst **ikke** t
   - **Coolify-værdier (Zeekr-Supabase, kilde-vars):** `MAILER_TEMPLATES_RECOVERY=https://zeekr-garage.dk/auth/recovery-email`, `MAILER_SUBJECTS_RECOVERY=Nulstil dit password - Zeekr Garage`. Supabase genstartet efter.
   - **Verificeret cross-browser 20-11-2026:** anmod i én browser, klik linket i en anden → virker (nyt password sat, logget ind). Mail på dansk.
 
+## Stave-rettelse æ/ø/å (20-11-2026)
+Bruger-synlige labels var skrevet med ASCII-digrafer (Hoej, Bekraeftet, Loest, uafhaengigt) fra et tidligere trin. Rettet til rigtige tegn: `lib/config.ts` (severity `Høj`, status `Bekræftet`/`Løst i OTA`, DISCLAIMER `uafhængigt`), `lib/tid.ts` (`i går`, `måned`/`måneder`, `år`), `app/layout.tsx` (meta-beskrivelse). **Kun display-strenge** — enum-værdier (`hoej`,`bekraeftet`,`loest_i_ota`,`oenske`), CSS-klasser (`bg-loest`) og variabelnavne er bevidst ASCII og urørte (DB/klasse-stabilitet). NB: `perl -CSD` dobbelt-encoder danske literaler — brug Python/Edit til æ/ø/å, ikke perl.
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.

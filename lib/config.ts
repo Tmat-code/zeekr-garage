@@ -7,7 +7,7 @@ export const SITE = {
 };
 
 export const DISCLAIMER =
-  `${SITE.domain} er et uofficielt, uafhaengigt ejer-community. ` +
+  `${SITE.domain} er et uofficielt, uafhængigt ejer-community. ` +
   `Siden er ikke tilknyttet, sponsoreret eller godkendt af ZEEKR, Geely ` +
   `eller deres datterselskaber.`;
 
@@ -46,7 +46,7 @@ export type Severity = (typeof SEVERITIES)[number];
 export const SEVERITY_STYLE: Record<Severity, { label: string; chip: string }> = {
   lav: { label: 'Lav', chip: 'bg-grafit-100 text-grafit-600' },
   middel: { label: 'Middel', chip: 'bg-kobber-100 text-kobber-800' },
-  hoej: { label: 'Hoej', chip: 'bg-kobber-200 text-kobber-900' },
+  hoej: { label: 'Høj', chip: 'bg-kobber-200 text-kobber-900' },
   kritisk: { label: 'Kritisk', chip: 'bg-grafit-900 text-white' },
 };
 
@@ -57,7 +57,7 @@ export type Status = (typeof STATUSES)[number];
 
 export const STATUS_STYLE: Record<Status, { label: string; chip: string; ikon: string }> = {
   ny: { label: 'Ny', chip: 'bg-grafit-100 text-grafit-600', ikon: '•' },
-  bekraeftet: { label: 'Bekraeftet', chip: 'bg-kobber-500 text-white', ikon: '✓' },
+  bekraeftet: { label: 'Bekræftet', chip: 'bg-kobber-500 text-white', ikon: '✓' },
   sendt_til_zeekr: { label: 'Sendt til Zeekr', chip: 'bg-grafit-900 text-white', ikon: '→' },
-  loest_i_ota: { label: 'Loest i OTA', chip: 'bg-loest text-white', ikon: '✓' },
+  loest_i_ota: { label: 'Løst i OTA', chip: 'bg-loest text-white', ikon: '✓' },
 };

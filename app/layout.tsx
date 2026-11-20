@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { SITE } from '@/lib/config';
 
 const BESKRIVELSE =
-  'Uofficielt, uafhaengigt community for Zeekr-ejere i Norden. Meld, bekraeft og stem paa softwarefejl paa tvaers af modeller — og saml dem i rapporter til Zeekr.';
+  'Uofficielt, uafhængigt community for Zeekr-ejere i Norden. Meld, bekræft og stem på softwarefejl på tværs af modeller — og saml dem i rapporter til Zeekr.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(`https://${SITE.domain}`),
