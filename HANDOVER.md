@@ -214,6 +214,13 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 - ~~**Mistænkelig aktivitet** (skærm 10)~~ **DROPPET** (brugerens beslutning 20-11-2026): fup-skærmen giver ikke mening her — stemmer er konto-bundne (én pr. konto, DB-håndhævet), ikke browser-baserede som bugherrer. Intet fup-panel.
 - ~~**Oprydning** (skærm 11)~~ **BYGGET 20-11-2026:** `OprydningPanel` på `/admin` — vælg dato, "Vis antal", dernæst "Fjern N stemmer" (slet bekræftelser før dato via `confirmations_delete_admin`). Server actions `taelBekraeftelserFoer`/`fjernBekraeftelserFoer` (erAdmin-gated). Ingen migration. Nyttig til at rydde test-stemmer før cutover-import.
 
+## Bruger-forside: overblik + kommentarer (bruger-paritet med bugherrer)
+Admin-panelet var færdigt, men bruger-siden haltede. To huller (brugerens observation 20-11-2026): forside-overblik manglede, og man kunne kun melde — ingen kunne kommentere.
+
+**Forside-overblik (bygget 20-11-2026):** `components/ForsideOverblik.tsx` — 4 nøgletal (Meldinger / Bekræftet af ejere / Sendt til Zeekr / Løst, afledt af `issues`-arrayet i `app/page.tsx`, ingen ekstra query) + tre "sådan virker det"-kort (Søg først / Bekræft sammen / Send til Zeekr). Hero trimmet. Dette er samtidig landing-page'en i hybrid-form.
+
+**Kommentarer / "Byggemøde" (under opbygning):** login-styret til v1 (konsistent med konto-model, ingen captcha). Formål: en "fejl" kan være en **fejl 40** (betjeningsfejl — brugeren kender ikke bilens funktion); fællesskabet svarer, admin "markér som løsning", så den fanges før rapporten til Zeekr. Kræver detalje-side pr. melding (fandtes ikke — board'et var inline uden link). Anonyme kommentarer (navn + captcha) og "Følg denne fejl" (email uden konto) er parkeret til senere.
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.
