@@ -162,6 +162,19 @@ Siden er nu offentligt tilgængelig på **https://zeekr-garage.dk** (+ www + api
 - **Bug 2 fundet + rettet (redirect til 0.0.0.0):** logout sendte til `https://0.0.0.0:3000/` (ERR_SSL_PROTOCOL_ERROR). Årsag: Next.js standalone binder til `0.0.0.0:3000`, så `request.url` i route-handlers er den interne adresse — en redirect bygget på den peger på 0.0.0.0. Bag tunnelen kommer det rigtige værtsnavn i Host-headeren. **Fix:** ny `lib/url.ts` (`publicOrigin()` læser Host/X-Forwarded-Host + proto; `sikkerSti()` mod open-redirect), brugt i `app/logout/route.ts` og `app/auth/callback/route.ts`. (Samme fælde kan ramme fremtidige server-redirects — brug `publicOrigin`, aldrig `request.url`.) Login-redirect var upåvirket (client-side `window.location.origin` + relativ `router.push`).
 - **Klient-cache-note:** rammer man et navn FØR dets DNS-record findes, kan det blive negativt cachet lokalt (Safari viste "kan ikke finde serveren" for www selv efter www var oppe; virkede i privat vindue). Fix: flush DNS / privat vindue / vent ~15–30 min. Kun den ene maskine, ikke nye besøgende.
 
+## Password-reset + SMTP (Resend) — opsat 20-11-2026
+Glemt-password virker nu via Resend-SMTP. Magic-link-login er bevidst **ikke** tilføjet (kun password + reset).
+
+- **Resend:** domænet `zeekr-garage.dk` tilføjet + verificeret (DKIM-TXT + 2 CNAMEs `rsend`/`send` via Forge; Resends "Auto configure" lagde DNS-records direkte i Cloudflare efter OAuth-godkendelse). Afsender: `noreply@zeekr-garage.dk`. API-nøgle (Sending access, scoped til domænet) oprettet af Torben — ligger **kun** i Coolify (`SMTP_PASS`), Claude har ikke set den.
+- **GoTrue-env på Zeekr-Supabase'en** (Coolify → `supabase-zdmeluhkaf…`, kilde-vars; GOTRUE_*-varianterne afledes):
+  - `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587` (STARTTLS), `SMTP_USER=resend`, `SMTP_PASS=<Resend API-nøgle>`, `SMTP_ADMIN_EMAIL=noreply@zeekr-garage.dk`, `SMTP_SENDER_NAME=Zeekr Garage`
+  - `GOTRUE_SITE_URL=https://zeekr-garage.dk` (var `${SERVICE_URL_SUPABASEKONG}`)
+  - `API_EXTERNAL_URL=https://api.zeekr-garage.dk` (var `http://supabase-kong:8000` internt → ellers pegede selve mail-linket et sted browseren ikke kan nå udefra)
+  - `ADDITIONAL_REDIRECT_URLS=https://zeekr-garage.dk/**,https://www.zeekr-garage.dk/**`
+  - `ENABLE_EMAIL_AUTOCONFIRM=true` (uændret — signup kræver ikke bekræftelse; reset sender mail alligevel)
+  - Supabase **genstartet** for at anvende.
+- **App:** `components/LoginForm.tsx` fik "Glemt password?" (ny `glemt`-mode → `resetPasswordForEmail`, redirect `/auth/callback?naeste=/nulstil`). Ny side `app/nulstil/page.tsx` + `components/NulstilForm.tsx` (kræver recovery-session fra linket, sætter nyt password med `updateUser`). `/auth/callback` bytter koden → session → `/nulstil`.
+
 ## Auto-deploy via n8n-poller (opsat 20-11-2026)
 Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router-porte), så n8n på Pixa "ringer ud" — poller GitHub og trigger Coolify-deploy lokalt. Kæden: **Claude pusher → n8n opdager → Coolify deployer**, ingen manuel redeploy.
 - **n8n-workflow "Zeekr Garage auto-deploy"** (kopi af bugherrers, 4 noder): Schedule (hvert 3. min) → HTTP GET `https://api.github.com/repos/Tmat-code/zeekr-garage/commits/main` (header `User-Agent: n8n`) → Code (husker sidste `sha` i workflow static data, kun videre ved ny) → HTTP POST `http://192.168.1.18:8000/api/v1/deploy?uuid=rpcqm0klit7tcvzms7syizxv&force=false` med `Authorization: Bearer <Coolify API-token>`.
