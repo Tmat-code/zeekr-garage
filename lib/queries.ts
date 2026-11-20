@@ -85,3 +85,23 @@ export async function getCurrentUser() {
   } = await sb.auth.getUser();
   return user;
 }
+
+// --- Forside-besked (banner) ---
+export type ForsideBesked = { message: string; active: boolean };
+
+// Til admin-editoren: raa raekke uanset active.
+export async function getForsideBeskedRaw(): Promise<ForsideBesked> {
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('site_announcement')
+    .select('message, active')
+    .eq('id', 1)
+    .single();
+  return { message: data?.message ?? '', active: data?.active ?? false };
+}
+
+// Til forsiden: kun hvis aktiv + har tekst, ellers null (intet banner).
+export async function getForsideBesked(): Promise<string | null> {
+  const { message, active } = await getForsideBeskedRaw();
+  return active && message.trim() ? message : null;
+}

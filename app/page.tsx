@@ -1,20 +1,33 @@
 import Link from 'next/link';
-import { getModels, getIssues, getMyConfirmedIssueIds, getCurrentUser } from '@/lib/queries';
+import {
+  getModels,
+  getIssues,
+  getMyConfirmedIssueIds,
+  getCurrentUser,
+  getForsideBesked,
+} from '@/lib/queries';
 import FejlBoard from '@/components/FejlBoard';
 
 // Altid frisk fra databasen (offentlig læsning, ingen statisk caching).
 export const dynamic = 'force-dynamic';
 
 export default async function Forside() {
-  const [models, issues, mineSet, user] = await Promise.all([
+  const [models, issues, mineSet, user, besked] = await Promise.all([
     getModels(),
     getIssues(),
     getMyConfirmedIssueIds(),
     getCurrentUser(),
+    getForsideBesked(),
   ]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
+      {besked && (
+        <div className="mb-6 rounded-xl border border-kobber-200 bg-kobber-50 px-5 py-4 text-grafit-800">
+          <p className="whitespace-pre-line">{besked}</p>
+        </div>
+      )}
+
       {/* Intro */}
       <section className="rounded-2xl border border-grafit-200 bg-white px-6 py-8 sm:px-8">
         <h1 className="text-2xl font-semibold tracking-tight text-grafit-900 sm:text-3xl">

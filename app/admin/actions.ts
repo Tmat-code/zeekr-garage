@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
-import { erModerator } from '@/lib/admin';
+import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, type Status, type Severity } from '@/lib/config';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB,
@@ -61,6 +61,26 @@ export async function gemRedigering(
     .from('issues')
     .update({ title, description })
     .eq('id', issueId);
+  if (error) throw new Error(error.message);
+  revalider();
+}
+
+// --- Forside-besked (kun admin) ---
+export async function gemForsideBesked(message: string, active: boolean): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin kan ændre forside-beskeden.');
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const { error } = await sb
+    .from('site_announcement')
+    .update({
+      message: message.trim() || null,
+      active,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+    })
+    .eq('id', 1);
   if (error) throw new Error(error.message);
   revalider();
 }

@@ -200,8 +200,14 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 - `components/admin/ModereringsTabel.tsx` — client, sorteret efter stemmer: status/alvor-dropdowns, markér løst, redigér (inline), slet (bekræft-step).
 - `components/Header.tsx` — "🔧 Værkstedet"-link vises kun for moderator/admin.
 
+**Fase 2 — Forside-besked (bygget 20-11-2026):**
+- Migration `supabase/migrations/20261120150000_forside_besked.sql`: `site_announcement`-singleton (id=1, message, active, updated_at/by), RLS læs-alle + `site_announcement_update_admin`. **Skal køres i Studio.**
+- `lib/queries.ts`: `getForsideBeskedRaw()` (admin) + `getForsideBesked()` (forside, kun hvis aktiv+tekst).
+- `app/admin/actions.ts`: `gemForsideBesked(message, active)` (`erAdmin`-gated).
+- `components/admin/ForsideBeskedEditor.tsx`: textarea + Tænd/Sluk + Gem, status-pille.
+- `app/page.tsx`: banner øverst på forsiden når aktiv.
+
 **Roadmap (resten af bugherrers panel — ikke bygget endnu):**
-- **Forside-besked** (banner-toggle, skærm 4) — kræver `site_announcement`-tabel + editor + visning på `/`.
 - **Zeekr-rapport** (skærm 2,3,6) — PDF/CSV-eksport, "markér sendt", delta siden sidst (+N stemmer), rapport-log. (`zeekr_reports`-tabellen findes allerede i init — udvides.)
 - **Aktivitet** (skærm 8,9) — grafer (hændelser pr. time/ugedag/dag), afledt af created_at på issues/confirmations.
 - **Adgange** (skærm 5) — moderator-invitationer. Tilpasses Supabase: invitation sætter rolle på kontoen efter signup (ikke eget password).
