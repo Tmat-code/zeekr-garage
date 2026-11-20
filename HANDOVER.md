@@ -127,7 +127,8 @@ Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
 - Next.js 14 App Router, standalone Docker-build. `@/`-alias, Tailwind-palet grafit+kobber (`lib/config.ts`, `tailwind.config.ts`).
 - Datalag: `@supabase/ssr`. `lib/supabase/server.ts` (auth + SSR, bruger `SUPABASE_INTERNAL_URL` hvis sat), `client.ts` (browser, public URL), `middleware.ts` (token-refresh).
 - `lib/queries.ts`: modeller, issues m. koblede modeller + optalte bekræftelser, brugerens egne bekræftelser.
-- Sider: `/` (board), `/meld` (login-gated), `/login` (konto: email+password), `/om`, `/auth/callback`, `/logout`.
+- Sider: `/` (board m. type-filter Alle/Fejl/Ønsker + modelfilter), `/meld` (login-gated, **søg-først-flow**: søg eksisterende før ny oprettes; fejl ELLER ønske), `/login` (konto: email+password), `/om`, `/auth/callback`, `/logout`.
+- **Meldingstyper:** fejl + ønske (bugherrer-paritet). Samme maskineri, kun `issues.type` (enum `issue_type`) adskiller. Migration `supabase/migrations/20261120110000_issue_type.sql` — anvendt på Pixa-instansen.
 - Komponenter: `FejlBoard` (filter/søg/sortér), `ConfirmButton` ("mig med" m. modelvalg), `MeldForm`, `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
 - RLS styrer alt: læsning fri, skrivning kun egne rækker (authenticated).
 - **Deploy-noter:** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` skal gives som **build-args** i Coolify (bages ind ved build). Anon-key hentes fra Supabase-servicens Environment Variables (`SERVICE_SUPABASEANON_KEY`). Browser-URL skal kunne nås udefra (Cloudflare Tunnel) ELLER på LAN via `http://192.168.1.18:8002` (Kong serverer /rest + /auth med anon-key uden basic-auth; kun Studio-ruten er basic-auth-beskyttet). SSR kan bruge intern Kong-URL via `SUPABASE_INTERNAL_URL`.

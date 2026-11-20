@@ -3,12 +3,23 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { SEVERITIES, SEVERITY_STYLE, type Severity } from '@/lib/config';
+import { SEVERITIES, SEVERITY_STYLE, type Severity, type IssueType } from '@/lib/config';
 import type { Model } from '@/lib/types';
 
-export default function MeldForm({ models }: { models: Model[] }) {
+export default function MeldForm({
+  models,
+  type = 'fejl',
+  initialTitle = '',
+  onBack,
+}: {
+  models: Model[];
+  type?: IssueType;
+  initialTitle?: string;
+  onBack?: () => void;
+}) {
   const router = useRouter();
-  const [titel, setTitel] = useState('');
+  const erOenske = type === 'oenske';
+  const [titel, setTitel] = useState(initialTitle);
   const [beskrivelse, setBeskrivelse] = useState('');
   const [kategori, setKategori] = useState('');
   const [severity, setSeverity] = useState<Severity>('middel');
@@ -23,9 +34,10 @@ export default function MeldForm({ models }: { models: Model[] }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setFejl('');
-    if (titel.trim().length < 5) return setFejl('Giv fejlen en kort, tydelig titel.');
-    if (beskrivelse.trim().length < 10) return setFejl('Beskriv fejlen lidt mere.');
-    if (valgte.length === 0) return setFejl('Vælg mindst én model fejlen rammer.');
+    const ting = erOenske ? 'ønsket' : 'fejlen';
+    if (titel.trim().length < 5) return setFejl(`Giv ${ting} en kort, tydelig titel.`);
+    if (beskrivelse.trim().length < 10) return setFejl(`Beskriv ${ting} lidt mere.`);
+    if (valgte.length === 0) return setFejl(`Vælg mindst én model ${erOenske ? 'ønsket gælder' : 'fejlen rammer'}.`);
 
     setBusy(true);
     try {
@@ -40,6 +52,7 @@ export default function MeldForm({ models }: { models: Model[] }) {
       const { data: issue, error: e1 } = await sb
         .from('issues')
         .insert({
+          type,
           title: titel.trim(),
           description: beskrivelse.trim(),
           category: kategori.trim() || null,
@@ -71,7 +84,7 @@ export default function MeldForm({ models }: { models: Model[] }) {
           id="titel"
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
-          placeholder="Kortmodul fryser ved opstart i koldt vejr"
+          placeholder={erOenske ? 'Trådløst CarPlay' : 'Kortmodul fryser ved opstart i koldt vejr'}
           className="input"
         />
       </div>
@@ -83,7 +96,7 @@ export default function MeldForm({ models }: { models: Model[] }) {
           value={beskrivelse}
           onChange={(e) => setBeskrivelse(e.target.value)}
           rows={4}
-          placeholder="Hvad sker der, hvornår, og hvordan genskaber man det?"
+          placeholder={erOenske ? 'Hvad ønsker du, og hvorfor ville det gøre bilen bedre?' : 'Hvad sker der, hvornår, og hvordan genskaber man det?'}
           className="input"
         />
       </div>
@@ -99,23 +112,25 @@ export default function MeldForm({ models }: { models: Model[] }) {
             className="input"
           />
         </div>
-        <div>
-          <label htmlFor="sev" className="label">Alvorlighed</label>
-          <select
-            id="sev"
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value as Severity)}
-            className="input"
-          >
-            {SEVERITIES.map((s) => (
-              <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
-            ))}
-          </select>
-        </div>
+        {!erOenske && (
+          <div>
+            <label htmlFor="sev" className="label">Alvorlighed</label>
+            <select
+              id="sev"
+              value={severity}
+              onChange={(e) => setSeverity(e.target.value as Severity)}
+              className="input"
+            >
+              {SEVERITIES.map((s) => (
+                <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div>
-        <span className="label">Hvilke modeller rammer fejlen?</span>
+        <span className="label">{erOenske ? 'Hvilke modeller gælder ønsket?' : 'Hvilke modeller rammer fejlen?'}</span>
         <div className="flex flex-wrap gap-2">
           {models.map((m) => {
             const valgt = valgte.includes(m.id);
@@ -142,13 +157,19 @@ export default function MeldForm({ models }: { models: Model[] }) {
 
       {fejl && <p className="text-sm font-medium text-kobber-700">{fejl}</p>}
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? 'Sender…' : 'Meld fejlen'}
+          {busy ? 'Sender…' : erOenske ? 'Foreslå ønsket' : 'Meld fejlen'}
         </button>
-        <button type="button" onClick={() => router.push('/')} className="btn-ghost">
-          Annullér
-        </button>
+        {onBack ? (
+          <button type="button" onClick={onBack} className="btn-ghost">
+            ← Tilbage til søgning
+          </button>
+        ) : (
+          <button type="button" onClick={() => router.push('/')} className="btn-ghost">
+            Annullér
+          </button>
+        )}
       </div>
     </form>
   );

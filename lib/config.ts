@@ -23,6 +23,22 @@ export const MODEL_FALLBACK = [
   { slug: 'zeekr-x', name: 'Zeekr X', platform: 'SEA1/SEA2' },
 ] as const;
 
+// --- Meldingstype: fejl eller oenske ---
+export const ISSUE_TYPES = ['fejl', 'oenske'] as const;
+export type IssueType = (typeof ISSUE_TYPES)[number];
+
+export const TYPE_META: Record<
+  IssueType,
+  { navn: string; flertal: string; badge: string; chip: string }
+> = {
+  fejl: { navn: 'Fejl', flertal: 'fejl', badge: 'Fejl', chip: 'bg-grafit-900 text-white' },
+  oenske: { navn: 'Ønske', flertal: 'ønsker', badge: 'Ønske', chip: 'bg-kobber-100 text-kobber-800' },
+};
+
+export function erGyldigType(t: string | null | undefined): IssueType {
+  return t === 'oenske' ? 'oenske' : 'fejl';
+}
+
 // --- Alvorlighed ---
 export const SEVERITIES = ['lav', 'middel', 'hoej', 'kritisk'] as const;
 export type Severity = (typeof SEVERITIES)[number];

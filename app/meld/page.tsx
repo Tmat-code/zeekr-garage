@@ -1,24 +1,38 @@
 import { redirect } from 'next/navigation';
-import { getModels, getCurrentUser } from '@/lib/queries';
-import MeldForm from '@/components/MeldForm';
+import { getModels, getIssues, getMyConfirmedIssueIds, getCurrentUser } from '@/lib/queries';
+import { erGyldigType } from '@/lib/config';
+import MeldFlow from '@/components/MeldFlow';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Meld ind' };
 
-export const metadata = { title: 'Meld en fejl' };
-
-export default async function MeldSide() {
+export default async function MeldSide({
+  searchParams,
+}: {
+  searchParams?: { type?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/meld');
 
-  const models = await getModels();
+  const initialType = erGyldigType(searchParams?.type);
+  const [models, issues, mineSet] = await Promise.all([
+    getModels(),
+    getIssues(),
+    getMyConfirmedIssueIds(),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Meld en fejl</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Meld ind</h1>
       <p className="mt-1 text-grafit-600">
-        Tjek gerne først om den allerede er meldt — så kan du bekræfte den i stedet.
+        Søg først — så undgår vi dubletter, og de rigtige fejl får flere stemmer.
       </p>
-      <MeldForm models={models} />
+      <MeldFlow
+        issues={issues}
+        models={models}
+        myConfirmedIds={[...mineSet]}
+        initialType={initialType}
+      />
     </div>
   );
 }

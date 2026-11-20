@@ -21,12 +21,13 @@ export default async function Forside() {
           Fejl-board for Zeekr-ejere
         </h1>
         <p className="mt-2 max-w-2xl text-grafit-600">
-          Meld softwarefejl, bekræft dem sammen, og stem de vigtigste op. Én fejl kan ramme
-          flere modeller — så systemet viser når noget rammer en hel platform. De bekræftede
-          fejl samles i rapporter til Zeekr.
+          Meld softwarefejl og ønsker til ny funktionalitet, bekræft dem sammen, og stem de
+          vigtigste op. Én melding kan ramme flere modeller — så systemet viser når noget rammer
+          en hel platform. De bekræftede meldinger samles i rapporter til Zeekr.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link href="/meld" className="btn-primary">Meld en fejl</Link>
+          <Link href="/meld?type=oenske" className="btn-secondary">Foreslå et ønske</Link>
           {!user && (
             <Link href="/login" className="btn-ghost">Log ind for at bidrage</Link>
           )}

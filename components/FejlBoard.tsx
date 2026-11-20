@@ -4,10 +4,12 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IssueRow, Model } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
+import { TYPE_META } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 
 type Sortering = 'stemmer' | 'nyeste';
+type TypeFilter = 'alle' | 'fejl' | 'oenske';
 
 export default function FejlBoard({
   issues,
@@ -22,12 +24,19 @@ export default function FejlBoard({
 }) {
   const [query, setQuery] = useState('');
   const [modelSlug, setModelSlug] = useState<string | 'alle'>('alle');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('alle');
   const [sort, setSort] = useState<Sortering>('stemmer');
   const mine = useMemo(() => new Set(myConfirmedIds), [myConfirmedIds]);
+
+  const antalFejl = useMemo(() => issues.filter((i) => i.type === 'fejl').length, [issues]);
+  const antalOensker = useMemo(() => issues.filter((i) => i.type === 'oenske').length, [issues]);
 
   const viste = useMemo(() => {
     const q = query.trim().toLowerCase();
     let r = issues;
+    if (typeFilter !== 'alle') {
+      r = r.filter((i) => i.type === typeFilter);
+    }
     if (modelSlug !== 'alle') {
       r = r.filter((i) => i.models.some((m) => m.slug === modelSlug));
     }
@@ -44,7 +53,7 @@ export default function FejlBoard({
         ? b.created_at.localeCompare(a.created_at)
         : b.confirmations - a.confirmations,
     );
-  }, [issues, modelSlug, query, sort]);
+  }, [issues, modelSlug, typeFilter, query, sort]);
 
   return (
     <div>
@@ -60,6 +69,25 @@ export default function FejlBoard({
         ))}
       </div>
 
+      {/* Type-filter: Alle / Fejl / Ønsker */}
+      <div className="mb-4 inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
+        {([
+          { key: 'alle', navn: 'Alle', antal: issues.length },
+          { key: 'fejl', navn: 'Fejl', antal: antalFejl },
+          { key: 'oenske', navn: 'Ønsker', antal: antalOensker },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTypeFilter(t.key)}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              typeFilter === t.key ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'
+            }`}
+          >
+            {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
+          </button>
+        ))}
+      </div>
+
       {/* Søg + sortering */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <input
@@ -70,7 +98,10 @@ export default function FejlBoard({
           className="input sm:max-w-xs"
         />
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-grafit-500">{viste.length} fejl</span>
+          <span className="text-grafit-500">
+            {viste.length}{' '}
+            {typeFilter === 'oenske' ? 'ønsker' : typeFilter === 'fejl' ? 'fejl' : 'meldinger'}
+          </span>
           <div className="flex gap-1 rounded-lg bg-grafit-100 p-1">
             <SortKnap aktiv={sort === 'stemmer'} onClick={() => setSort('stemmer')}>
               Flest stemmer
@@ -85,13 +116,13 @@ export default function FejlBoard({
       {/* Liste */}
       {viste.length === 0 ? (
         <div className="kort p-10 text-center">
-          <p className="font-semibold text-grafit-700">Ingen fejl her endnu</p>
+          <p className="font-semibold text-grafit-700">Ingen meldinger her endnu</p>
           <p className="mt-1 text-sm text-grafit-500">
-            {modelSlug === 'alle'
-              ? 'Vær den første til at melde en fejl.'
-              : 'Ingen fejl på denne model endnu — eller prøv et andet filter.'}
+            {modelSlug === 'alle' && typeFilter === 'alle'
+              ? 'Vær den første til at melde ind.'
+              : 'Intet matcher filteret endnu — prøv et andet.'}
           </p>
-          <Link href="/meld" className="btn-primary mt-4">Meld en fejl</Link>
+          <Link href="/meld" className="btn-primary mt-4">Meld ind</Link>
         </div>
       ) : (
         <ul className="grid gap-3">
@@ -107,13 +138,14 @@ export default function FejlBoard({
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold text-grafit-900">{i.title}</h3>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className={`chip ${TYPE_META[i.type].chip}`}>{TYPE_META[i.type].badge}</span>
                   {i.models.map((m) => (
                     <span key={m.slug} className="chip bg-grafit-100 text-grafit-700">
                       {m.name.replace('Zeekr ', '')}
                     </span>
                   ))}
                   <PlatformSignal platforms={i.models.map((m) => m.platform)} />
-                  <SeverityTag severity={i.severity} />
+                  {i.type === 'fejl' && <SeverityTag severity={i.severity} />}
                   {(i.status === 'sendt_til_zeekr' || i.status === 'loest_i_ota' || i.status === 'bekraeftet') && (
                     <StatusTag status={i.status} />
                   )}

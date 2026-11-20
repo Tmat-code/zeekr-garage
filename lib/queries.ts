@@ -1,5 +1,5 @@
 import { supabaseServer } from '@/lib/supabase/server';
-import { MODEL_FALLBACK, type Severity, type Status } from '@/lib/config';
+import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
 import type { IssueRow, Model } from '@/lib/types';
 
 // --- Modeller ---
@@ -29,7 +29,7 @@ export async function getIssues(): Promise<IssueRow[]> {
   const { data, error } = await sb
     .from('issues')
     .select(
-      `id, title, description, category, severity, status, created_at,
+      `id, type, title, description, category, severity, status, created_at,
        issue_models ( models ( id, slug, name, platform ) ),
        confirmations ( count )`,
     )
@@ -47,6 +47,7 @@ export async function getIssues(): Promise<IssueRow[]> {
       : 0;
     return {
       id: row.id,
+      type: (row.type ?? 'fejl') as IssueType,
       title: row.title,
       description: row.description,
       category: row.category,

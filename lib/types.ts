@@ -1,4 +1,4 @@
-import type { Severity, Status } from '@/lib/config';
+import type { Severity, Status, IssueType } from '@/lib/config';
 
 export type Model = {
   id: string;
@@ -11,6 +11,7 @@ export type Model = {
 // En fejl som den vises paa boardet: med koblede modeller og optalte bekraeftelser.
 export type IssueRow = {
   id: string;
+  type: IssueType;
   title: string;
   description: string;
   category: string | null;
