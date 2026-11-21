@@ -326,7 +326,14 @@ Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_ka
 
 ## Store forum-features ønsket (bruger-feedback 21-11-2026, IKKE bygget)
 - **Chat mellem brugere** (DM / privatbeskeder). Stort: egne tabeller (samtaler + beskeder), realtime via Supabase, moderering, ulæst-markering. Scopes separat.
-- **Meetup / events** (Torbens spec): admin + moderatorer opretter et event; brugere kan melde sig på (RSVP); man kan sende information ud til de tilmeldte. **Kun admin/mod opretter.** Byggeplan: `events` (titel, beskrivelse, sted, tidspunkt, oprettet_af) + `event_signups` (event_id, user_id) + evt. `event_updates` (beskeder til tilmeldte) + RLS (læs alle, opret kun mod/admin via er_moderator, tilmeld = authenticated egne) + sider `/events` + detalje m. tilmeld-knap + admin-opret. Notifikation til tilmeldte = email/notifikations-lag (samme som "følg-tråd"). Hænger sammen med forum-kategorien "Træf, køreture & events".
+- **Meetup / events - BYGGET 21-11-2026.** Se eget afsnit "## Events / meetups" nedenfor.
+
+## Events / meetups (bygget 21-11-2026)
+Admin/moderatorer opretter events; brugere melder sig til (RSVP); moderator sender en opdatering der (hvis email er sat op) mailes til de tilmeldte. Hænger sammen med forum-kategorien "Træf, køreture & events". Adgang som resten: alt læses offentligt, login for at deltage.
+- **Migration `20261121230000_events.sql` (KØRT i Studio):** `events` (title, slug, description, location, starts_at, ends_at, created_by, is_cancelled) · `event_signups` (event_id, user_id, note, unique(event_id,user_id)) · `event_updates` (event_id, body, created_by). RLS: events læs alle / skriv kun `er_moderator`; signups læs alle / insert+update+delete egne; updates læs alle / insert kun moderator. Trigger touch_updated_at. **Security-definer RPC `event_deltager_emails(e_id)`** returnerer de tilmeldtes `auth.users.email`, gated på `er_moderator()` i WHERE (ikke-mod får tom liste) - bruges til mail-udsendelse uden service_role.
+- **Email (valgfri, graceful):** `lib/email.ts` sender via Resend's HTTP-API med BCC (modtagere ser ikke hinanden). Kræver env `RESEND_API_KEY` (+ evt. `MAIL_FROM`, `MAIL_REPLY_TO`) på **garage-appen** i Coolify - IKKE sat endnu, så opdateringer vises på event-siden men mailes ikke før nøglen er sat. (Resend-domænet zeekr-garage.dk er allerede verificeret fra password-reset.)
+- **Kode:** `lib/events.ts` (getEvents kommende/afholdte, getEvent, getMinTilmelding) · `app/events/actions.ts` (opret/ret/aflys/slet/tilmeld/afmeld/sendOpdatering) · ruter `/events` (liste), `/events/[slug]` (detalje + tilmeld + deltagere + opdateringer + admin-panel), `/events/ny` + `/events/[slug]/rediger` (login+mod-gated) · komponenter `TilmeldKnap`, `EventForm` (datetime-local ↔ ISO), `EventAdmin` (rediger/aflys/slet + send-opdatering) · Nav + footer-link "Events".
+- **Mangler/senere:** "antal går" / gæster pr. tilmelding · kalender-eksport (.ics) · notifikation ved nyt event (ikke kun ved opdatering) · sæt `RESEND_API_KEY` for at aktivere mails.
 
 ## Åbne forum-småting (parkeret 21-11-2026)
 
