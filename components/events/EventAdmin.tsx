@@ -39,12 +39,12 @@ export default function EventAdmin({
     setKvittering(null);
     start(async () => {
       try {
-        const { sent } = await sendOpdatering(eventId, slug, title, besked);
+        const { sent, info } = await sendOpdatering(eventId, slug, title, besked);
         setBesked('');
         setKvittering(
           sent > 0
-            ? `Opdateringen er sendt og mailet til ${sent} tilmeldte.`
-            : 'Opdateringen er slået op. (Ingen mails sendt - email er ikke sat op, eller ingen tilmeldte.)',
+            ? `Opdateringen er slået op og mailet til ${sent} tilmeldt(e).`
+            : `Opdateringen er slået op. Ingen mails sendt${info ? ` (${info})` : ''}.`,
         );
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke sende.');

@@ -136,7 +136,7 @@ export async function sendOpdatering(
   slug: string,
   title: string,
   body: string,
-): Promise<{ sent: number }> {
+): Promise<{ sent: number; info: string }> {
   await kraevMod();
   const sb = supabaseServer();
   const {
@@ -152,25 +152,38 @@ export async function sendOpdatering(
 
   // Hent de tilmeldtes emails (security-definer RPC, moderator-gated) og mail dem.
   let sent = 0;
+  let info = '';
   try {
-    const { data: emails } = await sb.rpc('event_deltager_emails', { e_id: eventId });
-    const liste = ((emails ?? []) as string[]).filter(Boolean);
-    if (liste.length > 0) {
-      const link = `https://${SITE.domain}/events/${slug}`;
-      const html =
-        `<p>Der er en ny opdatering til <strong>${escapeHtml(title)}</strong>:</p>` +
-        `<p style="white-space:pre-line">${escapeHtml(tekst)}</p>` +
-        `<p><a href="${link}">Se eventet på ${SITE.domain}</a></p>` +
-        `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${SITE.name}.</p>`;
-      const res = await sendMailBcc(liste, `Opdatering: ${title} - ${SITE.name}`, html);
-      sent = res.sent;
+    const { data: emails, error: rpcErr } = await sb.rpc('event_deltager_emails', {
+      e_id: eventId,
+    });
+    if (rpcErr) {
+      info = `RPC-fejl: ${rpcErr.message}`;
+    } else {
+      // Robust mod både scalar-array (["a@b"]) og objekt-array ([{event_deltager_emails:"a@b"}]).
+      const liste = ((emails ?? []) as any[])
+        .map((x) => (typeof x === 'string' ? x : x?.event_deltager_emails ?? x?.email))
+        .filter((m: any) => typeof m === 'string' && m.includes('@'));
+      if (liste.length === 0) {
+        info = 'ingen tilmeldte med email';
+      } else {
+        const link = `https://${SITE.domain}/events/${slug}`;
+        const html =
+          `<p>Der er en ny opdatering til <strong>${escapeHtml(title)}</strong>:</p>` +
+          `<p style="white-space:pre-line">${escapeHtml(tekst)}</p>` +
+          `<p><a href="${link}">Se eventet på ${SITE.domain}</a></p>` +
+          `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${SITE.name}.</p>`;
+        const res = await sendMailBcc(liste, `Opdatering: ${title} - ${SITE.name}`, html);
+        sent = res.sent;
+        info = res.info;
+      }
     }
-  } catch {
-    // email er best-effort; opdateringen er gemt uanset.
+  } catch (e: any) {
+    info = `undtagelse: ${String(e?.message ?? e).slice(0, 140)}`;
   }
 
   revalidatePath(`/events/${slug}`);
-  return { sent };
+  return { sent, info };
 }
 
 function escapeHtml(s: string): string {
