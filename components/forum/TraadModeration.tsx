@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saetFastgjort, saetLaast, fjernTraad } from '@/app/forum/actions';
 
@@ -10,12 +11,14 @@ export default function TraadModeration({
   traadSlug,
   isPinned,
   isLocked,
+  feedbackUrl,
 }: {
   threadId: string;
   kategoriSlug: string;
   traadSlug: string;
   isPinned: boolean;
   isLocked: boolean;
+  feedbackUrl?: string;
 }) {
   const router = useRouter();
   const [fejl, setFejl] = useState<string | null>(null);
@@ -36,6 +39,15 @@ export default function TraadModeration({
     <div className="mt-6 rounded-xl border border-dashed border-grafit-300 bg-grafit-50 p-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium text-grafit-500">🔧 Moderering:</span>
+        {feedbackUrl && (
+          <Link
+            href={feedbackUrl}
+            className="rounded-lg border border-kobber-300 bg-kobber-50 px-2.5 py-1.5 text-sm font-medium text-kobber-700 hover:bg-kobber-100"
+            title="Er det en rigtig fejl? Opret den som struktureret feedback til Zeekr."
+          >
+            → Opret som feedback
+          </Link>
+        )}
         <button
           className="btn-ghost !py-1.5 text-sm"
           disabled={pending}

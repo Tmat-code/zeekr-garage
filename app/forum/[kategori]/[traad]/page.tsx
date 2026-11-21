@@ -39,6 +39,14 @@ export default async function TraadSide({
   const isLoggedIn = !!ctx.user;
   const naeste = `/forum/${params.kategori}/${traad.slug}`;
 
+  // Bro til Feedback: prefill /meld med trådens titel + åbnings-indlæg (kortet,
+  // så URL'en ikke bliver for lang). Kun relevant for moderatorer (triage).
+  const aabning = indlaeg.find((p) => p.isOpening)?.body ?? '';
+  const feedbackUrl =
+    `/meld?type=fejl&titel=${encodeURIComponent(traad.title)}` +
+    `&beskrivelse=${encodeURIComponent(aabning.slice(0, 1200))}` +
+    `&fra=${encodeURIComponent(naeste)}`;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <VisningPing threadId={traad.id} />
@@ -73,6 +81,7 @@ export default async function TraadSide({
           traadSlug={traad.slug}
           isPinned={traad.isPinned}
           isLocked={traad.isLocked}
+          feedbackUrl={feedbackUrl}
         />
       )}
 

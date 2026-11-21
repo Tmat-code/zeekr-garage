@@ -15,13 +15,18 @@ export const metadata = { title: 'Meld ind' };
 export default async function MeldSide({
   searchParams,
 }: {
-  searchParams?: { type?: string };
+  searchParams?: { type?: string; titel?: string; beskrivelse?: string; fra?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/meld');
 
   const tp = searchParams?.type;
   const initialType: IssueType | null = tp === 'fejl' || tp === 'oenske' ? tp : null;
+  const initialTitle = (searchParams?.titel ?? '').slice(0, 160);
+  const initialBody = (searchParams?.beskrivelse ?? '').slice(0, 4000);
+  // Kun interne stier accepteres som "fra" (undgå open-redirect i linket).
+  const fraForum =
+    searchParams?.fra && searchParams.fra.startsWith('/forum/') ? searchParams.fra : undefined;
   const [models, issues, mineSet, userCar] = await Promise.all([
     getModels(),
     getIssues(),
@@ -41,6 +46,9 @@ export default async function MeldSide({
         userCar={userCar}
         myConfirmedIds={[...mineSet]}
         initialType={initialType}
+        initialTitle={initialTitle}
+        initialBody={initialBody}
+        fraForum={fraForum}
       />
     </div>
   );

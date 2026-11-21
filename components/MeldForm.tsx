@@ -10,17 +10,21 @@ export default function MeldForm({
   models,
   type = 'fejl',
   initialTitle = '',
+  initialBody = '',
+  fraForum,
   onBack,
 }: {
   models: Model[];
   type?: IssueType;
   initialTitle?: string;
+  initialBody?: string;
+  fraForum?: string;
   onBack?: () => void;
 }) {
   const router = useRouter();
   const erOenske = type === 'oenske';
   const [titel, setTitel] = useState(initialTitle);
-  const [beskrivelse, setBeskrivelse] = useState('');
+  const [beskrivelse, setBeskrivelse] = useState(initialBody);
   const [kategori, setKategori] = useState('');
   const [softwareVersion, setSoftwareVersion] = useState('');
   const [phoneModel, setPhoneModel] = useState('');
@@ -86,6 +90,15 @@ export default function MeldForm({
 
   return (
     <form onSubmit={submit} className="kort mt-6 flex flex-col gap-5 p-6">
+      {fraForum && (
+        <div className="rounded-xl border border-kobber-200 bg-kobber-50 px-4 py-3 text-sm text-grafit-700">
+          📌 Oprettet ud fra en forum-tråd — titel og tekst er forudfyldt. Tjek og tilføj model(ler){' '}
+          {erOenske ? '' : '+ softwareversion'}, så fejlen bliver struktureret feedback.{' '}
+          <a href={fraForum} className="font-medium text-kobber-700 hover:underline">
+            Åbn tråden
+          </a>
+        </div>
+      )}
       <div>
         <label htmlFor="titel" className="label">Titel</label>
         <input

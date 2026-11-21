@@ -16,17 +16,23 @@ export default function MeldFlow({
   userCar,
   myConfirmedIds,
   initialType = null,
+  initialTitle = '',
+  initialBody = '',
+  fraForum,
 }: {
   issues: IssueRow[];
   models: Model[];
   userCar: MinBil | null;
   myConfirmedIds: string[];
   initialType?: IssueType | null;
+  initialTitle?: string;
+  initialBody?: string;
+  fraForum?: string;
 }) {
   const router = useRouter();
   const [type, setType] = useState<IssueType | null>(initialType);
   const [trin, setTrin] = useState<Trin>(initialType ? 'soeg' : 'vaelg');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialTitle);
   const [harSoegt, setHarSoegt] = useState(false);
   const mine = useMemo(() => new Set(myConfirmedIds), [myConfirmedIds]);
 
@@ -251,6 +257,8 @@ export default function MeldFlow({
           models={models}
           type={type ?? 'fejl'}
           initialTitle={query}
+          initialBody={initialBody}
+          fraForum={fraForum}
           onBack={() => setTrin(naesteEfterSoeg)}
         />
       )}
