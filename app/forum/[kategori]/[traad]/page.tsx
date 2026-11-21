@@ -1,0 +1,92 @@
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { getTraad, getIndlaeg } from '@/lib/forum';
+import { adminKontekst } from '@/lib/admin';
+import ForumTraad from '@/components/forum/ForumTraad';
+import TraadModeration from '@/components/forum/TraadModeration';
+import VisningPing from '@/components/forum/VisningPing';
+
+export const dynamic = 'force-dynamic';
+
+function daDato(iso: string): string {
+  return new Date(iso).toLocaleDateString('da-DK', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { kategori: string; traad: string };
+}) {
+  const t = await getTraad(params.traad);
+  return { title: t ? t.title : 'Tråd' };
+}
+
+export default async function TraadSide({
+  params,
+}: {
+  params: { kategori: string; traad: string };
+}) {
+  const traad = await getTraad(params.traad);
+  // Tråden skal høre til den kategori URL'en peger på.
+  if (!traad || traad.kategori.slug !== params.kategori) notFound();
+
+  const [indlaeg, ctx] = await Promise.all([getIndlaeg(traad.id), adminKontekst()]);
+  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const isLoggedIn = !!ctx.user;
+  const naeste = `/forum/${params.kategori}/${traad.slug}`;
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <VisningPing threadId={traad.id} />
+
+      {/* Brødkrumme */}
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-grafit-500">
+        <Link href="/forum" className="hover:text-kobber-700">
+          Forum
+        </Link>
+        <span aria-hidden="true">/</span>
+        <Link href={`/forum/${traad.kategori.slug}`} className="hover:text-kobber-700">
+          {traad.kategori.icon && <span className="mr-1">{traad.kategori.icon}</span>}
+          {traad.kategori.name}
+        </Link>
+      </nav>
+
+      {/* Titel + meta */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {traad.isPinned && <span className="chip bg-kobber-100 text-kobber-800">📌 Fastgjort</span>}
+        {traad.isLocked && <span className="chip bg-grafit-100 text-grafit-600">🔒 Låst</span>}
+      </div>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-grafit-900">{traad.title}</h1>
+      <p className="mt-1 text-sm text-grafit-500">
+        Oprettet {daDato(traad.createdAt)} · {traad.replyCount}{' '}
+        {traad.replyCount === 1 ? 'svar' : 'svar'} · {traad.viewCount} visninger
+      </p>
+
+      {erModerator && (
+        <TraadModeration
+          threadId={traad.id}
+          kategoriSlug={traad.kategori.slug}
+          traadSlug={traad.slug}
+          isPinned={traad.isPinned}
+          isLocked={traad.isLocked}
+        />
+      )}
+
+      <ForumTraad
+        threadId={traad.id}
+        kategoriSlug={traad.kategori.slug}
+        traadSlug={traad.slug}
+        indlaeg={indlaeg}
+        megId={ctx.user?.id ?? null}
+        erModerator={erModerator}
+        isLoggedIn={isLoggedIn}
+        isLocked={traad.isLocked}
+        naeste={naeste}
+      />
+    </div>
+  );
+}

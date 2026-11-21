@@ -50,3 +50,73 @@ export type Kommentar = {
   author_id: string | null;
   author_navn: string | null;
 };
+
+// =========================================================================
+// Forum
+// =========================================================================
+
+// En forum-kategori (model-forum hvis modelId != null, ellers tvaergaaende).
+export type ForumKategori = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  groupLabel: string;
+  groupOrder: number;
+  displayOrder: number;
+  modelId: string | null;
+  isLocked: boolean;
+};
+
+// Kategori + optalte tal (til oversigts-raekken, a la Polestar).
+export type ForumKategoriStat = ForumKategori & {
+  traade: number;       // antal traade
+  indlaeg: number;      // antal indlaeg i alt (aabninger + svar)
+  visninger: number;    // sum af visninger
+  sidstAktiv: string | null; // seneste aktivitet (ISO) eller null
+};
+
+// En gruppe af kategorier (gruppe-overskrift + raekker).
+export type ForumGruppe = { label: string; kategorier: ForumKategoriStat[] };
+
+// En traad-raekke i en kategori-liste.
+export type ForumTraadRow = {
+  id: string;
+  slug: string;
+  title: string;
+  forfatter: string | null;
+  bil: string | null;       // garage-badge ("Zeekr 7GT · Long Range RWD")
+  createdAt: string;
+  lastPostAt: string;
+  replyCount: number;
+  viewCount: number;
+  isPinned: boolean;
+  isLocked: boolean;
+};
+
+// Et indlaeg i en traad.
+export type ForumIndlaeg = {
+  id: string;
+  threadId: string;
+  body: string;
+  forfatter: string | null;
+  bil: string | null;
+  authorId: string | null;
+  createdAt: string;
+  edited: boolean;
+  isOpening: boolean;
+};
+
+// En traad med dens kategori (til detalje-siden).
+export type ForumTraadDetalje = {
+  id: string;
+  slug: string;
+  title: string;
+  createdAt: string;
+  isPinned: boolean;
+  isLocked: boolean;
+  viewCount: number;
+  replyCount: number;
+  kategori: { slug: string; name: string; icon: string | null; isLocked: boolean };
+};
