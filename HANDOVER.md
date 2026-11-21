@@ -296,9 +296,33 @@ Forsiden er ikke længere selve boardet. Ny informationsarkitektur:
 - **Globalt "under opbygning"-banner:** diskret bånd øverst i `app/layout.tsx` på alle sider.
 - **Ingen DB-migrationer** (ren frontend på eksisterende queries). `npm run build` grønt.
 
+## Forum (skive 1, custom) — bygget + LIVE 21-11-2026
+Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke Discourse (se "Arkitektur"). Supabase = eneste IdP, ingen SSO-bro. UX-forbillede polestar-forum.com (set live via Chrome): grupper → kategori-rækker → trådliste → tråd.
+
+**Datamodel (migration `20261121200000_forum.sql` — KØRT i Studio + verificeret 21-11: 15 kategorier/6 model-fora, 16 RLS-policies, 4 triggers, bump-RPC):**
+- `forum_categories` (slug, name, description, icon, group_label, group_order, display_order, model_id nullable, is_locked). Seedet: 4 grupper / 15 kategorier (model-foraene via join til `models`).
+- `forum_threads` (category_id, author_id, title, slug, last_post_at + reply_count [denorm.], view_count, is_pinned, is_locked, is_removed).
+- `forum_posts` (thread_id, author_id, body, is_opening, edited, is_removed). **Åbnings-indlægget (is_opening) ER trådens tekst** — svar er bare flere posts.
+- Triggers er **security definer** (ellers må en der svarer ikke UPDATE'e en fremmed tråd pga. RLS): `forum_post_after_insert` (bump last_post_at + reply_count ekskl. åbning), `forum_post_after_update` (hold reply_count korrekt ved soft-remove), + touch_updated_at. `bump_thread_view(uuid)`-RPC (security definer, grant anon+auth) bumpes fra browseren (`VisningPing`), ikke SSR/bots.
+- RLS (16 policies, mønster = issues/comments): læs alle; opret tråd/indlæg = authenticated + egne + ikke i låst kategori/tråd; ret/slet egne; moderator alt.
+
+**Kategori-taksonomi (bevidst INGEN "problemer"-kategori → det ER Feedback-boardet):**
+- **Velkommen**: Præsentér dig · Community-regler (`is_locked` — kun moderator opretter tråde).
+- **Modellerne** (rygrad): ét forum pr. model (9X/7X/7GT/001/001 Sport/X).
+- **Ejer-lounge**: Køb/priser/levering · Anmeldelser & langtidstest · Billeder & videoer.
+- **Teknik**: Software & OTA · Opladning & rækkevidde · Tilbehør & dele · App & infotainment.
+
+**Kode:** `lib/forum.ts` (getForumGrupper/getKategori/getTraade/getTraad/getIndlaeg; 3-niveau author-embed `profiles→models/variants` til garage-badge, FK-hints som getMyCar). `app/forum/actions.ts` (opretTraad/svar/retIndlaeg/fjernIndlaeg + moderering saetFastgjort/saetLaast/fjernTraad; dansk slugify). Ruter: `/forum` (grupperet oversigt, afløser stubben), `/forum/[kategori]` (trådliste), `/forum/[kategori]/[traad]` (tråd+svar), `/forum/[kategori]/ny` (opret, login-gated server-side; statisk `ny` vinder over dynamisk `[traad]`). Komponenter under `components/forum/`: `ForumOversigt` (client, kategori-filter), `NyTraadForm`, `ForumTraad` (indlæg + svar + ret/fjern, mønster fra `Kommentarer.tsx`), `TraadModeration` (pin/lås/fjern tråd), `VisningPing`, `GarageBadge`. grafit+kobber, min-w-0 på mobil.
+
+**Det ambitiøse hook:** indlæg bærer automatisk forfatterens garage-badge ("🚗 Zeekr 7GT · Long Range RWD") fra profilen — det Discourse ikke kan. (Senere: antal ejere pr. model-forum, "Opret som feedback"-bro.)
+
+**Verificeret live 21-11 (WebFetch, udlogget):** `/forum` = 4 grupper + 15 kategorier (0 tråde); `/forum/software-ota` = header/beskrivelse + "Log ind for at skrive" + "Ingen tråde endnu". `npm run build` grønt, deployet via n8n (Coolify grøn). **Mangler:** end-to-end skrive-test (kræver login) + seed af regler/velkomst-tråd (Torbens egne ord).
+
+**Senere skiver:** tværgående tråd-søgning · følg/notifikationer · Billeder m. upload · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
+
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
-- **Forum — BESLUTTET 21-11-2026: custom** (Next.js + Supabase, se "Arkitektur"). Discourse fravalgt; Supabase = eneste IdP, ingen SSO-bro. Modsætningen i dokumentet ryddet (Arkitektur + Sektioner + Åbne spørgsmål opdateret). Bygges tyndt men ambitiøst, vævet ind i ejer-grafen (det Discourse ikke kan).
+- **Forum — SKIVE 1 BYGGET + LIVE 21-11-2026** (custom, Next.js + Supabase). Se afsnittet "## Forum (skive 1, custom)" ovenfor for datamodel/kode/status. Discourse fravalgt; Supabase = eneste IdP, ingen SSO-bro. Modsætningen i dokumentet ryddet (Arkitektur + Sektioner + Åbne spørgsmål opdateret). Resten af dette punkt er den oprindelige plan (nu opfyldt for skive 1):
   - **UX-forbillede: polestar-forum.com** (grupper m. overskrift + undertekst → kategori-rækker: ikon · titel (fed) · beskrivelse · antal tråde · antal indlæg/visninger · seneste aktivitet → trådliste → tråd). Top-bar: søgefelt + "Opret tråd". Rene rækker. Offentligt læsbart, login kun for at skrive.
   - **Grupper/kategorier (afledt af Polestars live-struktur, set 21-11 via Chrome — 4 gruppe-overskrifter, hver m. kategori-rækker):**
     1. **Velkommen** — Præsentér dig · Community-regler.
