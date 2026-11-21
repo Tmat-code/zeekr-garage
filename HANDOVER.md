@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-20
+**Sidst opdateret:** 2026-11-21
 
 ---
 
@@ -280,10 +280,22 @@ Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router
 - **Genbrugt fra bugherrer:** Coolify API-token `n8n-deploy` (Deploy-ret, deployer alle apps på teamet) + Allowed-IPs (private ranges). Ingen ny token/credential.
 - **Repo gjort OFFENTLIGT 20-11-2026:** krævet for at den uautentificerede GET virker (GitHub giver 404 på private repos uden token). Repoet er tjekket rent — ingen committede hemmeligheder (`.env` git-ignoreret, kun `.env.example`-skabelon). Alle nøgler bor i Coolify. Offentligt repo støtter også portfolio-vinklen (Zeekr kan se kvaliteten).
 
-## Næste op: landingpage + forum (bygges i hver sin session)
-To næste byggeklodser, hver i sin egen session:
-- **Landingpage:** rigtig forside/hjem for zeekr-garage (hvad communityet er, for Zeekr-ejere i Norden, veje videre til fejl-board / forum / Min garage). Lige nu *ér* forsiden selve fejl-boardet (`app/page.tsx`) — beslut om boardet bliver på `/` eller flytter til fx `/board`, og om landingpagen bliver ny `/`.
-- **Forum:** diskussionsforum ud over fejl-boardet. **Første beslutning i den session:** Discourse (selvhostet på Pixa, SSO mod custom-appen) vs. custom-bygget (Next.js + Supabase, samme stak som resten). Afgør retning + identity-provider med Torben før kode. Se "Åbne spørgsmål" nedenfor.
+## Landingpage, navneskift & link-side (bygget 21-11-2026)
+Forsiden er ikke længere selve boardet. Ny informationsarkitektur:
+- **`/` = landingpage** (`app/page.tsx` omskrevet): mørk grafit+kobber-hero (CSS/SVG-lysstreger via `.hero-streaks` i globals.css, skyline-silhuet, reduced-motion-venlig), instrument-stribe med **LIVE tal** (meldinger/bekræftelser/modeller/sendt — afledt af samme `getIssues`/`getModels` som boardet, `force-dynamic`, så de opdateres automatisk med feedback), forum-panel (bærende, "Åbner snart"), feedback-panel ("Live nu" + seneste 3 meldinger + 1→2→3), Min garage/Om-kort. Forsidebesked-banner flyttet ind i hero.
+- **Boardet flyttet til `/feedback`** (`app/feedback/page.tsx`) — intro + `FejlBoard` (uændret board-logik). `ForsideOverblik.tsx` er nu ubrugt (kan ryddes senere).
+- **Navneskift: "Fejl-board" → "Feedback"** overalt (dækker både fejl OG ønsker; pro-Zeekr, ikke klagemur). Route `/feedback`.
+- **`/links`** (`app/links/page.tsx`): bugherrers 14 links porteret + grupperet (Officielt fra Zeekr / Specs & test / Køb / Tilbehør & dele / Praktisk & fællesskab), pro-Zeekr-intro, "vi tjener ikke på links", eksterne i nyt faneblad. Data-drevet array `LINK_GRUPPER`. **Mest 7GT endnu — se Næste op.**
+- **`/forum`** (`app/forum/page.tsx`): "Åbner snart"-stub (mørkt panel + underfora-teaser) så header-linket lever indtil forummet bygges.
+- **Header** (`components/Header.tsx`): Forum · Feedback · Links · Om (Om skjult < sm) + garage/Værkstedet/login. Logo → `/`. Brand i `font-display`.
+- **Tone:** pro-Zeekr ("konstruktiv medspiller, ikke en pressgruppe", "vil se gode biler blive endnu bedre") i hero + feedback + om.
+- **Font:** Archivo (display/overskrifter) via **`@fontsource/archivo`** — self-hostet via npm, **INGEN Google-request ved build** (undgår net-afhængig deploy på Pixa). Importeret i `app/layout.tsx` (vægt 500–800); body = systemfont uændret; `font-display`-klasse mappet i `tailwind.config.ts`.
+- **Globalt "under opbygning"-banner:** diskret bånd øverst i `app/layout.tsx` på alle sider.
+- **Ingen DB-migrationer** (ren frontend på eksisterende queries). `npm run build` grønt.
+
+## Næste op
+- **Alle manualer på /links:** find zeekr.eu manual-URL pr. model (Zeekr 001, 001 Sport, 7X, 7GT, X, 9X) — kun 7GT er inde nu. (Manual-URL er `zeekr.eu/manual-result?vk=…&yk=…&vn=…&ven=…` — model/år/variant-koder skal findes fra zeekr.eu's manual-vælger.)
+- **Forum (egen session):** Discourse (selvhostet på Pixa, SSO) vs. custom (Next.js + Supabase). **BEMÆRK modsætning i dette dokument:** afsnittet "Arkitektur — BESLUTTET: hybrid" siger Discourse ER valgt, men "Åbne spørgsmål" nedenfor behandler det stadig som åbent. Afklar + ryd op før kode. Identity-provider afgøres med Torben.
 
 Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
 

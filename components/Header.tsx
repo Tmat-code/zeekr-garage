@@ -10,7 +10,7 @@ export default async function Header() {
     <header className="sticky top-0 z-40 border-b border-grafit-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="flex items-baseline gap-2">
-          <span className="text-lg font-semibold tracking-tight text-grafit-900">
+          <span className="font-display text-lg font-extrabold tracking-tight text-grafit-900">
             {SITE.name}
           </span>
           <span className="hidden text-xs text-grafit-400 sm:inline">
@@ -19,10 +19,16 @@ export default async function Header() {
         </Link>
 
         <nav className="flex items-center gap-1.5 text-sm">
-          <Link href="/" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
-            Fejl-board
+          <Link href="/forum" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+            Forum
           </Link>
-          <Link href="/om" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+          <Link href="/feedback" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+            Feedback
+          </Link>
+          <Link href="/links" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+            Links
+          </Link>
+          <Link href="/om" className="hidden rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100 sm:inline-flex">
             Om
           </Link>
           {erModerator && (

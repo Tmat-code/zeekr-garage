@@ -41,6 +41,8 @@ const config: Config = {
         loest: '#4f6f4a',
       },
       fontFamily: {
+        // Archivo (industriel grotesk) til display/overskrifter — automotive, teknisk.
+        display: ['Archivo', 'system-ui', 'sans-serif'],
         sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
