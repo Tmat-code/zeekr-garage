@@ -287,14 +287,15 @@ Forsiden er ikke længere selve boardet. Ny informationsarkitektur:
 - **Navneskift: "Fejl-board" → "Feedback"** overalt (dækker både fejl OG ønsker; pro-Zeekr, ikke klagemur). Route `/feedback`.
 - **`/links`** (`app/links/page.tsx`): bugherrers 14 links porteret + grupperet (Officielt fra Zeekr / Specs & test / Køb / Tilbehør & dele / Praktisk & fællesskab), pro-Zeekr-intro, "vi tjener ikke på links", eksterne i nyt faneblad. Data-drevet array `LINK_GRUPPER`. **Mest 7GT endnu — se Næste op.**
 - **`/forum`** (`app/forum/page.tsx`): "Åbner snart"-stub (mørkt panel + underfora-teaser) så header-linket lever indtil forummet bygges.
-- **Header** (`components/Header.tsx`): Forum · Feedback · Links · Om (Om skjult < sm) + garage/Værkstedet/login. Logo → `/`. Brand i `font-display`.
+- **Header** (`components/Header.tsx` + `components/Nav.tsx`): Forum · Feedback · Links · Om + garage/Værkstedet/login. **Mobil-menu (21-11):** på < sm folder nav ud i et burger-drevet panel (client-component `Nav.tsx`) i stedet for at skride ud over skærmkanten; email fjernet fra nav; logo + knapper `whitespace-nowrap` (brækkede ellers "Zeekr Garage"/"Log ud" i to linjer). Logo → `/`, brand i `font-display`.
+- **Footer** (`components/Footer.tsx`): opdateret til nye ruter — Forum · Feedback · Links · Om (var "Fejl-board" + "Forum kommer senere" — fulgte ikke navneskiftet). Disclaimeren lever i footeren (alle sider), så forsidens "Om siden"-kort blev erstattet af et "Nyttige links"-kort → `/links` for at undgå gentagelse.
 - **Tone:** pro-Zeekr ("konstruktiv medspiller, ikke en pressgruppe", "vil se gode biler blive endnu bedre") i hero + feedback + om.
 - **Font:** Archivo (display/overskrifter) via **`@fontsource/archivo`** — self-hostet via npm, **INGEN Google-request ved build** (undgår net-afhængig deploy på Pixa). Importeret i `app/layout.tsx` (vægt 500–800); body = systemfont uændret; `font-display`-klasse mappet i `tailwind.config.ts`.
 - **Globalt "under opbygning"-banner:** diskret bånd øverst i `app/layout.tsx` på alle sider.
 - **Ingen DB-migrationer** (ren frontend på eksisterende queries). `npm run build` grønt.
 
 ## Næste op
-- **Alle manualer på /links:** find zeekr.eu manual-URL pr. model (Zeekr 001, 001 Sport, 7X, 7GT, X, 9X) — kun 7GT er inde nu. (Manual-URL er `zeekr.eu/manual-result?vk=…&yk=…&vn=…&ven=…` — model/år/variant-koder skal findes fra zeekr.eu's manual-vælger.)
+- ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
 - **Forum (egen session):** Discourse (selvhostet på Pixa, SSO) vs. custom (Next.js + Supabase). **BEMÆRK modsætning i dette dokument:** afsnittet "Arkitektur — BESLUTTET: hybrid" siger Discourse ER valgt, men "Åbne spørgsmål" nedenfor behandler det stadig som åbent. Afklar + ryd op før kode. Identity-provider afgøres med Torben.
 
 Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
