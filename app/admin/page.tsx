@@ -1,5 +1,5 @@
 import { getIssues, getForsideBeskedRaw } from '@/lib/queries';
-import { getAdminStats, getSenesteAktivitet } from '@/lib/queries-admin';
+import { getAdminStats, getSenesteAktivitet, getForumOverblik } from '@/lib/queries-admin';
 import Overblik from '@/components/admin/Overblik';
 import ModereringsTabel from '@/components/admin/ModereringsTabel';
 import ForsideBeskedEditor from '@/components/admin/ForsideBeskedEditor';
@@ -8,8 +8,9 @@ import OprydningPanel from '@/components/admin/OprydningPanel';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminForside() {
-  const [stats, aktivitet, issues, besked] = await Promise.all([
+  const [stats, forum, aktivitet, issues, besked] = await Promise.all([
     getAdminStats(),
+    getForumOverblik(),
     getSenesteAktivitet(12),
     getIssues(),
     getForsideBeskedRaw(),
@@ -17,7 +18,7 @@ export default async function AdminForside() {
 
   return (
     <div className="space-y-6">
-      <Overblik stats={stats} aktivitet={aktivitet} />
+      <Overblik stats={stats} forum={forum} aktivitet={aktivitet} />
 
       <ForsideBeskedEditor initial={besked} />
 

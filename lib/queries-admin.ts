@@ -37,26 +37,61 @@ export async function getAdminStats(): Promise<AdminStats> {
 }
 
 // =========================================================================
-// Seneste aktivitet — forenet feed af nye meldinger + bekraeftelser
+// Forum — tal til overblik
+// =========================================================================
+export type ForumOverblik = { kategorier: number; traade: number; indlaeg: number };
+
+export async function getForumOverblik(): Promise<ForumOverblik> {
+  const sb = supabaseServer();
+  const [kat, traade, indlaeg] = await Promise.all([
+    sb.from('forum_categories').select('*', { count: 'exact', head: true }),
+    sb.from('forum_threads').select('*', { count: 'exact', head: true }).eq('is_removed', false),
+    sb.from('forum_posts').select('*', { count: 'exact', head: true }).eq('is_removed', false),
+  ]);
+  return {
+    kategorier: kat.count ?? 0,
+    traade: traade.count ?? 0,
+    indlaeg: indlaeg.count ?? 0,
+  };
+}
+
+// =========================================================================
+// Seneste aktivitet — forenet feed: meldinger + bekraeftelser + forum
 // =========================================================================
 export type AktivitetPost = {
-  kind: 'melding' | 'bekraeftelse';
+  kind: 'melding' | 'bekraeftelse' | 'forum_traad' | 'forum_indlaeg';
   titel: string;
   detalje: string | null;
   created_at: string;
+  href: string | null;
 };
 
 export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]> {
   const sb = supabaseServer();
-  const [nye, bek] = await Promise.all([
+  const [nye, bek, traade, indlaeg] = await Promise.all([
     sb
       .from('issues')
-      .select('title, type, created_at')
+      .select('id, title, type, created_at')
       .order('created_at', { ascending: false })
       .limit(graense),
     sb
       .from('confirmations')
-      .select('created_at, issues ( title ), models ( name )')
+      .select('created_at, issue_id, issues ( title ), models ( name )')
+      .order('created_at', { ascending: false })
+      .limit(graense),
+    sb
+      .from('forum_threads')
+      .select('title, slug, created_at, kategori:forum_categories ( slug, name )')
+      .eq('is_removed', false)
+      .order('created_at', { ascending: false })
+      .limit(graense),
+    sb
+      .from('forum_posts')
+      .select(
+        'created_at, is_opening, thread:forum_threads ( title, slug, is_removed, kategori:forum_categories ( slug ) )',
+      )
+      .eq('is_removed', false)
+      .eq('is_opening', false)
       .order('created_at', { ascending: false })
       .limit(graense),
   ]);
@@ -69,6 +104,7 @@ export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]
       titel: r.title,
       detalje: r.type === 'oenske' ? 'Ønske' : 'Fejl',
       created_at: r.created_at,
+      href: `/melding/${r.id}`,
     });
   }
 
@@ -78,11 +114,122 @@ export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]
       titel: r.issues?.title ?? 'en melding',
       detalje: r.models?.name ?? null,
       created_at: r.created_at,
+      href: r.issue_id ? `/melding/${r.issue_id}` : null,
+    });
+  }
+
+  for (const r of (traade.data ?? []) as any[]) {
+    const kat = r.kategori;
+    feed.push({
+      kind: 'forum_traad',
+      titel: r.title,
+      detalje: kat?.name ?? null,
+      created_at: r.created_at,
+      href: kat?.slug ? `/forum/${kat.slug}/${r.slug}` : null,
+    });
+  }
+
+  for (const r of (indlaeg.data ?? []) as any[]) {
+    const th = r.thread;
+    if (!th || th.is_removed) continue; // svar i en fjernet tråd tælles ikke
+    const katSlug = th.kategori?.slug ?? null;
+    feed.push({
+      kind: 'forum_indlaeg',
+      titel: th.title ?? 'en tråd',
+      detalje: null,
+      created_at: r.created_at,
+      href: katSlug ? `/forum/${katSlug}/${th.slug}` : null,
     });
   }
 
   feed.sort((a, b) => b.created_at.localeCompare(a.created_at));
   return feed.slice(0, graense);
+}
+
+// =========================================================================
+// Forum-moderering — seneste traade + indlaeg til /admin/forum
+// =========================================================================
+export type AdminForumTraad = {
+  id: string;
+  slug: string;
+  kategoriSlug: string;
+  kategoriNavn: string;
+  title: string;
+  forfatter: string | null;
+  lastPostAt: string;
+  replyCount: number;
+  viewCount: number;
+  isPinned: boolean;
+  isLocked: boolean;
+};
+
+export type AdminForumIndlaeg = {
+  id: string;
+  body: string;
+  forfatter: string | null;
+  createdAt: string;
+  isOpening: boolean;
+  traadTitel: string;
+  traadSlug: string;
+  kategoriSlug: string;
+};
+
+export async function getAdminForum(graense = 25): Promise<{
+  traade: AdminForumTraad[];
+  indlaeg: AdminForumIndlaeg[];
+}> {
+  const sb = supabaseServer();
+  const [t, p] = await Promise.all([
+    sb
+      .from('forum_threads')
+      .select(
+        `id, slug, title, last_post_at, reply_count, view_count, is_pinned, is_locked,
+         forfatter:profiles!forum_threads_author_id_fkey ( display_name ),
+         kategori:forum_categories ( slug, name )`,
+      )
+      .eq('is_removed', false)
+      .order('last_post_at', { ascending: false })
+      .limit(graense),
+    sb
+      .from('forum_posts')
+      .select(
+        `id, body, created_at, is_opening,
+         forfatter:profiles!forum_posts_author_id_fkey ( display_name ),
+         thread:forum_threads ( title, slug, is_removed, kategori:forum_categories ( slug ) )`,
+      )
+      .eq('is_removed', false)
+      .order('created_at', { ascending: false })
+      .limit(graense),
+  ]);
+
+  const traade: AdminForumTraad[] = ((t.data ?? []) as any[]).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    kategoriSlug: r.kategori?.slug ?? '',
+    kategoriNavn: r.kategori?.name ?? '',
+    title: r.title,
+    forfatter: r.forfatter?.display_name ?? null,
+    lastPostAt: r.last_post_at,
+    replyCount: r.reply_count ?? 0,
+    viewCount: r.view_count ?? 0,
+    isPinned: r.is_pinned ?? false,
+    isLocked: r.is_locked ?? false,
+  }));
+
+  const indlaeg: AdminForumIndlaeg[] = ((p.data ?? []) as any[])
+    .filter((r) => r.thread && !r.thread.is_removed)
+    .map((r) => ({
+      id: r.id,
+      body: r.body,
+      forfatter: r.forfatter?.display_name ?? null,
+      createdAt: r.created_at,
+      isOpening: r.is_opening ?? false,
+      traadTitel: r.thread?.title ?? '',
+      traadSlug: r.thread?.slug ?? '',
+      kategoriSlug: r.thread?.kategori?.slug ?? '',
+    }));
+
+  return { traade, indlaeg };
 }
 
 // =========================================================================

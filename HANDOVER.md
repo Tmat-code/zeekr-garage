@@ -320,6 +320,16 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 
 **Senere skiver:** tværgående tråd-søgning · følg/notifikationer · Billeder m. upload · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
 
+## Åbne forum-småting (parkeret 21-11-2026)
+- **"Køb, priser og levering" (Ejer-lounge):** navn + placering tages op SENERE. To knaster noteret: (1) kategorien tjener mest *prospekter* (ikke-ejere) men sidder i "Ejer-lounge"; (2) "priser" i titlen kan trække mod mindre konstruktive tråde. Mulig retning: omdøb til "Køb & levering" + beskrivelse der inviterer til hjælp/erfaringer. **Behold som den er indtil Torben beslutter.**
+
+## Værkstedet — samlet administration (i gang 21-11-2026)
+Mål: ét kontrolrum for HELE sitet. I dag er `/admin` bygget til feedback; forummet har kun inline-moderering (pin/lås/fjern på den enkelte tråd via `TraadModeration`). Kobles sammen så forum + feedback styres ét sted. **Ingen migration nødvendig** — forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så det kan bygges + pushes uden Studio.
+- **Akse 1 — Overblik:** ét samlet aktivitets-feed (meldinger, bekræftelser, forum-tråde, forum-indlæg) + nøgletal for begge rum. Udvider `getSenesteAktivitet`/Overblik.
+- **Akse 2 — Moderering:** `/admin/forum` — seneste tråde/indlæg med fjern/lås/pin fra listen. Senere: "Opret som feedback"-bro fra en tråd.
+- **Akse 3 — Styring:** forum-kategorier fra UI (opret/omdøb/sortér/lås — fjerner Studio-afhængigheden), redigerbare forum-regler, + eksisterende Adgange/forside-besked.
+- **Rækkefølge (aftalt):** forum-moderering + kategori-styring først, så det samlede feed.
+
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
 - **Forum — SKIVE 1 BYGGET + LIVE 21-11-2026** (custom, Next.js + Supabase). Se afsnittet "## Forum (skive 1, custom)" ovenfor for datamodel/kode/status. Discourse fravalgt; Supabase = eneste IdP, ingen SSO-bro. Modsætningen i dokumentet ryddet (Arkitektur + Sektioner + Åbne spørgsmål opdateret). Resten af dette punkt er den oprindelige plan (nu opfyldt for skive 1):

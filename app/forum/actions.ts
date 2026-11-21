@@ -23,6 +23,9 @@ function revalider(kategoriSlug: string, traadSlug?: string) {
   revalidatePath('/forum');
   revalidatePath(`/forum/${kategoriSlug}`);
   if (traadSlug) revalidatePath(`/forum/${kategoriSlug}/${traadSlug}`);
+  // Værkstedet viser også forum-aktivitet/moderering.
+  revalidatePath('/admin/forum');
+  revalidatePath('/admin');
 }
 
 // Opret tråd -> returnér URL til den nye tråd (klienten navigerer dertil).
