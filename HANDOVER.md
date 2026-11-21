@@ -316,7 +316,7 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 
 **Det ambitiøse hook:** indlæg bærer automatisk forfatterens garage-badge ("🚗 Zeekr 7GT · Long Range RWD") fra profilen - det Discourse ikke kan. (Senere: antal ejere pr. model-forum, "Opret som feedback"-bro.)
 
-**Verificeret live 21-11:** udlogget (WebFetch) = 4 grupper + 15 kategorier, login-gate korrekt. **Skrive-stien end-to-end verificeret via Chrome som admin (Torben):** opret tråd → korrekt slug + **garage-badge "🚗 Zeekr 7GT · Core RWD" automatisk på indlæg** (hooket virker) + moderering-bar + svar-felt; denorm-tæller + visnings-ping tikkede; "Fjern tråd" virker. Test ryddet op. `npm run build` grønt, deployet via n8n (Coolify grøn). **Mangler:** seed af regler/velkomst-tråd (Torbens egne ord).
+**Verificeret live 21-11:** udlogget (WebFetch) = 4 grupper + 15 kategorier, login-gate korrekt. **Skrive-stien end-to-end verificeret via Chrome som admin (Torben):** opret tråd → korrekt slug + **garage-badge "🚗 Zeekr 7GT · Core RWD" automatisk på indlæg** (hooket virker) + moderering-bar + svar-felt; denorm-tæller + visnings-ping tikkede; "Fjern tråd" virker. Test ryddet op. `npm run build` grønt, deployet via n8n (Coolify grøn). **Første indhold postet 21-11 (via Chrome, som Torben):** fastgjort regel-tråd "Velkommen - sådan er tonen i Garagen" i Community-regler + fastgjort velkomst-tråd "Velkommen i Garagen - sig hej" i Præsentér dig.
 
 **Senere skiver:** tværgående tråd-søgning · følg/notifikationer · Billeder m. upload · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
 
