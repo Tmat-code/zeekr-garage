@@ -8,9 +8,10 @@ export default function Footer() {
         <p className="max-w-2xl">{DISCLAIMER}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-grafit-400">
           <span className="font-semibold text-grafit-600">{SITE.name}</span>
-          <Link href="/" className="hover:text-kobber-700">Fejl-board</Link>
+          <Link href="/forum" className="hover:text-kobber-700">Forum</Link>
+          <Link href="/feedback" className="hover:text-kobber-700">Feedback</Link>
+          <Link href="/links" className="hover:text-kobber-700">Links</Link>
           <Link href="/om" className="hover:text-kobber-700">Om</Link>
-          <span>Forum kommer senere</span>
         </div>
       </div>
     </footer>

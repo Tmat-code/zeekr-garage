@@ -259,13 +259,12 @@ export default async function Forside() {
               </Link>
             </div>
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
-              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Om siden</h3>
+              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Nyttige links</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Et uofficielt ejer-community — en konstruktiv medspiller, ikke en pressgruppe.
-                Ikke-kommercielt: ingen annoncer, ingen affiliate.
+                Manualer, specs, test, tilbehør og lidt praktisk — samlet ét sted for Zeekr-ejere.
               </p>
-              <Link href="/om" className="mt-4 inline-flex text-sm font-semibold text-kobber-700 hover:text-kobber-600">
-                Læs om Zeekr Garage
+              <Link href="/links" className="mt-4 inline-flex text-sm font-semibold text-kobber-700 hover:text-kobber-600">
+                Se nyttige links
               </Link>
             </div>
           </div>
