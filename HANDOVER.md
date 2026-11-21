@@ -320,8 +320,15 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 
 **Senere skiver:** tværgående tråd-søgning · følg/notifikationer · Billeder m. upload · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
 
+## Forum-kategorier: bruger-ønsker tilføjet (21-11-2026)
+Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_kategorier_2.sql`, kørt i Studio): **Dæk, fælge & undervogn** + **DIY & FAQ** (Teknik), **Bilpleje & detailing** + **Forsikring, service & værksted** (Ejer-lounge), **Træf, køreture & events** (ny gruppe **Fællesskab**), **Køb, salg & bytte** (ny gruppe **Marked**). Forum har nu 21 kategorier / 6 grupper.
+- **"Køb, priser og levering"-tvivlen er dermed løst:** Ejer-lounge "Køb, priser & levering" = ny bil / forhandler / levering; Marked "Køb, salg & bytte" = brugt mellem ejere. De to dækker hver sit, ingen omdøbning nødvendig. (NB: kategori-editoren kan endnu IKKE flytte en kategori mellem grupper - det kræver SQL/mig, eller en udvidelse af editoren.)
+
+## Store forum-features ønsket (bruger-feedback 21-11-2026, IKKE bygget)
+- **Chat mellem brugere** (DM / privatbeskeder). Stort: egne tabeller (samtaler + beskeder), realtime via Supabase, moderering, ulæst-markering. Scopes separat.
+- **Meetup / events** (Torbens spec): admin + moderatorer opretter et event; brugere kan melde sig på (RSVP); man kan sende information ud til de tilmeldte. **Kun admin/mod opretter.** Byggeplan: `events` (titel, beskrivelse, sted, tidspunkt, oprettet_af) + `event_signups` (event_id, user_id) + evt. `event_updates` (beskeder til tilmeldte) + RLS (læs alle, opret kun mod/admin via er_moderator, tilmeld = authenticated egne) + sider `/events` + detalje m. tilmeld-knap + admin-opret. Notifikation til tilmeldte = email/notifikations-lag (samme som "følg-tråd"). Hænger sammen med forum-kategorien "Træf, køreture & events".
+
 ## Åbne forum-småting (parkeret 21-11-2026)
-- **"Køb, priser og levering" (Ejer-lounge):** navn + placering tages op SENERE. To knaster noteret: (1) kategorien tjener mest *prospekter* (ikke-ejere) men sidder i "Ejer-lounge"; (2) "priser" i titlen kan trække mod mindre konstruktive tråde. Mulig retning: omdøb til "Køb & levering" + beskrivelse der inviterer til hjælp/erfaringer. **Behold som den er indtil Torben beslutter.**
 
 ## Værkstedet - samlet administration (bygget 21-11-2026)
 Ét kontrolrum for HELE sitet: forum + feedback styres ét sted. **Ingen migration** - forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så bygget + pushet uden Studio. `npm run build` grønt; deployet via n8n.
