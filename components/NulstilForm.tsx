@@ -38,7 +38,7 @@ export default function NulstilForm() {
         router.refresh();
       }, 1200);
     } catch {
-      setFejl('Kunne ikke opdatere password. Linket kan være udløbet — bed om et nyt fra login-siden.');
+      setFejl('Kunne ikke opdatere password. Linket kan være udløbet - bed om et nyt fra login-siden.');
       setBusy(false);
     }
   }

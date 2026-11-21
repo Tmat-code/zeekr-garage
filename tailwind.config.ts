@@ -11,7 +11,7 @@ const config: Config = {
         // Automotive-palet. Bevidst UDEN "Claude"-blaa/groenne toner og UDEN
         // Zeekrs egne firmafarver (jura: ingen antydet tilknytning).
         grafit: {
-          // Koel grafit/charcoal — basis for et rent, premium look.
+          // Koel grafit/charcoal - basis for et rent, premium look.
           50: '#f7f8f8',
           100: '#eceef0',
           200: '#d5d9dd',
@@ -25,7 +25,7 @@ const config: Config = {
           950: '#0e0f12',
         },
         kobber: {
-          // Varm kobber/bronze accent — primaer handling. Automotive, ikke neon.
+          // Varm kobber/bronze accent - primaer handling. Automotive, ikke neon.
           50: '#fcf5f0',
           100: '#f7e6d8',
           200: '#eec8ae',
@@ -37,11 +37,11 @@ const config: Config = {
           800: '#703626',
           900: '#5d2f22',
         },
-        // Daempet groen — KUN til "loest i OTA"-status (ikke neon, ikke Claude-groen).
+        // Daempet groen - KUN til "loest i OTA"-status (ikke neon, ikke Claude-groen).
         loest: '#4f6f4a',
       },
       fontFamily: {
-        // Archivo (industriel grotesk) til display/overskrifter — automotive, teknisk.
+        // Archivo (industriel grotesk) til display/overskrifter - automotive, teknisk.
         display: ['Archivo', 'system-ui', 'sans-serif'],
         sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],

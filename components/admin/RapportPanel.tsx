@@ -90,7 +90,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
           <span>
             Inkludér kommentarer
             <span className="block text-xs text-grafit-400">
-              Tager ejernes kommentarer med (den markerede løsning udelades — Zeekr skal have fejlen, ikke workaround&apos;en).
+              Tager ejernes kommentarer med (den markerede løsning udelades - Zeekr skal have fejlen, ikke workaround&apos;en).
             </span>
           </span>
         </label>
@@ -108,7 +108,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
       {/* Officiel rapport (kun admin) */}
       {erAdmin && (
         <div className="mt-5 rounded-xl border border-kobber-300 bg-kobber-50 p-4">
-          <p className="font-semibold text-grafit-900">📮 Dan Zeekr-rapport (officiel — markerer som sendt)</p>
+          <p className="font-semibold text-grafit-900">📮 Dan Zeekr-rapport (officiel - markerer som sendt)</p>
           <p className="mt-0.5 text-sm text-grafit-600">
             Markerer hele udvalget ovenfor som sendt til Zeekr i ét hug. Gør det kun, når du faktisk sender rapporten nu.
           </p>
@@ -157,7 +157,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
         {oversat && (
           <span className="text-sm">
             {!oversat.konfigureret ? (
-              <span className="text-grafit-500">LibreTranslate er ikke konfigureret (LIBRETRANSLATE_URL mangler) — rapporter er kun på dansk.</span>
+              <span className="text-grafit-500">LibreTranslate er ikke konfigureret (LIBRETRANSLATE_URL mangler) - rapporter er kun på dansk.</span>
             ) : oversat.ok ? (
               <span className="text-loest">OK ({oversat.vaert}): &quot;{oversat.prove?.kilde}&quot; → &quot;{oversat.prove?.resultat}&quot;</span>
             ) : (

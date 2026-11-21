@@ -28,7 +28,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
   const [beskrivelse, setBeskrivelse] = useState(issue.description);
 
   const type = TYPE_META[issue.type];
-  const modelTekst = issue.models.map((m) => m.name).join(', ') || '—';
+  const modelTekst = issue.models.map((m) => m.name).join(', ') || '-';
 
   function koer(fn: () => Promise<void>) {
     setFejl(null);

@@ -1,4 +1,4 @@
--- Zeekr Garage — skive 1: kerneskema (custom-delen)
+-- Zeekr Garage - skive 1: kerneskema (custom-delen)
 -- Selvhostet Supabase (Postgres) paa Pixa.
 -- Adgang (BESLUTTET: aabent): alt er offentligt laesbart; login (authenticated)
 -- kraeves kun for at bidrage. VIN/praecise bil-data er private (egen tabel).
@@ -22,7 +22,7 @@ create type public.issue_severity as enum (
 );
 
 -- =========================================================================
--- models  (reference/seed — de 6 DK-modeller + platform)
+-- models  (reference/seed - de 6 DK-modeller + platform)
 -- =========================================================================
 create table public.models (
   id            uuid primary key default gen_random_uuid(),
@@ -69,7 +69,7 @@ create table public.cars (
 create index cars_owner_id_idx on public.cars (owner_id);
 create index cars_model_id_idx on public.cars (model_id);
 
--- car_private  (VIN m.m. — kun ejeren laeser/skriver)
+-- car_private  (VIN m.m. - kun ejeren laeser/skriver)
 create table public.car_private (
   car_id uuid primary key references public.cars(id) on delete cascade,
   vin    text,
@@ -93,7 +93,7 @@ create table public.issues (
 create index issues_status_idx   on public.issues (status);
 create index issues_severity_idx on public.issues (severity);
 
--- issue_models  (kobling — én fejl kan ramme flere modeller)
+-- issue_models  (kobling - én fejl kan ramme flere modeller)
 create table public.issue_models (
   issue_id uuid not null references public.issues(id) on delete cascade,
   model_id uuid not null references public.models(id) on delete cascade,
@@ -115,7 +115,7 @@ create index confirmations_issue_id_idx on public.confirmations (issue_id);
 create index confirmations_model_id_idx on public.confirmations (model_id);
 
 -- =========================================================================
--- zeekr_reports  (offentlige, samlede rapporter — portfolio-kronjuvel)
+-- zeekr_reports  (offentlige, samlede rapporter - portfolio-kronjuvel)
 -- =========================================================================
 create table public.zeekr_reports (
   id          uuid primary key default gen_random_uuid(),

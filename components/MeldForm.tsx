@@ -46,7 +46,7 @@ export default function MeldForm({
     if (beskrivelse.trim().length < 10) return setFejl(`Beskriv ${ting} lidt mere.`);
     if (valgte.length === 0) return setFejl(`Vælg mindst én model ${erOenske ? 'ønsket gælder' : 'fejlen rammer'}.`);
     if (!erOenske && softwareVersion.trim().length < 2)
-      return setFejl('Skriv hvilken softwareversion (OTA) du er på — det er vigtigt for bevis på tværs.');
+      return setFejl('Skriv hvilken softwareversion (OTA) du er på - det er vigtigt for bevis på tværs.');
 
     setBusy(true);
     try {
@@ -92,7 +92,7 @@ export default function MeldForm({
     <form onSubmit={submit} className="kort mt-6 flex flex-col gap-5 p-6">
       {fraForum && (
         <div className="rounded-xl border border-kobber-200 bg-kobber-50 px-4 py-3 text-sm text-grafit-700">
-          📌 Oprettet ud fra en forum-tråd — titel og tekst er forudfyldt. Tjek og tilføj model(ler){' '}
+          📌 Oprettet ud fra en forum-tråd - titel og tekst er forudfyldt. Tjek og tilføj model(ler){' '}
           {erOenske ? '' : '+ softwareversion'}, så fejlen bliver struktureret feedback.{' '}
           <a href={fraForum} className="font-medium text-kobber-700 hover:underline">
             Åbn tråden
@@ -166,11 +166,11 @@ export default function MeldForm({
         </div>
       )}
 
-      {/* Telefon — kun relevant for fejl (CarPlay / Android Auto / app) */}
+      {/* Telefon - kun relevant for fejl (CarPlay / Android Auto / app) */}
       {!erOenske && (
         <div className="rounded-xl border border-dashed border-grafit-300 p-4">
           <p className="text-sm font-semibold text-grafit-700">
-            Telefon <span className="font-normal text-grafit-400">— valgfrit</span>
+            Telefon <span className="font-normal text-grafit-400">- valgfrit</span>
           </p>
           <p className="mt-0.5 text-xs text-grafit-500">
             Udfyld kun hvis fejlen handler om telefonen (CarPlay, Android Auto, Bluetooth, appen).
@@ -223,7 +223,7 @@ export default function MeldForm({
           })}
         </div>
         <p className="mt-1.5 text-xs text-grafit-400">
-          Tag gerne flere — rammer den hele platformen, vægter det tungere.
+          Tag gerne flere - rammer den hele platformen, vægter det tungere.
         </p>
       </div>
 

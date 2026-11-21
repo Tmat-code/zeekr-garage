@@ -10,13 +10,13 @@ import Footer from '@/components/Footer';
 import { SITE } from '@/lib/config';
 
 const BESKRIVELSE =
-  'Uofficielt, uafhængigt community for Zeekr-ejere i Norden. Meld, bekræft og stem på softwarefejl på tværs af modeller — og saml dem i rapporter til Zeekr.';
+  'Uofficielt, uafhængigt community for Zeekr-ejere i Norden. Meld, bekræft og stem på softwarefejl på tværs af modeller - og saml dem i rapporter til Zeekr.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(`https://${SITE.domain}`),
   title: {
-    default: `${SITE.name} – Uofficielt community for Zeekr-ejere`,
-    template: `%s – ${SITE.name}`,
+    default: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
+    template: `%s - ${SITE.name}`,
   },
   description: BESKRIVELSE,
   robots: { index: true, follow: true },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'da_DK',
     siteName: SITE.name,
-    title: `${SITE.name} – Uofficielt community for Zeekr-ejere`,
+    title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
     description: BESKRIVELSE,
   },
 };
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="bg-grafit-900 text-grafit-300">
           <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-4 py-1.5 text-center text-xs">
             <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-kobber-500" aria-hidden="true" />
-            <span>Zeekr Garage er under opbygning — nyt indhold og funktioner kommer løbende.</span>
+            <span>Zeekr Garage er under opbygning - nyt indhold og funktioner kommer løbende.</span>
           </div>
         </div>
         <Header />

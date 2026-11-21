@@ -1,7 +1,7 @@
--- Zeekr Garage — admin/moderator-roller + RLS-skrivepolitikker
+-- Zeekr Garage - admin/moderator-roller + RLS-skrivepolitikker
 -- ---------------------------------------------------------------------------
 -- Formand = admin. Moderator kan moderere board'et. Begge skriver via deres
--- EGEN authenticated session (anon-key + JWT), styret af RLS — ingen
+-- EGEN authenticated session (anon-key + JWT), styret af RLS - ingen
 -- service_role-noegle i app'en. Det afloeser init-kommentarens plan om
 -- service_role-moderering.
 --

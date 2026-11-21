@@ -75,7 +75,7 @@ export default async function RapportSide() {
       {/* Rapport-log */}
       <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
         <h3 className="font-semibold text-grafit-900">Rapport-log</h3>
-        <p className="mt-0.5 mb-3 text-sm text-grafit-500">Hvem har downloadet rapporter — med dato og tidspunkt.</p>
+        <p className="mt-0.5 mb-3 text-sm text-grafit-500">Hvem har downloadet rapporter - med dato og tidspunkt.</p>
         {log.length === 0 ? (
           <p className="text-sm text-grafit-500">Ingen downloads endnu.</p>
         ) : (

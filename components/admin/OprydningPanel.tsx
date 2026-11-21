@@ -47,7 +47,7 @@ export default function OprydningPanel() {
         <h2 className="text-lg font-semibold text-grafit-900">Oprydning</h2>
       </div>
       <p className="mb-3 text-sm text-grafit-500">
-        Fjern &quot;mig med&quot;-stemmer fra før en dato — fx test-klik fra før lanceringen. Viser
+        Fjern &quot;mig med&quot;-stemmer fra før en dato - fx test-klik fra før lanceringen. Viser
         antal først; sletning retter stemmetallene og <strong>kan ikke fortrydes</strong>.
       </p>
 

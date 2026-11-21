@@ -1,4 +1,4 @@
-// Simpel søjlegraf — rene divs, ingen chart-lib. Grafit+kobber.
+// Simpel søjlegraf - rene divs, ingen chart-lib. Grafit+kobber.
 export type Soejle = { label?: string; antal: number };
 
 export default function BarGraf({

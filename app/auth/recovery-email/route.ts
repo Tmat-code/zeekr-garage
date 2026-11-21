@@ -15,7 +15,7 @@ const TEMPLATE = `<!doctype html>
       </p>
       <p style="margin:0 0 4px;color:#6b7280;font-size:13px;">Virker knappen ikke, så kopiér dette link ind i din browser:</p>
       <p style="margin:0 0 22px;font-size:12px;word-break:break-all;color:#78716c;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nulstil</p>
-      <p style="margin:0;color:#9ca3af;font-size:12px;">Har du ikke selv bedt om dette, kan du roligt ignorere mailen — dit password bliver ikke ændret.</p>
+      <p style="margin:0;color:#9ca3af;font-size:12px;">Har du ikke selv bedt om dette, kan du roligt ignorere mailen - dit password bliver ikke ændret.</p>
     </div>
   </body>
 </html>`;

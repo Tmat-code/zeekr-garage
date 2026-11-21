@@ -43,7 +43,7 @@ export async function getModels(): Promise<Model[]> {
     .order('display_order', { ascending: true });
 
   if (error || !data || data.length === 0) {
-    // Fallback hvis DB ikke kan naas — siden virker stadig.
+    // Fallback hvis DB ikke kan naas - siden virker stadig.
     return MODEL_FALLBACK.map((m, i) => ({
       id: m.slug,
       slug: m.slug,

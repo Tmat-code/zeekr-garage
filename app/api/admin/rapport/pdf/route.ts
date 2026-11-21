@@ -107,11 +107,11 @@ export async function GET(req: Request) {
           .fontSize(10)
           .font('Helvetica-Bold')
           .fillColor(GROEN)
-          .text(`${t.metaLabels.bilBekraeftet}: ${bilBekr}  —  ${br}`, 58, doc.y + 2, { width: sideBredde });
+          .text(`${t.metaLabels.bilBekraeftet}: ${bilBekr}  -  ${br}`, 58, doc.y + 2, { width: sideBredde });
         doc.moveDown(0.2);
       }
 
-      const metaDele = [`${t.metaLabels.model}: ${f.modeller || '—'}`];
+      const metaDele = [`${t.metaLabels.model}: ${f.modeller || '-'}`];
       if (f.software_version) metaDele.push(`${t.metaLabels.software}: ${f.software_version}`);
       if (f.phone_model || f.phone_os) {
         metaDele.push(`${t.metaLabels.telefon}: ${[f.phone_model, f.phone_os].filter(Boolean).join(' / ')}`);

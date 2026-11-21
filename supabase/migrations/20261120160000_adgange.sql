@@ -1,4 +1,4 @@
--- Zeekr Garage — Adgange (moderator-/admin-roller via email-invitation)
+-- Zeekr Garage - Adgange (moderator-/admin-roller via email-invitation)
 -- ---------------------------------------------------------------------------
 -- Ingen separat password-mekanik (login er Supabase). Admin inviterer paa email:
 --  - findes brugeren allerede => rollen saettes med det samme

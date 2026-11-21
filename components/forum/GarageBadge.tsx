@@ -1,5 +1,5 @@
 // Lille garage-badge: viser forfatterens bil ("🚗 Zeekr 7GT · Long Range RWD").
-// Det er forummets differentiering — indlæg kender ejer-grafen. Ingen bil => intet.
+// Det er forummets differentiering - indlæg kender ejer-grafen. Ingen bil => intet.
 export default function GarageBadge({ bil }: { bil: string | null }) {
   if (!bil) return null;
   return (

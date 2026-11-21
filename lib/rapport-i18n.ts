@@ -53,7 +53,7 @@ type Tekster = {
 export const I18N: Record<RapportSprog, Tekster> = {
   da: {
     sprognavn: 'Dansk',
-    undertitel: `Uofficielt, uafhængigt ejer-community for Zeekr — ${SITE.domain}`,
+    undertitel: `Uofficielt, uafhængigt ejer-community for Zeekr - ${SITE.domain}`,
     genereret: (dato, antal) => `Genereret ${dato} · ${antal} poster`,
     metaLabels: { model: 'Model', software: 'Software', status: 'Status', telefon: 'Telefon', bilBekraeftet: 'Biler bekræftet' },
     stemme: 'stemme',
@@ -69,7 +69,7 @@ export const I18N: Record<RapportSprog, Tekster> = {
   },
   en: {
     sprognavn: 'English',
-    undertitel: `Unofficial, independent owner community for Zeekr — ${SITE.domain}`,
+    undertitel: `Unofficial, independent owner community for Zeekr - ${SITE.domain}`,
     genereret: (dato, antal) => `Generated ${dato} · ${antal} entries`,
     metaLabels: { model: 'Model', software: 'Software', status: 'Status', telefon: 'Phone', bilBekraeftet: 'Cars confirmed' },
     stemme: 'vote',
@@ -85,7 +85,7 @@ export const I18N: Record<RapportSprog, Tekster> = {
   },
   sv: {
     sprognavn: 'Svenska',
-    undertitel: `Inofficiell, oberoende ägargemenskap för Zeekr — ${SITE.domain}`,
+    undertitel: `Inofficiell, oberoende ägargemenskap för Zeekr - ${SITE.domain}`,
     genereret: (dato, antal) => `Genererad ${dato} · ${antal} poster`,
     metaLabels: { model: 'Modell', software: 'Programvara', status: 'Status', telefon: 'Telefon', bilBekraeftet: 'Bilar bekräftade' },
     stemme: 'röst',
@@ -103,19 +103,19 @@ export const I18N: Record<RapportSprog, Tekster> = {
 
 export const RAPPORT_RAMME: Record<RapportSprog, Record<RapportType, { titel: string; intro: string }>> = {
   da: {
-    fejl: { titel: 'ZEEKR GARAGE — FEJLRAPPORT', intro: 'Denne rapport samler de softwarefejl, som flest ejere i fællesskabet har bekræftet at opleve. Hver post viser antal bekræftelser (biler), berørte modeller, softwareversion og en beskrivelse.' },
-    oenske: { titel: 'ZEEKR GARAGE — ØNSKE-RAPPORT', intro: 'Denne rapport samler de ønsker til ny funktionalitet, som flest ejere har stemt på. Hver post viser antal stemmer, berørte modeller og en beskrivelse.' },
-    begge: { titel: 'ZEEKR GARAGE — FEJL & ØNSKER', intro: 'Denne rapport samler både bekræftede softwarefejl og ønsker fra Zeekr-fællesskabet, sorteret efter antal stemmer.' },
+    fejl: { titel: 'ZEEKR GARAGE - FEJLRAPPORT', intro: 'Denne rapport samler de softwarefejl, som flest ejere i fællesskabet har bekræftet at opleve. Hver post viser antal bekræftelser (biler), berørte modeller, softwareversion og en beskrivelse.' },
+    oenske: { titel: 'ZEEKR GARAGE - ØNSKE-RAPPORT', intro: 'Denne rapport samler de ønsker til ny funktionalitet, som flest ejere har stemt på. Hver post viser antal stemmer, berørte modeller og en beskrivelse.' },
+    begge: { titel: 'ZEEKR GARAGE - FEJL & ØNSKER', intro: 'Denne rapport samler både bekræftede softwarefejl og ønsker fra Zeekr-fællesskabet, sorteret efter antal stemmer.' },
   },
   en: {
-    fejl: { titel: 'ZEEKR GARAGE — BUG REPORT', intro: 'This report compiles the software issues that the most owners in the community have confirmed. Each entry shows the number of confirmations (cars), affected models, software version and a description.' },
-    oenske: { titel: 'ZEEKR GARAGE — FEATURE REQUESTS', intro: 'This report compiles the feature requests that the most owners have voted for. Each entry shows the number of votes, affected models and a description.' },
-    begge: { titel: 'ZEEKR GARAGE — BUGS & REQUESTS', intro: 'This report compiles both confirmed software issues and feature requests from the Zeekr community, sorted by number of votes.' },
+    fejl: { titel: 'ZEEKR GARAGE - BUG REPORT', intro: 'This report compiles the software issues that the most owners in the community have confirmed. Each entry shows the number of confirmations (cars), affected models, software version and a description.' },
+    oenske: { titel: 'ZEEKR GARAGE - FEATURE REQUESTS', intro: 'This report compiles the feature requests that the most owners have voted for. Each entry shows the number of votes, affected models and a description.' },
+    begge: { titel: 'ZEEKR GARAGE - BUGS & REQUESTS', intro: 'This report compiles both confirmed software issues and feature requests from the Zeekr community, sorted by number of votes.' },
   },
   sv: {
-    fejl: { titel: 'ZEEKR GARAGE — FELRAPPORT', intro: 'Den här rapporten samlar de programvarufel som flest ägare har bekräftat. Varje post visar antal bekräftelser (bilar), berörda modeller, programvaruversion och en beskrivning.' },
-    oenske: { titel: 'ZEEKR GARAGE — ÖNSKEMÅL', intro: 'Den här rapporten samlar de önskemål som flest ägare har röstat på. Varje post visar antal röster, berörda modeller och en beskrivning.' },
-    begge: { titel: 'ZEEKR GARAGE — FEL & ÖNSKEMÅL', intro: 'Den här rapporten samlar både bekräftade programvarufel och önskemål från Zeekr-gemenskapen, sorterade efter antal röster.' },
+    fejl: { titel: 'ZEEKR GARAGE - FELRAPPORT', intro: 'Den här rapporten samlar de programvarufel som flest ägare har bekräftat. Varje post visar antal bekräftelser (bilar), berörda modeller, programvaruversion och en beskrivning.' },
+    oenske: { titel: 'ZEEKR GARAGE - ÖNSKEMÅL', intro: 'Den här rapporten samlar de önskemål som flest ägare har röstat på. Varje post visar antal röster, berörda modeller och en beskrivning.' },
+    begge: { titel: 'ZEEKR GARAGE - FEL & ÖNSKEMÅL', intro: 'Den här rapporten samlar både bekräftade programvarufel och önskemål från Zeekr-gemenskapen, sorterade efter antal röster.' },
   },
 };
 

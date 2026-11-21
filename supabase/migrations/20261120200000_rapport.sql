@@ -1,4 +1,4 @@
--- Zeekr Garage — Zeekr-rapport (eksport PDF/CSV, markér sendt, delta, log)
+-- Zeekr Garage - Zeekr-rapport (eksport PDF/CSV, markér sendt, delta, log)
 -- ---------------------------------------------------------------------------
 -- Porteret fra bugherrer (SQLite → Postgres). Sendt-sporing pr. melding, snapshot
 -- til fortryd, rapport-log, og oversættelses-cache (LibreTranslate i app-laget).
@@ -127,7 +127,7 @@ as $$
 $$;
 
 -- =========================================================================
--- 6) RPC: dan rapport-markering (markér udvalg som sendt + snapshot) — KUN admin
+-- 6) RPC: dan rapport-markering (markér udvalg som sendt + snapshot) - KUN admin
 -- =========================================================================
 create or replace function public.dan_rapport_markering(
   p_type text,
@@ -180,7 +180,7 @@ end;
 $$;
 
 -- =========================================================================
--- 7) RPC: fortryd seneste markering — KUN admin
+-- 7) RPC: fortryd seneste markering - KUN admin
 -- =========================================================================
 create or replace function public.fortryd_markering()
 returns int

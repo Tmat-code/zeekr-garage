@@ -1,4 +1,4 @@
--- Zeekr Garage — Forside-besked (banner)
+-- Zeekr Garage - Forside-besked (banner)
 -- ---------------------------------------------------------------------------
 -- Én besked ad gangen, vist oeverst paa forsiden naar active = true.
 -- Singleton: altid id = 1. Kun admin skriver; alle laeser (banneret er offentligt).

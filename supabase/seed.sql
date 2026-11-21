@@ -1,4 +1,4 @@
--- Zeekr Garage — seed-data
+-- Zeekr Garage - seed-data
 -- De 6 DK-modeller + deres softwareplatform (jf. HANDOVER).
 -- Idempotent: kan koeres igen uden dubletter.
 

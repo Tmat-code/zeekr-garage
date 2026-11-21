@@ -70,7 +70,7 @@ export default function AdgangePanel({
           <h2 className="text-lg font-semibold text-grafit-900">Adgange</h2>
         </div>
         <p className="mb-3 text-sm text-grafit-500">
-          Giv andre adgang til at moderere. Du inviterer på email — har personen allerede en konto,
+          Giv andre adgang til at moderere. Du inviterer på email - har personen allerede en konto,
           får de rollen med det samme; ellers tildeles den automatisk, når de opretter en konto med
           den email. Din egen konto er altid admin.
         </p>

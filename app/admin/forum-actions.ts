@@ -120,7 +120,7 @@ export async function flytKategori(id: string, retning: 'op' | 'ned'): Promise<v
   const liste = (gruppe ?? []) as any[];
   const idx = liste.findIndex((c) => c.id === id);
   const naboIdx = retning === 'op' ? idx - 1 : idx + 1;
-  if (naboIdx < 0 || naboIdx >= liste.length) return; // yderpunkt — ingenting
+  if (naboIdx < 0 || naboIdx >= liste.length) return; // yderpunkt - ingenting
 
   const nabo = liste[naboIdx];
   // Byt display_order.
@@ -132,7 +132,7 @@ export async function flytKategori(id: string, retning: 'op' | 'ned'): Promise<v
   revalider();
 }
 
-// Slet en kategori — kun hvis den er tom (cascade ville ellers slette tråde).
+// Slet en kategori - kun hvis den er tom (cascade ville ellers slette tråde).
 export async function sletKategori(id: string): Promise<void> {
   await kraevModerator();
   const sb = supabaseServer();
@@ -142,7 +142,7 @@ export async function sletKategori(id: string): Promise<void> {
     .eq('category_id', id)
     .eq('is_removed', false);
   if ((count ?? 0) > 0) {
-    throw new Error(`Kategorien har ${count} tråd(e) — flyt eller fjern dem først.`);
+    throw new Error(`Kategorien har ${count} tråd(e) - flyt eller fjern dem først.`);
   }
   const { error } = await sb.from('forum_categories').delete().eq('id', id);
   if (error) throw new Error(error.message);

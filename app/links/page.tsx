@@ -7,7 +7,7 @@ export const metadata = {
 type LinkPost = { navn: string; kilde: string; url: string };
 type LinkGruppe = { titel: string; links: LinkPost[] };
 
-// Porteret fra bugherrer.dk/links. Mest 7GT endnu — udvides pr. model efterhånden.
+// Porteret fra bugherrer.dk/links. Mest 7GT endnu - udvides pr. model efterhånden.
 const LINK_GRUPPER: LinkGruppe[] = [
   {
     titel: 'Officielt fra Zeekr',
@@ -20,7 +20,7 @@ const LINK_GRUPPER: LinkGruppe[] = [
         url: 'https://www.zeekr.eu/manual-result?vk=AAF9&yk=MZ18&lk=da_DK&ln=Dansk&vn=7GT&yn=2026&ven=Long+Range+RWD',
       },
       {
-        navn: 'Brugermanualer — vælg din model',
+        navn: 'Brugermanualer - vælg din model',
         kilde: 'zeekr.eu · alle modeller',
         url: 'https://www.zeekr.eu/contact',
       },
@@ -99,7 +99,7 @@ export default function LinksSide() {
       </h1>
       <p className="mt-3 max-w-2xl text-grafit-600">
         Ting vi selv bruger som Zeekr-ejere: officielt fra Zeekr, test og specs, køb og tilbehør,
-        og lidt praktisk. Mest 7GT lige nu — flere modeller følger, efterhånden som ejerne bidrager.
+        og lidt praktisk. Mest 7GT lige nu - flere modeller følger, efterhånden som ejerne bidrager.
       </p>
       <p className="mt-2 text-sm text-grafit-400">
         Vi tjener ikke på nogen af linkene. Eksterne sider åbner i et nyt faneblad.

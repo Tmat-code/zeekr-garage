@@ -49,7 +49,7 @@ export default function LoginForm({
           redirectTo: `${window.location.origin}/auth/callback?naeste=/nulstil`,
         });
         if (error) throw error;
-        // Neutral besked — afsloerer ikke om mailen findes.
+        // Neutral besked - afsloerer ikke om mailen findes.
         setInfo('Hvis der findes en konto på den mail, har vi sendt et nulstillingslink. Tjek din indbakke.');
         setBusy(false);
         return;
@@ -66,7 +66,7 @@ export default function LoginForm({
         if (!bil.ejerIkke) {
           if (!bil.modelId) {
             setBusy(false);
-            return setFejl('Vælg din model — eller markér "Ejer ikke en Zeekr endnu".');
+            return setFejl('Vælg din model - eller markér "Ejer ikke en Zeekr endnu".');
           }
           if (varianterForModel.length > 1 && !bil.variantId) {
             setBusy(false);
@@ -84,7 +84,7 @@ export default function LoginForm({
         });
         if (error) throw error;
         if (!data.session) {
-          setInfo('Konto oprettet — tjek din mail for at bekræfte, så er du klar.');
+          setInfo('Konto oprettet - tjek din mail for at bekræfte, så er du klar.');
           setBusy(false);
           return;
         }
@@ -156,7 +156,7 @@ export default function LoginForm({
             <p className="mt-2 text-xs text-grafit-500">
               Hvorfor spørger vi? Din bil knytter dine &quot;mig med&quot;-stemmer til en rigtig
               model og variant, så fejl-rapporterne til Zeekr bliver præcise. Ejer du ikke en Zeekr
-              endnu, kan du stadig læse og følge med — du kan bare ikke stemme, før din bil er
+              endnu, kan du stadig læse og følge med - du kan bare ikke stemme, før din bil er
               registreret. Du kan altid rette den under Min garage.
             </p>
           </div>

@@ -1,4 +1,4 @@
--- Zeekr Garage — Forum (custom, Next.js + Supabase)
+-- Zeekr Garage - Forum (custom, Next.js + Supabase)
 -- ---------------------------------------------------------------------------
 -- Diskussionsforum ud over Feedback-boardet. UX-forbillede: polestar-forum.com
 -- (grupper -> kategori-raekker -> traadliste -> traad). Discourse fravalgt
@@ -247,7 +247,7 @@ insert into public.forum_categories
   (slug, name, description, icon, group_label, group_order, display_order, is_locked)
 values
   ('praesenter-dig', 'Præsentér dig',
-   'Ny her? Sig hej, og fortæl hvilken Zeekr du kører — eller drømmer om.',
+   'Ny her? Sig hej, og fortæl hvilken Zeekr du kører - eller drømmer om.',
    '👋', 'Velkommen', 1, 1, false),
   ('regler', 'Community-regler',
    'Sådan holder vi en god, konstruktiv tone. Læs før du poster.',
@@ -259,7 +259,7 @@ values
    'Dine indtryk efter uger og måneder bag rattet.',
    '⭐', 'Ejer-lounge', 3, 2, false),
   ('billeder-videoer', 'Billeder & videoer',
-   'Vis din bil frem — foto, clips og roadtrips.',
+   'Vis din bil frem - foto, clips og roadtrips.',
    '📷', 'Ejer-lounge', 3, 3, false),
   ('software-ota', 'Software & OTA',
    'Nye opdateringer, changelogs og hvad de ændrer. (Rigtige fejl → Feedback.)',
@@ -279,7 +279,7 @@ on conflict (slug) do nothing;
 insert into public.forum_categories
   (slug, name, description, icon, group_label, group_order, display_order, model_id)
 select m.slug, m.name,
-       'Alt om ' || m.name || ' — snak, spørgsmål og erfaringer.',
+       'Alt om ' || m.name || ' - snak, spørgsmål og erfaringer.',
        '🚗', 'Modellerne', 2, m.display_order, m.id
 from public.models m
 on conflict (slug) do nothing;

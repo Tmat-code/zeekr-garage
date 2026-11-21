@@ -4,7 +4,7 @@ import KategoriStyring from '@/components/admin/KategoriStyring';
 import ForumModerering from '@/components/admin/ForumModerering';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Forum – Værkstedet' };
+export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
   const [grupper, forum] = await Promise.all([getForumGrupper(), getAdminForum(25)]);
@@ -31,7 +31,7 @@ export default async function AdminForumSide() {
           <span className="text-sm text-grafit-400">{antalKategorier} i alt</span>
         </div>
         <p className="mb-4 text-sm text-grafit-500">
-          Opret, omdøb, sortér og lås kategorier — direkte her, uden at gå i databasen. En låst
+          Opret, omdøb, sortér og lås kategorier - direkte her, uden at gå i databasen. En låst
           kategori kan kun moderatorer starte tråde i.
         </p>
         <KategoriStyring grupper={grupper} />

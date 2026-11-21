@@ -9,7 +9,7 @@ indtil cutover; kør igen for et friskt snapshot.
    docker cp <bugherrer-container>:/app/data ~/bugherrer-data
    tar czf ~/bugherrer-data.tgz -C ~/bugherrer-data .
    ```
-   (DB-filen hedder `bugherrer.db`, WAL-mode — tag hele mappen med.)
+   (DB-filen hedder `bugherrer.db`, WAL-mode - tag hele mappen med.)
 2. Pak ud og generér import-SQL:
    ```
    python3 -I gen_import.py /sti/til/bugherrer.db ../../supabase/imports/bugherrer_import.sql

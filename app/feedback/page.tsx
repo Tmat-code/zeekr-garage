@@ -31,7 +31,7 @@ export default async function FeedbackSide() {
         </h1>
         <p className="mt-2 max-w-2xl text-grafit-600">
           Meld fejl og ønsker, bekræft dem sammen, og stem de vigtigste op. Vi samler dem i
-          konstruktive rapporter til Zeekr — som en medspiller, der vil se gode biler blive endnu bedre.
+          konstruktive rapporter til Zeekr - som en medspiller, der vil se gode biler blive endnu bedre.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link href="/meld" className="btn-primary">Meld en fejl</Link>

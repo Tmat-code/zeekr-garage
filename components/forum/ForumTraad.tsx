@@ -177,7 +177,7 @@ export default function ForumTraad({
         </h2>
         {isLocked ? (
           <div className="rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-500">
-            🔒 Tråden er låst — der kan ikke skrives flere svar.
+            🔒 Tråden er låst - der kan ikke skrives flere svar.
           </div>
         ) : isLoggedIn ? (
           <div className="space-y-2">

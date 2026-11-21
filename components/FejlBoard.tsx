@@ -122,7 +122,7 @@ export default function FejlBoard({
           <p className="mt-1 text-sm text-grafit-500">
             {modelSlug === 'alle' && typeFilter === 'alle'
               ? 'Vær den første til at melde ind.'
-              : 'Intet matcher filteret endnu — prøv et andet.'}
+              : 'Intet matcher filteret endnu - prøv et andet.'}
           </p>
           <Link href="/meld" className="btn-primary mt-4">Meld ind</Link>
         </div>

@@ -107,7 +107,7 @@ function IndlaegRaekke({ p }: { p: AdminForumIndlaeg }) {
       <div className="mt-2 flex items-center gap-2 text-sm">
         <span className="flex-1" />
         {p.isOpening ? (
-          <span className="text-xs text-grafit-400">Åbnings-indlæg — brug “Fjern tråd”</span>
+          <span className="text-xs text-grafit-400">Åbnings-indlæg - brug “Fjern tråd”</span>
         ) : bekraeftSlet ? (
           <span className="flex items-center gap-1">
             <button

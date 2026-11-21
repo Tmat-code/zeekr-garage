@@ -81,7 +81,7 @@ export default function Overblik({
       </div>
 
       <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-grafit-400">
-        Seneste aktivitet — hele sitet
+        Seneste aktivitet - hele sitet
       </h3>
 
       {aktivitet.length === 0 ? (

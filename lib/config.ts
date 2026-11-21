@@ -1,4 +1,4 @@
-// Centraliseret konfiguration — domaene, visningsnavn, statusser, modeller.
+// Centraliseret konfiguration - domaene, visningsnavn, statusser, modeller.
 // Alt kan overstyres via environment-variabler i Coolify.
 
 export const SITE = {

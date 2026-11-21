@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { kategori: string } }) {
   const kat = await getKategori(params.kategori);
-  return { title: kat ? `Ny tråd – ${kat.name}` : 'Ny tråd' };
+  return { title: kat ? `Ny tråd - ${kat.name}` : 'Ny tråd' };
 }
 
 export default async function NyTraadSide({ params }: { params: { kategori: string } }) {
@@ -31,7 +31,7 @@ export default async function NyTraadSide({ params }: { params: { kategori: stri
         Ny tråd i {kat.name}
       </h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Hold en god, konstruktiv tone — vi er her for at hjælpe hinanden.
+        Hold en god, konstruktiv tone - vi er her for at hjælpe hinanden.
       </p>
       <NyTraadForm kategoriSlug={kat.slug} kategoriNavn={kat.name} />
     </div>

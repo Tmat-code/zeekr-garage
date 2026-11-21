@@ -40,7 +40,7 @@ export default async function AktivitetSide() {
         </Link>
       </div>
       <p className="-mt-3 text-sm text-grafit-500">
-        Stemmer og nye meldinger — vist i dansk tid.
+        Stemmer og nye meldinger - vist i dansk tid.
       </p>
 
       <div className="grid grid-cols-3 gap-3">
@@ -59,7 +59,7 @@ export default async function AktivitetSide() {
 
       <section className="rounded-2xl border-2 border-kobber-200 bg-white p-5">
         <h3 className="mb-1 font-semibold text-grafit-900">Hen over døgnet</h3>
-        <p className="mb-3 text-xs text-grafit-400">Hændelser pr. klokkeslæt (0–23).</p>
+        <p className="mb-3 text-xs text-grafit-400">Hændelser pr. klokkeslæt (0-23).</p>
         <BarGraf soejler={timeSoejler} />
       </section>
 
@@ -96,7 +96,7 @@ export default async function AktivitetSide() {
       </section>
 
       <p className="text-xs text-grafit-400">
-        💡 Dette er fællesskabs-aktivitet (stemmer/meldinger) — ikke serverens CPU/hukommelse.
+        💡 Dette er fællesskabs-aktivitet (stemmer/meldinger) - ikke serverens CPU/hukommelse.
         Den egentlige server-belastning kan du se i Coolifys egen overvågning på applikationen.
       </p>
     </div>

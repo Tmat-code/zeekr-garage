@@ -1,4 +1,4 @@
--- Zeekr Garage — Kommentarer ("Byggemøde")
+-- Zeekr Garage - Kommentarer ("Byggemøde")
 -- ---------------------------------------------------------------------------
 -- Login-styret v1: alle laeser; authenticated skriver egne; forfatter retter/
 -- sletter egne; moderator/admin retter/sletter alle og kan markere en kommentar

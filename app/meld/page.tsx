@@ -38,7 +38,7 @@ export default async function MeldSide({
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Meld ind</h1>
       <p className="mt-1 text-grafit-600">
-        Søg først — så undgår vi dubletter, og de rigtige fejl får flere stemmer.
+        Søg først - så undgår vi dubletter, og de rigtige fejl får flere stemmer.
       </p>
       <MeldFlow
         issues={issues}

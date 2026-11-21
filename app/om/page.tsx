@@ -10,17 +10,17 @@ export default function OmSide() {
       <div className="prose mt-4 space-y-4 text-grafit-700">
         <p>
           {SITE.name} er et uofficielt, ikke-kommercielt community af og for Zeekr-ejere
-          i Norden. Ingen annoncer, ingen affiliate — bare ejere der hjælper hinanden.
+          i Norden. Ingen annoncer, ingen affiliate - bare ejere der hjælper hinanden.
         </p>
         <p>
           Kernen er et <strong>fejl-board</strong>: meld softwarefejl, bekræft dem sammen,
           og stem de vigtigste op. Én fejl kan tagges til flere modeller, så vi kan se når
           noget rammer en hel platform. De bekræftede fejl samles i pæne, offentlige
-          rapporter til Zeekr — som en konstruktiv medspiller, ikke en vred pressgruppe.
+          rapporter til Zeekr - som en konstruktiv medspiller, ikke en vred pressgruppe.
         </p>
         <p>
           Senere kommer et rigtigt <strong>forum</strong> med underfora pr. model, tråde og
-          guides — med ét fælles login, så det hele føles som ét site.
+          guides - med ét fælles login, så det hele føles som ét site.
         </p>
       </div>
 

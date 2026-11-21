@@ -92,7 +92,7 @@ export default async function Forside() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-grafit-300">
               Et uofficielt fællesskab, hvor ejere mødes, deler erfaringer og hjælper hinanden.
-              Vi samler fejl og ønsker som konstruktiv feedback til Zeekr — fordi vi vil se gode
+              Vi samler fejl og ønsker som konstruktiv feedback til Zeekr - fordi vi vil se gode
               biler blive endnu bedre.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
@@ -133,7 +133,7 @@ export default async function Forside() {
         </div>
       </section>
 
-      {/* FORUM — det bærende rum (live) */}
+      {/* FORUM - det bærende rum (live) */}
       <section className="mx-auto max-w-5xl px-4 pt-14">
         <div className="relative overflow-hidden rounded-2xl bg-grafit-900 p-6 text-white ring-1 ring-grafit-800 sm:p-9">
           <div
@@ -149,7 +149,7 @@ export default async function Forside() {
               </span>
             </div>
             <p className="mt-3 max-w-xl text-grafit-300">
-              Fællesskabets hjerte: hverdagssnak, spørgsmål og guides — med et eget forum for
+              Fællesskabets hjerte: hverdagssnak, spørgsmål og guides - med et eget forum for
               hver model, plus opladning, software, tilbehør og livet som ejer. Samme login som
               resten af siden.
             </p>
@@ -239,7 +239,7 @@ export default async function Forside() {
               </div>
             ) : (
               <p className="mt-5 border-t border-grafit-100 pt-4 text-sm text-grafit-400">
-                Ingen meldinger endnu — vær den første til at melde noget ind.
+                Ingen meldinger endnu - vær den første til at melde noget ind.
               </p>
             )}
 
@@ -260,7 +260,7 @@ export default async function Forside() {
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
               <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Min garage</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Registrér din Zeekr, så dine indlæg i forummet viser den rigtige bil — og dine
+                Registrér din Zeekr, så dine indlæg i forummet viser den rigtige bil - og dine
                 stemmer tæller for den rigtige model.
               </p>
               <Link
@@ -273,7 +273,7 @@ export default async function Forside() {
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
               <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Nyttige links</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Manualer, specs, test, tilbehør og lidt praktisk — samlet ét sted for Zeekr-ejere.
+                Manualer, specs, test, tilbehør og lidt praktisk - samlet ét sted for Zeekr-ejere.
               </p>
               <Link href="/links" className="mt-4 inline-flex text-sm font-semibold text-kobber-700 hover:text-kobber-600">
                 Se nyttige links

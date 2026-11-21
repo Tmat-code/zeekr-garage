@@ -6,7 +6,7 @@ Uofficielt, uafhaengigt community- og fejl-board for Zeekr-ejere i Norden.
   data i selvhostet **Supabase** (Postgres + auth + RLS) paa hjemmeserveren Pixa.
   Alt er offentligt laesbart; login kraeves kun for at bidrage.
 - **Forum (senere skive):** Discourse, selvhostet, med underfora pr. model og ét
-  faelles login (SSO) — saa fejl-board og forum foeles som ét site.
+  faelles login (SSO) - saa fejl-board og forum foeles som ét site.
 
 Se `HANDOVER.md` for den fulde plan, arkitektur og status.
 

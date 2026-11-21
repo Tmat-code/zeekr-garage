@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 // Server-side Supabase-klient (auth-bevidst, cookie-baseret session).
-// Bruger den INTERNE URL hvis sat (hurtig, paa Pixas Docker-netvaerk) — ellers
+// Bruger den INTERNE URL hvis sat (hurtig, paa Pixas Docker-netvaerk) - ellers
 // den offentlige. Samme instans => samme JWT, saa login validerer uanset hvilken.
 const SUPABASE_URL =
   process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -25,7 +25,7 @@ export function supabaseServer() {
             cookieStore.set(name, value, options),
           );
         } catch {
-          // Kaldt fra en Server Component (kan ikke saette cookies) — ignoreres.
+          // Kaldt fra en Server Component (kan ikke saette cookies) - ignoreres.
           // Session-opdatering sker i middleware/route handlers.
         }
       },

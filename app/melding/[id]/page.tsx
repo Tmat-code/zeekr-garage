@@ -93,7 +93,7 @@ export default async function MeldingSide({ params }: { params: { id: string } }
         <div>
           <p className="font-semibold text-grafit-900">Oplever du også dette?</p>
           <p className="text-sm text-grafit-500">
-            Bekræft med din variant — jo flere ejere, jo tungere vejer fejlen over for Zeekr.
+            Bekræft med din variant - jo flere ejere, jo tungere vejer fejlen over for Zeekr.
           </p>
         </div>
       </div>

@@ -123,7 +123,7 @@ export type OversaetStatus = {
   fejl?: string;
 };
 
-// "Test oversættelse" i admin — live-diagnose.
+// "Test oversættelse" i admin - live-diagnose.
 export async function oversaetDiagnose(): Promise<OversaetStatus> {
   if (!LT_URL) return { konfigureret: false, vaert: null, ok: false };
   let vaert = LT_URL;

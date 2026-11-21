@@ -170,7 +170,7 @@ export default function Kommentarer({
         💬 Byggemøde ({kommentarer.length})
       </h2>
       <p className="mt-0.5 text-sm text-grafit-500">
-        Er det en betjeningsfejl, eller har du et fix? Hjælp de andre her — så fanges en fejl 40,
+        Er det en betjeningsfejl, eller har du et fix? Hjælp de andre her - så fanges en fejl 40,
         før den ryger i rapporten til Zeekr.
       </p>
 
@@ -200,7 +200,7 @@ export default function Kommentarer({
               className="input min-h-[90px]"
               value={ny}
               onChange={(e) => setNy(e.target.value)}
-              placeholder="Fx: 'Dette er faktisk en indstilling — gå ind i menuen under…'"
+              placeholder="Fx: 'Dette er faktisk en indstilling - gå ind i menuen under…'"
             />
             <div className="flex items-center gap-3">
               <button

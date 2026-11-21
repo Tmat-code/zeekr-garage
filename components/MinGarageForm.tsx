@@ -30,7 +30,7 @@ export default function MinGarageForm({
     setGemt(false);
     const vs = bil.modelId ? (varianter[bil.modelId] ?? []) : [];
     if (!bil.ejerIkke) {
-      if (!bil.modelId) return setFejl('Vælg din model — eller markér "Ejer ikke en Zeekr endnu".');
+      if (!bil.modelId) return setFejl('Vælg din model - eller markér "Ejer ikke en Zeekr endnu".');
       if (vs.length > 1 && !bil.variantId) return setFejl('Vælg din variant.');
     }
     setBusy(true);

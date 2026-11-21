@@ -1,4 +1,4 @@
--- Zeekr Garage — "Min garage": brugerens bil (model + variant) på profilen
+-- Zeekr Garage - "Min garage": brugerens bil (model + variant) på profilen
 -- ---------------------------------------------------------------------------
 -- Man registrerer sin bil ved oprettelse (eller vælger "ejer ikke endnu").
 -- "Mig med" bruger automatisk bilen. Ingen bil (begge null) => kan ikke stemme.

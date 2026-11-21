@@ -53,7 +53,7 @@ export default function NyTraadForm({
           className="input min-h-[180px]"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Skriv løs — spørgsmål, erfaring eller en god historie."
+          placeholder="Skriv løs - spørgsmål, erfaring eller en god historie."
         />
       </div>
       <div className="flex items-center gap-3">

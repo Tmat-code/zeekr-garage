@@ -32,7 +32,7 @@ export default function ForsideBeskedEditor({ initial }: { initial: ForsideBeske
         <h2 className="text-lg font-semibold text-grafit-900">Forside-besked</h2>
       </div>
       <p className="mb-3 text-sm text-grafit-500">
-        En besked øverst på forsiden — fx når du har sendt en rapport til Zeekr, eller ved
+        En besked øverst på forsiden - fx når du har sendt en rapport til Zeekr, eller ved
         flytning fra det gamle site. Tænd med ét klik, og sluk igen når den ikke er aktuel.
       </p>
 
@@ -43,7 +43,7 @@ export default function ForsideBeskedEditor({ initial }: { initial: ForsideBeske
           setMessage(e.target.value);
           setGemt(false);
         }}
-        placeholder="Fx: Vi er flyttet til zeekr-garage.dk — tak for alle meldinger!"
+        placeholder="Fx: Vi er flyttet til zeekr-garage.dk - tak for alle meldinger!"
       />
 
       <div className="mt-3 flex flex-wrap items-center gap-3">

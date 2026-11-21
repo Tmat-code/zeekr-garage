@@ -55,7 +55,7 @@ export async function markerLoesning(
   if (!(await erModerator())) throw new Error('Kun moderator/admin.');
   const sb = supabaseServer();
   if (vaerd) {
-    // Kun én løsning pr. melding — nulstil de andre først.
+    // Kun én løsning pr. melding - nulstil de andre først.
     await sb
       .from('comments')
       .update({ is_solution: false })

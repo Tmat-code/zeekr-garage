@@ -3,7 +3,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 // Browser-side Supabase-klient. Bruger den OFFENTLIGE URL (skal kunne naas fra
-// brugerens browser — selvhostet instans eksponeres via Cloudflare Tunnel).
+// brugerens browser - selvhostet instans eksponeres via Cloudflare Tunnel).
 export function supabaseBrowser() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',

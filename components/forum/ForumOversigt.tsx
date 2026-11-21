@@ -7,8 +7,8 @@ import type { ForumGruppe } from '@/lib/types';
 
 // Kort undertekst pr. gruppe (Polestar har gruppe-overskrift + undertekst).
 const GRUPPE_TEKST: Record<string, string> = {
-  Velkommen: 'Start her — sig hej og læs husreglerne.',
-  Modellerne: 'Ét forum pr. model — rygraden i fællesskabet.',
+  Velkommen: 'Start her - sig hej og læs husreglerne.',
+  Modellerne: 'Ét forum pr. model - rygraden i fællesskabet.',
   'Ejer-lounge': 'Livet som ejer: køb, test, billeder.',
   Teknik: 'Software, opladning, tilbehør og app.',
 };
@@ -69,7 +69,7 @@ function KategoriRaekke({
           <div className="text-xs text-grafit-400">visninger</div>
         </div>
         <div className="w-24 text-grafit-500">
-          {sidstAktiv ? relativTid(sidstAktiv) : '—'}
+          {sidstAktiv ? relativTid(sidstAktiv) : '-'}
         </div>
       </div>
 

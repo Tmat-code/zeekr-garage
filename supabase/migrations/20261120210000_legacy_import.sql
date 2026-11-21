@@ -1,4 +1,4 @@
--- Zeekr Garage — Legacy-import fra bugherrer
+-- Zeekr Garage - Legacy-import fra bugherrer
 -- ---------------------------------------------------------------------------
 -- Bugherrer har ingen brugerkonti (stemmer er browser-baserede), så importerede
 -- stemmer kan ikke blive til per-bruger-bekræftelser. I stedet gemmes de som et

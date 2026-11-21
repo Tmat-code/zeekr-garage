@@ -1,6 +1,6 @@
 // Finder appens OFFENTLIGE origin ud fra request-headers.
 // Next.js standalone binder til 0.0.0.0:3000, saa `request.url` peger paa den
-// interne adresse — en redirect bygget paa den sender browseren til
+// interne adresse - en redirect bygget paa den sender browseren til
 // https://0.0.0.0:3000. Bag Cloudflare Tunnel kommer det rigtige vaertsnavn i
 // Host- (eller X-Forwarded-Host-) headeren, saa vi bruger den i stedet.
 export function publicOrigin(request: Request): string {

@@ -48,7 +48,7 @@ export default function BilVaelger({
             disabled={!value.modelId || vs.length <= 1}
             onChange={(e) => onChange({ ...value, variantId: e.target.value })}
           >
-            <option value="">{vs.length > 1 ? 'Vælg variant…' : vs.length === 1 ? vs[0].name : '—'}</option>
+            <option value="">{vs.length > 1 ? 'Vælg variant…' : vs.length === 1 ? vs[0].name : '-'}</option>
             {vs.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}

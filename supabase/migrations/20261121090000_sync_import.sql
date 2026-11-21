@@ -1,4 +1,4 @@
--- Zeekr Garage — Sync-import RPC (kaldes af /api/sync/import fra n8n)
+-- Zeekr Garage - Sync-import RPC (kaldes af /api/sync/import fra n8n)
 -- ---------------------------------------------------------------------------
 -- Tager bugherrer-eksportens JSON og upserter idempotent (på legacy_bugherrer_id).
 -- security definer + kun service_role må kalde den → kan ikke misbruges via anon.

@@ -1,4 +1,4 @@
--- Zeekr Garage — Varianter (trim pr. model) + variant på bekræftelse
+-- Zeekr Garage - Varianter (trim pr. model) + variant på bekræftelse
 -- ---------------------------------------------------------------------------
 -- Naar en ejer bekraefter ("mig med"), vaelger de deres variant, saa
 -- "biler bekraeftet" kan vises med fordeling pr. trim (staerkt over for Zeekr).

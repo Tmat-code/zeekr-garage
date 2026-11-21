@@ -137,7 +137,7 @@ export default function MeldFlow({
           </h2>
           <p className="mt-1 text-sm text-grafit-600">
             Søg efter {erOenske ? 'dit ønske' : 'fejlen'}. Findes der noget, der ligner, så giv det
-            et &quot;mig med&quot; i stedet — det vejer tungere end en ny dublet.
+            et &quot;mig med&quot; i stedet - det vejer tungere end en ny dublet.
           </p>
 
           <div className="mt-4 flex gap-2">
@@ -207,7 +207,7 @@ export default function MeldFlow({
               ) : (
                 <div className="rounded-xl border border-loest/40 bg-loest/5 p-4">
                   <p className="font-semibold text-grafit-800">
-                    Ingen match — {erOenske ? 'dit ønske' : 'din fejl'} ser ud til at være ny.
+                    Ingen match - {erOenske ? 'dit ønske' : 'din fejl'} ser ud til at være ny.
                   </p>
                   <button onClick={() => setTrin(naesteEfterSoeg)} className="btn-primary mt-3">
                     Fortsæt →
@@ -233,15 +233,15 @@ export default function MeldFlow({
           <p className="mx-auto mt-2 max-w-md text-grafit-600">
             Har du prøvet en <strong>genstart af skærmen</strong> og tjekket at du er på{' '}
             <strong>nyeste OTA</strong>? En del software-bøvl forsvinder efter en genstart eller en
-            opdatering — så slipper vi for dubletter.
+            opdatering - så slipper vi for dubletter.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button onClick={() => router.push('/')} className="btn-ghost justify-center !py-4">
-              Ja — og det løste det
+              Ja - og det løste det
               <span className="block text-xs font-normal text-grafit-400">Så behøver vi ikke melde den. Tak!</span>
             </button>
             <button onClick={() => setTrin('formular')} className="btn-primary justify-center !py-4">
-              Nej — fejlen er der stadig
+              Nej - fejlen er der stadig
               <span className="block text-xs font-normal text-white/80">Så melder vi den rigtigt →</span>
             </button>
           </div>

@@ -4,7 +4,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { publicOrigin, sikkerSti } from '@/lib/url';
 
 // Cross-browser-sikker bekraeftelse af email-links (recovery/signup).
-// Bruger token_hash + verifyOtp (server-side) — IKKE PKCE — saa linket virker
+// Bruger token_hash + verifyOtp (server-side) - IKKE PKCE - saa linket virker
 // uanset hvilken browser det aabnes i. Resend-mailen peger hertil.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

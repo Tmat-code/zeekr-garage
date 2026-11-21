@@ -6,7 +6,7 @@ import ForumOversigt from '@/components/forum/ForumOversigt';
 export const metadata = {
   title: 'Forum',
   description:
-    'Fællesskabet for Zeekr-ejere i Norden — ét forum pr. model plus snak om opladning, software, tilbehør og livet som ejer.',
+    'Fællesskabet for Zeekr-ejere i Norden - ét forum pr. model plus snak om opladning, software, tilbehør og livet som ejer.',
 };
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export default async function ForumSide() {
           Forum
         </h1>
         <p className="mt-2 max-w-2xl text-grafit-600">
-          Snak, spørgsmål og erfaringer — med et eget forum for hver model. Stødt på en rigtig fejl?
+          Snak, spørgsmål og erfaringer - med et eget forum for hver model. Stødt på en rigtig fejl?
           Den hører hjemme på{' '}
           <Link href="/feedback" className="font-medium text-kobber-700 hover:underline">
             Feedback

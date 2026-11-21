@@ -2,7 +2,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { STATUSES, type Status } from '@/lib/config';
 
 // =========================================================================
-// Overblik — tal til stat-tiles
+// Overblik - tal til stat-tiles
 // =========================================================================
 export type AdminStats = {
   meldinger: number;
@@ -37,7 +37,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 }
 
 // =========================================================================
-// Forum — tal til overblik
+// Forum - tal til overblik
 // =========================================================================
 export type ForumOverblik = { kategorier: number; traade: number; indlaeg: number };
 
@@ -56,7 +56,7 @@ export async function getForumOverblik(): Promise<ForumOverblik> {
 }
 
 // =========================================================================
-// Seneste aktivitet — forenet feed: meldinger + bekraeftelser + forum
+// Seneste aktivitet - forenet feed: meldinger + bekraeftelser + forum
 // =========================================================================
 export type AktivitetPost = {
   kind: 'melding' | 'bekraeftelse' | 'forum_traad' | 'forum_indlaeg';
@@ -147,7 +147,7 @@ export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]
 }
 
 // =========================================================================
-// Forum-moderering — seneste traade + indlaeg til /admin/forum
+// Forum-moderering - seneste traade + indlaeg til /admin/forum
 // =========================================================================
 export type AdminForumTraad = {
   id: string;
@@ -233,7 +233,7 @@ export async function getAdminForum(graense = 25): Promise<{
 }
 
 // =========================================================================
-// Aktivitet — hændelser pr. time/ugedag/dag (i dansk tid)
+// Aktivitet - hændelser pr. time/ugedag/dag (i dansk tid)
 // =========================================================================
 const KBH = 'Europe/Copenhagen';
 const UGEDAGE = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
@@ -289,7 +289,7 @@ export type Aktivitet = {
 };
 
 // =========================================================================
-// Adgange — personer med rolle + pending invitationer
+// Adgange - personer med rolle + pending invitationer
 // =========================================================================
 export type AdgangBruger = {
   id: string;
