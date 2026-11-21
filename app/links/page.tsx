@@ -15,9 +15,14 @@ const LINK_GRUPPER: LinkGruppe[] = [
       { navn: 'Officiel modelside', kilde: 'zeekr.eu', url: 'https://www.zeekr.eu/models/7gt' },
       { navn: 'Connected Services', kilde: 'zeekr.eu', url: 'https://www.zeekr.eu/models/7gt' },
       {
-        navn: 'Brugermanual',
-        kilde: 'zeekr.eu · dansk, 7GT',
+        navn: 'Brugermanual (7GT)',
+        kilde: 'zeekr.eu · dansk',
         url: 'https://www.zeekr.eu/manual-result?vk=AAF9&yk=MZ18&lk=da_DK&ln=Dansk&vn=7GT&yn=2026&ven=Long+Range+RWD',
+      },
+      {
+        navn: 'Brugermanualer — vælg din model',
+        kilde: 'zeekr.eu · alle modeller',
+        url: 'https://www.zeekr.eu/contact',
       },
     ],
   },
