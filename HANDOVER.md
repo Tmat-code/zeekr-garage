@@ -280,6 +280,13 @@ Samme mønster som bugherrer: GitHub kan ikke nå Coolify udefra (lukkede router
 - **Genbrugt fra bugherrer:** Coolify API-token `n8n-deploy` (Deploy-ret, deployer alle apps på teamet) + Allowed-IPs (private ranges). Ingen ny token/credential.
 - **Repo gjort OFFENTLIGT 20-11-2026:** krævet for at den uautentificerede GET virker (GitHub giver 404 på private repos uden token). Repoet er tjekket rent — ingen committede hemmeligheder (`.env` git-ignoreret, kun `.env.example`-skabelon). Alle nøgler bor i Coolify. Offentligt repo støtter også portfolio-vinklen (Zeekr kan se kvaliteten).
 
+## Næste op: landingpage + forum (bygges i hver sin session)
+To næste byggeklodser, hver i sin egen session:
+- **Landingpage:** rigtig forside/hjem for zeekr-garage (hvad communityet er, for Zeekr-ejere i Norden, veje videre til fejl-board / forum / Min garage). Lige nu *ér* forsiden selve fejl-boardet (`app/page.tsx`) — beslut om boardet bliver på `/` eller flytter til fx `/board`, og om landingpagen bliver ny `/`.
+- **Forum:** diskussionsforum ud over fejl-boardet. **Første beslutning i den session:** Discourse (selvhostet på Pixa, SSO mod custom-appen) vs. custom-bygget (Next.js + Supabase, samme stak som resten). Afgør retning + identity-provider med Torben før kode. Se "Åbne spørgsmål" nedenfor.
+
+Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
+
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
 - bugherrer er SQLite; her bruges Supabase/Postgres. "Genbrug bugherrer" = app-laget (Next.js/TS, UI, deploy-flow), ikke data-laget.
