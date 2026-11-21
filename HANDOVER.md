@@ -316,7 +316,7 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 
 **Det ambitiøse hook:** indlæg bærer automatisk forfatterens garage-badge ("🚗 Zeekr 7GT · Long Range RWD") fra profilen — det Discourse ikke kan. (Senere: antal ejere pr. model-forum, "Opret som feedback"-bro.)
 
-**Verificeret live 21-11 (WebFetch, udlogget):** `/forum` = 4 grupper + 15 kategorier (0 tråde); `/forum/software-ota` = header/beskrivelse + "Log ind for at skrive" + "Ingen tråde endnu". `npm run build` grønt, deployet via n8n (Coolify grøn). **Mangler:** end-to-end skrive-test (kræver login) + seed af regler/velkomst-tråd (Torbens egne ord).
+**Verificeret live 21-11:** udlogget (WebFetch) = 4 grupper + 15 kategorier, login-gate korrekt. **Skrive-stien end-to-end verificeret via Chrome som admin (Torben):** opret tråd → korrekt slug + **garage-badge "🚗 Zeekr 7GT · Core RWD" automatisk på indlæg** (hooket virker) + moderering-bar + svar-felt; denorm-tæller + visnings-ping tikkede; "Fjern tråd" virker. Test ryddet op. `npm run build` grønt, deployet via n8n (Coolify grøn). **Mangler:** seed af regler/velkomst-tråd (Torbens egne ord).
 
 **Senere skiver:** tværgående tråd-søgning · følg/notifikationer · Billeder m. upload · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
 
@@ -329,7 +329,8 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 - **Akse 2 — Moderering (BYGGET):** `/admin/forum` (`app/admin/forum/page.tsx` + `components/admin/ForumModerering.tsx`): seneste tråde (pin/lås/fjern) + seneste indlæg (fjern) direkte fra listen. **Genbruger forum-actions** (`saetFastgjort/saetLaast/fjernTraad/fjernIndlaeg`) — som nu også revaliderer `/admin/forum` + `/admin`. Åbnings-indlæg fjernes via "Fjern tråd" (ikke per-indlæg, så tråden ikke efterlades uden åbning).
 - **Akse 3 — Styring (BYGGET):** kategori-styring fra UI på `/admin/forum` (`components/admin/KategoriStyring.tsx` + `app/admin/forum-actions.ts`): opret (navn/gruppe/ikon/beskrivelse), omdøb, flyt op/ned i gruppen, lås/lås op, slet (kun hvis tom — cascade-værn). **Fjerner Studio-afhængigheden for nye kategorier.** Slug holdes stabil ved omdøbning (bryder ikke URL'er). Gated på `er_moderator()` + RLS.
 - Forum-link i Værkstedet-header (`app/admin/layout.tsx`).
-- **Mangler (senere):** "Opret som feedback"-bro fra en forum-tråd · redigerbare forum-regler i UI · end-to-end admin-test (kræver login — Torben ved Chrome).
+- **Verificeret live 21-11 via Chrome (Torben, admin):** `/admin/forum` render + modereringskø fanger ny tråd/indlæg; kategori opret + slet (15→16→15) virker uden SQL; "Fjern tråd" virker. Test ryddet op.
+- **Mangler (senere):** "Opret som feedback"-bro fra en forum-tråd · redigerbare forum-regler i UI.
 
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
