@@ -323,12 +323,13 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 ## Åbne forum-småting (parkeret 21-11-2026)
 - **"Køb, priser og levering" (Ejer-lounge):** navn + placering tages op SENERE. To knaster noteret: (1) kategorien tjener mest *prospekter* (ikke-ejere) men sidder i "Ejer-lounge"; (2) "priser" i titlen kan trække mod mindre konstruktive tråde. Mulig retning: omdøb til "Køb & levering" + beskrivelse der inviterer til hjælp/erfaringer. **Behold som den er indtil Torben beslutter.**
 
-## Værkstedet — samlet administration (i gang 21-11-2026)
-Mål: ét kontrolrum for HELE sitet. I dag er `/admin` bygget til feedback; forummet har kun inline-moderering (pin/lås/fjern på den enkelte tråd via `TraadModeration`). Kobles sammen så forum + feedback styres ét sted. **Ingen migration nødvendig** — forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så det kan bygges + pushes uden Studio.
-- **Akse 1 — Overblik:** ét samlet aktivitets-feed (meldinger, bekræftelser, forum-tråde, forum-indlæg) + nøgletal for begge rum. Udvider `getSenesteAktivitet`/Overblik.
-- **Akse 2 — Moderering:** `/admin/forum` — seneste tråde/indlæg med fjern/lås/pin fra listen. Senere: "Opret som feedback"-bro fra en tråd.
-- **Akse 3 — Styring:** forum-kategorier fra UI (opret/omdøb/sortér/lås — fjerner Studio-afhængigheden), redigerbare forum-regler, + eksisterende Adgange/forside-besked.
-- **Rækkefølge (aftalt):** forum-moderering + kategori-styring først, så det samlede feed.
+## Værkstedet — samlet administration (bygget 21-11-2026)
+Ét kontrolrum for HELE sitet: forum + feedback styres ét sted. **Ingen migration** — forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så bygget + pushet uden Studio. `npm run build` grønt; deployet via n8n.
+- **Akse 1 — Overblik (BYGGET):** `components/admin/Overblik.tsx` har nu forum-tiles (kategorier/tråde/indlæg) + et **samlet aktivitets-feed** der fletter meldinger, bekræftelser, forum-tråde OG forum-indlæg i én tidslinje — nu **klikbart** (hvert punkt linker til meldingen/tråden). `lib/queries-admin.ts`: `getForumOverblik()` + udvidet `getSenesteAktivitet()` (nye kinds `forum_traad`/`forum_indlaeg` + `href`) + `getAdminForum()`.
+- **Akse 2 — Moderering (BYGGET):** `/admin/forum` (`app/admin/forum/page.tsx` + `components/admin/ForumModerering.tsx`): seneste tråde (pin/lås/fjern) + seneste indlæg (fjern) direkte fra listen. **Genbruger forum-actions** (`saetFastgjort/saetLaast/fjernTraad/fjernIndlaeg`) — som nu også revaliderer `/admin/forum` + `/admin`. Åbnings-indlæg fjernes via "Fjern tråd" (ikke per-indlæg, så tråden ikke efterlades uden åbning).
+- **Akse 3 — Styring (BYGGET):** kategori-styring fra UI på `/admin/forum` (`components/admin/KategoriStyring.tsx` + `app/admin/forum-actions.ts`): opret (navn/gruppe/ikon/beskrivelse), omdøb, flyt op/ned i gruppen, lås/lås op, slet (kun hvis tom — cascade-værn). **Fjerner Studio-afhængigheden for nye kategorier.** Slug holdes stabil ved omdøbning (bryder ikke URL'er). Gated på `er_moderator()` + RLS.
+- Forum-link i Værkstedet-header (`app/admin/layout.tsx`).
+- **Mangler (senere):** "Opret som feedback"-bro fra en forum-tråd · redigerbare forum-regler i UI · end-to-end admin-test (kræver login — Torben ved Chrome).
 
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
