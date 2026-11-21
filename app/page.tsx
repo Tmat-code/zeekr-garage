@@ -180,15 +180,15 @@ export default async function Forside() {
       {/* FEEDBACK (sekundært, men live) + MIN GARAGE / OM */}
       <section className="mx-auto max-w-5xl px-4 py-14">
         <div className="grid gap-4 lg:grid-cols-5">
-          <div className="rounded-2xl border border-grafit-200 bg-white p-6 sm:p-7 lg:col-span-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
+          <div className="min-w-0 rounded-2xl border border-grafit-200 bg-white p-6 sm:p-7 lg:col-span-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <h2 className="font-display text-xl font-bold tracking-tight text-grafit-900">Feedback</h2>
-                <span className="chip bg-loest/10 text-loest ring-1 ring-inset ring-loest/25">
+                <span className="chip shrink-0 bg-loest/10 text-loest ring-1 ring-inset ring-loest/25">
                   ● Live nu
                 </span>
               </div>
-              <Link href="/feedback" className="text-sm font-semibold text-kobber-700 hover:text-kobber-600">
+              <Link href="/feedback" className="shrink-0 whitespace-nowrap text-sm font-semibold text-kobber-700 hover:text-kobber-600">
                 Åbn feedback
               </Link>
             </div>
@@ -213,12 +213,12 @@ export default async function Forside() {
                         {i.title}
                       </span>
                       {m && (
-                        <span className="font-mono text-xs text-grafit-400">
+                        <span className="shrink-0 font-mono text-xs text-grafit-400">
                           {kortModel(m.name)}
                           {i.models.length > 1 ? ` +${i.models.length - 1}` : ''}
                         </span>
                       )}
-                      <span className="font-mono text-sm font-semibold tabular-nums text-grafit-700">
+                      <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-grafit-700">
                         ▲ {i.confirmations}
                       </span>
                     </Link>
@@ -244,7 +244,7 @@ export default async function Forside() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 lg:col-span-2">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
               <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Min garage</h3>
               <p className="mt-2 text-sm text-grafit-600">
