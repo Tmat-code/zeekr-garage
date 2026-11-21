@@ -349,7 +349,7 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
   - **Slice 1:** migration (tabeller + enums + triggers + RLS + seed kategorier - køres i Studio FØR push) · ruter `/forum` (grupperet oversigt, afløser stubben), `/forum/[kategori]` (trådliste), `/forum/[kategori]/[traad]` (tråd + svar), `/forum/[kategori]/ny` (opret, login-gated) · komponenter genbruger Header/Footer/grafit+kobber + skrive-mønster fra `Kommentarer.tsx` · garage-badge på indlæg · søg + "Opret tråd" i top-bar · basal moderering (pin/lås/fjern for moderator). Afløser "Åbner snart"-stubben i `app/forum/page.tsx`.
   - **Senere skiver:** tværgående søgning, følg/notifikationer, Feedback-broen, Billeder m. upload, modereringskø i Værkstedet.
 
-Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
+Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; **almindelig bindestreg "-" i dansk tekst, aldrig lange tankestreger (— og –), overalt - UI, kode, HANDOVER**; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
 - ~~SSO-retning mellem Discourse og custom-app~~ **BORTFALDET 21-11-2026:** Discourse fravalgt, forum bygges custom → Supabase er eneste IdP, ingen SSO-bro.
