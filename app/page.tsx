@@ -103,10 +103,10 @@ export default async function Forside() {
                 Vær med
               </Link>
               <Link
-                href="/feedback"
+                href="/forum"
                 className="inline-flex items-center justify-center rounded-lg border border-grafit-600 px-5 py-2.5 font-semibold text-grafit-100 transition-colors hover:border-kobber-500 hover:text-white"
               >
-                Se feedback
+                Åbn forummet
               </Link>
             </div>
             <p className="mt-5 text-sm text-grafit-500">
@@ -133,7 +133,7 @@ export default async function Forside() {
         </div>
       </section>
 
-      {/* FORUM — det bærende rum (åbner snart) */}
+      {/* FORUM — det bærende rum (live) */}
       <section className="mx-auto max-w-5xl px-4 pt-14">
         <div className="relative overflow-hidden rounded-2xl bg-grafit-900 p-6 text-white ring-1 ring-grafit-800 sm:p-9">
           <div
@@ -144,34 +144,46 @@ export default async function Forside() {
           <div className="relative">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="font-display text-2xl font-bold tracking-tight">Forummet</h2>
-              <span className="chip bg-kobber-500/15 text-kobber-300 ring-1 ring-inset ring-kobber-500/30">
-                Åbner snart
+              <span className="chip bg-loest/20 text-grafit-50 ring-1 ring-inset ring-loest/50">
+                <span className="text-[#8fd48a]" aria-hidden="true">●</span> Live nu
               </span>
             </div>
             <p className="mt-3 max-w-xl text-grafit-300">
-              Fællesskabets hjerte: hverdagssnak, spørgsmål og guides — med et eget underforum for
-              hver model, så det hele bor ét sted med samme login som resten af siden.
+              Fællesskabets hjerte: hverdagssnak, spørgsmål og guides — med et eget forum for
+              hver model, plus opladning, software, tilbehør og livet som ejer. Samme login som
+              resten af siden.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
               {forumModeller.map((m) => (
-                <span key={m.id} className="rounded-lg bg-grafit-800 px-3 py-1.5 text-sm text-grafit-200">
+                <Link
+                  key={m.id}
+                  href={`/forum/${m.slug}`}
+                  className="rounded-lg bg-grafit-800 px-3 py-1.5 text-sm text-grafit-200 transition-colors hover:bg-grafit-700 hover:text-white"
+                >
                   {m.name}
-                </span>
+                </Link>
               ))}
-              <span className="rounded-lg bg-grafit-800 px-3 py-1.5 text-sm text-grafit-400">
-                Generel snak
-              </span>
+              <Link
+                href="/forum"
+                className="rounded-lg bg-grafit-800 px-3 py-1.5 text-sm text-kobber-300 transition-colors hover:bg-grafit-700 hover:text-kobber-200"
+              >
+                + flere rum →
+              </Link>
             </div>
 
             <div className="mt-7 flex flex-wrap items-center gap-4">
               <Link
-                href="/login"
+                href="/forum"
                 className="inline-flex items-center justify-center rounded-lg bg-kobber-500 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-kobber-600"
               >
-                Opret din profil
+                Åbn forummet
               </Link>
-              <span className="text-sm text-grafit-400">så er du med fra dag ét.</span>
+              {!user && (
+                <Link href="/login" className="text-sm font-semibold text-grafit-200 hover:text-white">
+                  Opret profil for at skrive med →
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -248,8 +260,8 @@ export default async function Forside() {
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
               <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Min garage</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Registrér din Zeekr, så du er klar når forummet åbner — og dine stemmer tæller for
-                den rigtige model.
+                Registrér din Zeekr, så dine indlæg i forummet viser den rigtige bil — og dine
+                stemmer tæller for den rigtige model.
               </p>
               <Link
                 href={user ? '/garage' : '/login'}
