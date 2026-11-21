@@ -120,3 +120,35 @@ export type ForumTraadDetalje = {
   replyCount: number;
   kategori: { slug: string; name: string; icon: string | null; isLocked: boolean };
 };
+
+// =========================================================================
+// Events / meetups
+// =========================================================================
+export type EventRow = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  isCancelled: boolean;
+  signupCount: number;
+  opretter: string | null;
+};
+
+export type EventDeltager = { navn: string | null; note: string | null };
+export type EventOpdatering = {
+  id: string;
+  body: string;
+  createdAt: string;
+  forfatter: string | null;
+};
+
+export type EventDetalje = EventRow & {
+  deltagere: EventDeltager[];
+  opdateringer: EventOpdatering[];
+};
+
+// Brugerens egen tilmelding til et event.
+export type MinTilmelding = { tilmeldt: boolean; note: string | null };

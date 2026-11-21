@@ -10,6 +10,7 @@ export default function Footer() {
           <span className="font-semibold text-grafit-600">{SITE.name}</span>
           <Link href="/forum" className="hover:text-kobber-700">Forum</Link>
           <Link href="/feedback" className="hover:text-kobber-700">Feedback</Link>
+          <Link href="/events" className="hover:text-kobber-700">Events</Link>
           <Link href="/links" className="hover:text-kobber-700">Links</Link>
           <Link href="/om" className="hover:text-kobber-700">Om</Link>
         </div>

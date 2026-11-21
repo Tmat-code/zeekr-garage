@@ -1,3 +1,17 @@
+// Absolut dato + tid i dansk tid (til events). null => "Dato kommer".
+export function datoTid(iso: string | null): string {
+  if (!iso) return 'Dato kommer';
+  return new Date(iso).toLocaleString('da-DK', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Copenhagen',
+  });
+}
+
 // Relativ dansk tidsangivelse ("3t siden", "i gaar", "2 uger siden").
 export function relativTid(iso: string): string {
   const da = new Date(iso);
