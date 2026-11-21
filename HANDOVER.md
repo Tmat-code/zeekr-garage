@@ -23,19 +23,19 @@
   4. Antyd aldrig officiel tilknytning.
 - Undgå officielt-klingende navne (zeekrdanmark, zeekrnorden o.l.). Værste realistiske tilfælde ved en navne-tvist: brev om at skifte/overdrage domæne (ikke en retssag) — i DK via Klagenævnet for Domænenavne.
 
-## Arkitektur — BESLUTTET: hybrid
-- **Discourse** (selvhostet på Pixa, tematiseret, ét login via SSO) = forummet, fællesskabet, Garagen. Underfora pr. model, tråde, trust levels + moderering ud af boksen.
-- **Custom Next.js + Supabase** = fejl-/issue-boardet + Zeekr-rapporterne. Kronjuvelen og differentieringen — Torbens egen bygning (portfolio til Zeekr).
-- Ét domæne, ét login (Discourse SSO), samme tema → føles som ét site.
-- Design: lækkert, rent, automotive. **Undgå "Claude-agtige" grøn/blå farver.** Renere end den annonce-rodede Fora/Polestar-platform (= inspiration for struktur, ikke for reklamer/affiliate).
-- **Bekræftet 20-11-2026:** Discourse valgt til forum-delen (ikke custom, ikke hosted platform). Forum-UX-reference = polestar-forum.com (kategorier pr. model som rygrad). Rækkefølge: fejl-board (skive 1) bygges FØRST, forum bagefter. App-palet valgt: grafit + kobber (væk fra både Claude- og Zeekr-farver).
+## Arkitektur — BESLUTTET: alt custom (én stak)
+- **Custom Next.js + Supabase = hele sitet** — feedback-/issue-board, Zeekr-rapporter OG forummet. Én stak, ét login (Supabase auth), ingen SSO-bro. Torbens egen bygning hele vejen (portfolio til Zeekr).
+- **Discourse FRAVALGT 21-11-2026** (afløser den tidligere "hybrid"-beslutning). Begrundelse: solo/ikke-teknisk + vedligehold via Claude → én stak langt mere holdbart end at drifte + patche en Rails-Discourse + SSO-bro; kronjuvelen er den tætte datakobling (Min Garage → bil → stemmer → rapporter), som custom-forum forlænger naturligt og Discourse fragmenterer over en SSO-søm; design-sammenhæng + evt. redesign kun ét sted; "jeg byggede det hele" > "jeg konfigurerede Discourse". Discourses gratis-gevinster (trust levels, avanceret spam/moderering, digests) er tynde behov på FB-migrations-skala, og Værkstedet + "kø, ikke patrulje" dækker allerede moderering.
+- **Identitet AFKLARET 21-11-2026:** Supabase er det ene identitetssystem. SSO-spørgsmålet (hvem er IdP mellem Discourse og app) er dermed **bortfaldet** — der er ingen bro.
+- Ét domæne, samme tema → føles som ét site (nu reelt ét site, ikke to systemer limet sammen).
+- Design: lækkert, rent, automotive. **Undgå "Claude-agtige" grøn/blå farver.** Polestar/Fora = inspiration for struktur, ikke for reklamer/affiliate.
+- Forum-UX-reference = polestar-forum.com (kategorier pr. model som rygrad). App-palet: grafit + kobber (væk fra både Claude- og Zeekr-farver).
 
 ## Stack & hosting
 - Next.js (genbrug bugherrers stack), TypeScript.
 - **Supabase (selvhostet på Pixa)** — auth, rettigheder (RLS), realtime (giver "lever"-følelsen i feed/chat).
 - Hosting: Pixa via Coolify. Mail via Resend. Ekstern adgang via Cloudflare Tunnel.
-- **Pixa-kapacitet (20-11-2026):** 13 GB RAM, 5,6 GB tilgængelig, 4 GB swap, 401 GB fri disk → Discourse (~1–1,5 GB) passer med god luft. Nem ekstra-gevinst: ryd den ulabelede/ledige Supabase-instans.
-- Note: Discourse kræver lidt mere opsætning i Coolify end en almindelig app (eget Docker-setup) — gørligt.
+- **Pixa-kapacitet (20-11-2026):** 13 GB RAM, ~5,6 GB tilgængelig, 4 GB swap, 401 GB fri disk. (Discourse-kapacitetsnoten er **bortfaldet 21-11-2026** — forum bygges custom i den eksisterende Zeekr-Supabase, ingen ny tung container.)
 
 ## Modeller & platforme (DK-lineup)
 Én fejl kan tagges til **flere** modeller. Modeller deler softwareplatform → mange fejl er fælles på tværs → stærkere bevis/pres mod Zeekr. Fang **model + softwareversion (OTA)** på hver melding; hardware-variant = valgfri metadata.
@@ -55,8 +55,8 @@ Platform-feltet lader systemet foreslå relaterede modeller og vise fx "fejl ram
 - Forside/feed (levende aktivitet)
 - Fejl-/issue-board pr. model + på tværs — **custom**
 - Zeekr-rapporter: offentlige, pæne, samlede — **custom (portfolio-kronjuvel)**
-- Forum/snak pr. model — **Discourse**
-- Garage: ejernes biler/profiler — **Discourse**
+- Forum/snak pr. model — **custom** (Next.js + Supabase)
+- Garage: ejernes biler/profiler — **custom** (Min garage findes allerede på profilen)
 - Spørgsmål & guides
 - Om — med uofficielt-disclaimer
 
@@ -75,7 +75,7 @@ Platform-feltet lader systemet foreslå relaterede modeller og vise fx "fejl ram
 - `software_versions` (model/platform, version, udgivet)
 - `zeekr_reports` (periode, model-scope, udvalgte issues, status)
 
-Forum-indhold (tråde, kategorier, Garage) ligger i **Discourse**, ikke her.
+Forum-indhold (kategorier, tråde, indlæg) får egne custom-tabeller i samme Supabase — se forum-datamodel i "Næste op".
 
 ## Moderering
 - **Kø, ikke patrulje:** struktur + Discourse trust levels + flag-kø + AI-dedup af fejlmeldinger (match ny melding mod eksisterende).
@@ -298,21 +298,16 @@ Forsiden er ikke længere selve boardet. Ny informationsarkitektur:
 
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert — `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.
-- **Forum (næste session):** diskussionsforum ud over Feedback-boardet.
-  - **UX-forbillede: polestar-forum.com** (observeret 21-11 via Torbens screenshot). Opbygning:
-    - **Grupper med overskrift + undertekst**, hver med kategori-rækker under:
-      - Gruppe "Velkommen": "Nye medlemmer — præsentér dig" + "Community-regler".
-      - Gruppe "Modeller" (rygraden): **ét forum pr. model** (Zeekr 001, 001 Sport, 7X, 7GT, X, 9X), hver med undertekst à la "Alt om [model]".
-      - Special-kategorier: fx "Billeder", og evt. tværgående (teknik & software/OTA, opladning & rækkevidde, tilbehør, køb & salg, guides).
-    - **Hver kategori-række:** ikon · titel (fed) · kort beskrivelse · antal tråde · antal visninger · seneste aktivitet (tid). Rene hvide rækker på lys baggrund.
-    - **Top-bar:** søgefelt ("Søg i community") + "Opret tråd"-knap.
-    - **Dybde:** kategori-oversigt → trådliste i kategori (titel · forfatter · svar · visninger · seneste aktivitet) → tråd (indlæg + svar).
-  - **FØRSTE BESLUTNING før kode:** Discourse (selvhostet på Pixa, SSO mod custom-appen) vs. custom-bygget (Next.js + Supabase, samme stak som resten). **Modsætning at rydde:** afsnittet "Arkitektur — BESLUTTET: hybrid" (øverst) siger Discourse ER valgt, men "Åbne spørgsmål" (nederst) behandler det som åbent — afklar med Torben hvad der gælder, og ret dokumentet.
-  - **Identity-provider / SSO-retning:** afgøres med Torben (hvem er IdP mellem Discourse og custom-appen).
-  - Adgang som resten: offentligt læsbart, login kun for at skrive. Samme header/footer, grafit+kobber, samme login. Header har allerede et "/forum"-link + en "Åbner snart"-stub (`app/forum/page.tsx`) der skal afløses af det rigtige forum.
+- **Forum — BESLUTTET 21-11-2026: custom** (Next.js + Supabase, se "Arkitektur"). Discourse fravalgt; Supabase = eneste IdP, ingen SSO-bro. Modsætningen i dokumentet ryddet (Arkitektur + Sektioner + Åbne spørgsmål opdateret). Bygges tyndt men ambitiøst, vævet ind i ejer-grafen (det Discourse ikke kan).
+  - **UX-forbillede: polestar-forum.com** (grupper m. overskrift + undertekst → kategori-rækker: ikon · titel (fed) · beskrivelse · antal tråde · antal indlæg/visninger · seneste aktivitet → trådliste → tråd). Top-bar: søgefelt + "Opret tråd". Rene rækker. Offentligt læsbart, login kun for at skrive.
+  - **Grupper/kategorier:** "Velkommen" (præsentér dig + regler) · "Modeller" som rygrad: ét forum pr. model (001, 001 Sport, 7X, 7GT, X, 9X) · tværgående (Billeder, Teknik & software/OTA, Opladning & rækkevidde, Tilbehør, Køb & salg, Guides).
+  - **Det ambitiøse hook (kernen):** forummet kender ejer-grafen. Hvert model-forum kan vise antal ejere (fra Min Garage). Indlæg bærer automatisk forfatterens garage-badge ("Zeekr 7GT · Long Range RWD · OTA 1.2") fra profilen. Blød bro til Feedback: en tråd der viser sig at være en rigtig fejl → "Opret som feedback" (prefill /meld). Forum = snak, Feedback = struktureret QA.
+  - **Foreslået datamodel (custom-tabeller, samme Zeekr-Supabase):** `forum_categories` (slug, navn, beskrivelse, ikon, model_id nullable, gruppe-label, display_order, is_locked) · `forum_threads` (category_id, author_id, titel, slug, created_at, last_post_at [denorm.], reply_count [denorm.], view_count, is_pinned, is_locked) · `forum_posts` (thread_id, author_id, body, created_at, edited, is_removed). Denorm. tællere + last_post_at via triggers (samme touch/count-mønster som issues/comments). RLS: læs alle (SSR/SEO), skriv authenticated, ret/slet egne, moderator alt. Genbrug `profiles` (bil) + roller (admin/moderator).
+  - **Slice 1:** migration (tabeller + enums + triggers + RLS + seed kategorier — køres i Studio FØR push) · ruter `/forum` (grupperet oversigt, afløser stubben), `/forum/[kategori]` (trådliste), `/forum/[kategori]/[traad]` (tråd + svar), `/forum/[kategori]/ny` (opret, login-gated) · komponenter genbruger Header/Footer/grafit+kobber + skrive-mønster fra `Kommentarer.tsx` · garage-badge på indlæg · søg + "Opret tråd" i top-bar · basal moderering (pin/lås/fjern for moderator). Afløser "Åbner snart"-stubben i `app/forum/page.tsx`.
+  - **Senere skiver:** tværgående søgning, følg/notifikationer, Feedback-broen, Billeder m. upload, modereringskø i Værkstedet.
 
 Konventioner som resten: grafit+kobber (ikke Claude-grøn/blå); æøå via Edit/Python, aldrig perl; migrationer køres i Studio FØR kode pushes (PostgREST er all-or-nothing); commit+push direkte til main; opdatér HANDOVER ved hver ændring.
 
 ## Åbne spørgsmål (bekræft i nyt projekt)
-- SSO-retning mellem Discourse og custom-app (hvem er identity-provider?) — afklares ved opsætning.
+- ~~SSO-retning mellem Discourse og custom-app~~ **BORTFALDET 21-11-2026:** Discourse fravalgt, forum bygges custom → Supabase er eneste IdP, ingen SSO-bro.
 - bugherrer er SQLite; her bruges Supabase/Postgres. "Genbrug bugherrer" = app-laget (Next.js/TS, UI, deploy-flow), ikke data-laget.
