@@ -343,14 +343,12 @@ Brugere kan nu selv ændre deres visningsnavn under **Min garage** - før var de
 - `lib/queries.ts`: `getMitNavn()`. `app/garage/page.tsx`: felt placeret over bil-vælgeren; intro-tekst justeret ("navn + bil"). Mail vises aldrig offentligt - kun `display_name`.
 - SQL-genvej til admin (fx sæt en bruger til et ønsket navn): `update public.profiles set display_name = 'Venø' where id = (select id from auth.users where email = '...');`
 
-## Selvbetjent mail-skift (bygget 22-11-2026 - afventer Supabase-opsætning)
-Brugere kan selv skifte login-mail under **Min garage** med **dobbelt bekræftelse** (klik på både gammel og ny adresse). Kode klar; kræver 2 GoTrue-env + genstart hos Torben før det virker.
+## Selvbetjent mail-skift (bygget + opsat 22-11-2026)
+Brugere kan selv skifte login-mail under **Min garage** med **dobbelt bekræftelse** (klik på både gammel og ny adresse). Kode + Supabase-opsætning færdig; **afventer end-to-end test**.
 - **App (BYGGET):** `components/SkiftMailForm.tsx` (klient): `auth.updateUser({ email }, { emailRedirectTo: <origin>/auth/confirm?next=/garage })`, mail-validering, "sendt"-kvittering der forklarer dobbelt-bekræftelse. Viser nuværende mail. `app/garage/page.tsx`: felt under bil-vælgeren (bruger `user.email`). Genbruger den eksisterende `/auth/confirm`-rute (`verifyOtp({type:'email_change', token_hash})` - samme cross-browser-flow som recovery).
-- **Dansk skabelon (BYGGET):** `app/auth/email-change-email/route.ts` - samme mønster som `recovery-email`, link peger på `/auth/confirm?...&type=email_change&next=/garage`.
-- **MANGLER (Torben, i Coolify → Zeekr-Supabase kilde-vars, derefter genstart):**
-  - `MAILER_TEMPLATES_EMAIL_CHANGE=https://zeekr-garage.dk/auth/email-change-email`
-  - `MAILER_SUBJECTS_EMAIL_CHANGE=Bekræft din nye e-mail - Zeekr Garage`
-  - `MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` (dobbelt-bekræftelse; er GoTrue-default, men sæt den eksplicit). `ADDITIONAL_REDIRECT_URLS` dækker allerede `/**`.
+- **Dansk skabelon (BYGGET):** `app/auth/email-change-email/route.ts` - samme mønster som `recovery-email`, link peger på `/auth/confirm?...&type=email_change&next=/garage`. Verificeret live på `https://zeekr-garage.dk/auth/email-change-email`.
+- **Supabase-env SAT (22-11-2026, via Coolify → Zeekr-Supabase, Claude satte dem):** `MAILER_TEMPLATES_EMAIL_CHANGE=https://zeekr-garage.dk/auth/email-change-email` + `MAILER_SUBJECTS_EMAIL_CHANGE=Bekræft din nye e-mail - Zeekr Garage` (begge fandtes som tomme Compose-defaults → redigeret, ikke tilføjet). Supabase **genstartet**, kom Running igen, site læser fint.
+  - **`MAILER_SECURE_EMAIL_CHANGE_ENABLED` IKKE sat eksplicit:** findes ikke som var i stacken, og GoTrue-default er allerede `true` → dobbelt-bekræftelse er aktiv som default. Ser man kun ÉN mail ved test, wire da `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` ind via compose (en løs ny var når ikke auth-containeren, da compose kun injicerer kendte GOTRUE_-vars).
 - **VIGTIGT - admin-vej:** rediger IKKE `auth.users.email` direkte i Table Editor (opdaterer ikke `auth.identities` → login kan gå i stykker). Admin skifter en brugers mail via **Studio → Authentication → Users → rediger** (går gennem admin-API, retter identity korrekt). `display_name` i `profiles` må gerne rettes direkte (det er bare tekst).
 
 ## Værkstedet - samlet administration (bygget 21-11-2026)
