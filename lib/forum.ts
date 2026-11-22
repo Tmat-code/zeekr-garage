@@ -143,7 +143,7 @@ export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | n
     .from('forum_threads')
     .select(
       `id, slug, title, created_at, is_pinned, is_locked, view_count, reply_count, is_removed,
-       kategori:forum_categories ( slug, name, icon, is_locked )`,
+       kategori:forum_categories ( slug, name, icon, is_locked, model_id )`,
     )
     .eq('slug', traadSlug)
     .limit(1)
@@ -164,6 +164,7 @@ export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | n
       slug: k?.slug ?? '',
       name: k?.name ?? '',
       icon: k?.icon ?? null,
+      modelId: k?.model_id ?? null,
       isLocked: k?.is_locked ?? false,
     },
   };

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getKategori, getTraade } from '@/lib/forum';
 import { adminKontekst } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
+import { modelBadge } from '@/lib/model-badge';
 import GarageBadge from '@/components/forum/GarageBadge';
 
 export const dynamic = 'force-dynamic';
@@ -31,9 +32,15 @@ export default async function KategoriSide({ params }: { params: { kategori: str
       {/* Kategori-header */}
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grafit-100 text-2xl" aria-hidden="true">
-            {kat.icon ?? '💬'}
-          </span>
+          {kat.modelId ? (
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grafit-900 font-display text-base font-semibold tabular-nums tracking-tight text-kobber-300" aria-hidden="true">
+              {modelBadge(kat.slug)}
+            </span>
+          ) : (
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grafit-100 text-2xl" aria-hidden="true">
+              {kat.icon ?? '💬'}
+            </span>
+          )}
           <div className="min-w-0">
             <h1 className="font-display text-2xl font-bold tracking-tight text-grafit-900">
               {kat.name}

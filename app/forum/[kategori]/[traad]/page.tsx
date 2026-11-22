@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getTraad, getIndlaeg } from '@/lib/forum';
 import { adminKontekst } from '@/lib/admin';
+import { modelBadge } from '@/lib/model-badge';
 import ForumTraad from '@/components/forum/ForumTraad';
 import TraadModeration from '@/components/forum/TraadModeration';
 import VisningPing from '@/components/forum/VisningPing';
@@ -58,7 +59,13 @@ export default async function TraadSide({
         </Link>
         <span aria-hidden="true">/</span>
         <Link href={`/forum/${traad.kategori.slug}`} className="hover:text-kobber-700">
-          {traad.kategori.icon && <span className="mr-1">{traad.kategori.icon}</span>}
+          {traad.kategori.modelId ? (
+            <span className="mr-1.5 rounded bg-grafit-900 px-1 py-0.5 font-display text-[10px] font-semibold tabular-nums tracking-tight text-kobber-300">
+              {modelBadge(traad.kategori.slug)}
+            </span>
+          ) : (
+            traad.kategori.icon && <span className="mr-1">{traad.kategori.icon}</span>
+          )}
           {traad.kategori.name}
         </Link>
       </nav>

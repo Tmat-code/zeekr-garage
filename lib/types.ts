@@ -118,7 +118,7 @@ export type ForumTraadDetalje = {
   isLocked: boolean;
   viewCount: number;
   replyCount: number;
-  kategori: { slug: string; name: string; icon: string | null; isLocked: boolean };
+  kategori: { slug: string; name: string; icon: string | null; modelId: string | null; isLocked: boolean };
 };
 
 // =========================================================================
