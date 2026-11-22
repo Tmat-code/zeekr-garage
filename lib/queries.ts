@@ -100,6 +100,23 @@ export async function getMyCar(): Promise<MinBil | null> {
   };
 }
 
+// --- Mit visningsnavn (det der vises som forfatter overalt) ---
+export async function getMitNavn(): Promise<string> {
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return '';
+
+  const { data } = await sb
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single();
+
+  return (data as any)?.display_name ?? '';
+}
+
 // --- Varianter pr. model (til "mig med"-flowet) ---
 export async function getVarianter(): Promise<VariantMap> {
   const sb = supabaseServer();

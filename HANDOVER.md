@@ -337,6 +337,12 @@ Admin/moderatorer opretter events; brugere melder sig til (RSVP); moderator send
 
 ## Åbne forum-småting (parkeret 21-11-2026)
 
+## Visningsnavn: bruger kan selv rette (bygget 22-11-2026)
+Brugere kan nu selv ændre deres visningsnavn under **Min garage** - før var det låst til delen før `@` i mailen (default fra signup-triggeren), og måtte rettes i SQL. Slår igennem overalt med det samme, fordi forfatter altid hentes live via `profiles.display_name` (ikke kopieret pr. indlæg).
+- `components/VisningsnavnForm.tsx` (klient): input + "Gem navn", trim + 2-40 tegn, klient-side `update profiles set display_name` på `auth.uid()`. Samme mønster som `MinGarageForm` (RLS: ejer opdaterer egen profil - ingen migration).
+- `lib/queries.ts`: `getMitNavn()`. `app/garage/page.tsx`: felt placeret over bil-vælgeren; intro-tekst justeret ("navn + bil"). Mail vises aldrig offentligt - kun `display_name`.
+- SQL-genvej til admin (fx sæt en bruger til et ønsket navn): `update public.profiles set display_name = 'Venø' where id = (select id from auth.users where email = '...');`
+
 ## Værkstedet - samlet administration (bygget 21-11-2026)
 Ét kontrolrum for HELE sitet: forum + feedback styres ét sted. **Ingen migration** - forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så bygget + pushet uden Studio. `npm run build` grønt; deployet via n8n.
 - **Akse 1 - Overblik (BYGGET):** `components/admin/Overblik.tsx` har nu forum-tiles (kategorier/tråde/indlæg) + et **samlet aktivitets-feed** der fletter meldinger, bekræftelser, forum-tråde OG forum-indlæg i én tidslinje - nu **klikbart** (hvert punkt linker til meldingen/tråden). `lib/queries-admin.ts`: `getForumOverblik()` + udvidet `getSenesteAktivitet()` (nye kinds `forum_traad`/`forum_indlaeg` + `href`) + `getAdminForum()`.
