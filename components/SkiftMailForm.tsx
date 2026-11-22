@@ -74,13 +74,13 @@ export default function SkiftMailForm({ nuvaerende }: { nuvaerende: string }) {
 
       {sendt ? (
         <p className="rounded-lg bg-loest/10 px-3 py-2 text-sm text-grafit-700 ring-1 ring-inset ring-loest/25">
-          Vi har sendt et bekræftelses-link til <b>begge</b> adresser - både din nuværende og den
-          nye. Mailen skifter først når <b>begge</b> links er klikket. Tjek evt. spam.
+          Vi har sendt et bekræftelses-link til din <b>nye</b> adresse. Mailen skifter først når du
+          har klikket linket. Tjek evt. spam.
         </p>
       ) : (
         <p className="text-xs text-grafit-500">
-          Af sikkerhed skifter mailen ikke med det samme: du får et bekræftelses-link på både din
-          nuværende og din nye adresse, og begge skal bekræftes. Du er stadig logget ind imens.
+          Af sikkerhed skifter mailen ikke med det samme: du får et bekræftelses-link på din nye
+          adresse, og mailen skifter først når du har klikket det. Du er stadig logget ind imens.
         </p>
       )}
 
