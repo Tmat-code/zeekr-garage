@@ -45,6 +45,7 @@ export default function MeldForm({
     if (titel.trim().length < 5) return setFejl(`Giv ${ting} en kort, tydelig titel.`);
     if (beskrivelse.trim().length < 10) return setFejl(`Beskriv ${ting} lidt mere.`);
     if (valgte.length === 0) return setFejl(`Vælg mindst én model ${erOenske ? 'ønsket gælder' : 'fejlen rammer'}.`);
+    if (!kategori) return setFejl('Vælg en kategori - tag "Andet", hvis ingen passer.');
     if (!erOenske && softwareVersion.trim().length < 2)
       return setFejl('Skriv hvilken softwareversion (OTA) du er på - det er vigtigt for bevis på tværs.');
 
@@ -137,7 +138,7 @@ export default function MeldForm({
           />
         </div>
         <div>
-          <label htmlFor="kat" className="label">Kategori <span className="font-normal text-grafit-400">(valgfri)</span></label>
+          <label htmlFor="kat" className="label">Kategori</label>
           <select
             id="kat"
             value={kategori}

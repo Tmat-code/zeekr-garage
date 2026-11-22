@@ -524,7 +524,7 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 
 ## Feedback-kategorier: 9 faste spande (22-11-2026)
 `issues.category` var et frit tekstfelt (alle skrev deres eget → ubrugeligt til filter). Nu en **fast liste af 9 spande** (`ISSUE_CATEGORIES` i `lib/config.ts`, lagret som slug): Kørehjælp & ADAS · Kørsel, bremser & understel · Opladning & rækkevidde · Skærm, stemme & infotainment · App, lås & forbindelse · Lys, ruder & udsyn · Klima, sæder & kabine · Hjul, dæk & TPMS · Andet. Udledt af meldingerne + Zeekr-manualens 22 afsnit komprimeret til ejer-venlige spande.
-- **Oprettelse** (`components/MeldForm.tsx`): fri-tekst-feltet er nu en dropdown (stadig valgfri - oprettelse brydes ikke). Gemmer slug.
+- **Oprettelse** (`components/MeldForm.tsx`): fri-tekst-feltet er nu en **krævet** dropdown (gemmer slug). "Andet" er sikker udvej, så kravet koster intet. Feltet vises for både fejl og ønsker (ikke gated på type). Gælder kun nye meldinger - de ~31 gamle mærkes op i Værkstedet.
 - **Board-filter** (`components/FejlBoard.tsx`): "Alle kategorier"-dropdown ved siden af søgefeltet. **Standard = Alle**, så intet skjules.
 - **Kuratering** (`components/admin/ModereringsTabel.tsx`): kategori-dropdown pr. række i Værkstedet + action `saetKategori` (moderator, validerer slug, revaliderer /admin + / + /feedback). Det er her de ~31 eksisterende mærkes op.
 - **Ingen migration, ingen databrud:** kolonnen var allerede tekst; `category` vises ingen steder som label (kun brugt i søgning), så gamle fri-tekst-værdier bevares urørt og dukker bare op under "Alle" indtil de re-mærkes. `kategoriLabel()`-helper falder tilbage til rå værdi hvis en slug ikke kendes.
