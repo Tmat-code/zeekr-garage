@@ -11,8 +11,9 @@ import {
   RAPPORT_RAMME,
   erGyldigRapportType,
   TYPE_FILNAVN,
+  rapportKategoriLabel,
 } from '@/lib/rapport-i18n';
-import { getRapportFejl, getRapportKommentarer } from '@/lib/rapport';
+import { getRapportFejl, getRapportKommentarer, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
 
 export const dynamic = 'force-dynamic';
@@ -68,9 +69,13 @@ export async function GET(req: Request) {
     doc.y = 140;
     doc.x = 50;
     doc.fillColor(GRAFIT).fontSize(10).font('Helvetica').text(ramme.intro, { width: sideBredde });
+    doc.moveDown(0.4);
+    doc.fillColor(GRAA).fontSize(9).font('Helvetica-Oblique').text(t.grupperetNote, { width: sideBredde });
     doc.moveDown(1);
 
-    fejl.forEach((f, i) => {
+    const grupper = grupperEfterKategori(fejl);
+
+    const tegnFejl = (f: (typeof fejl)[number], i: number) => {
       if (doc.y > doc.page.height - 160) {
         doc.addPage();
         doc.y = 50;
@@ -144,6 +149,33 @@ export async function GET(req: Request) {
       doc.moveDown(0.6);
       doc.strokeColor('#e3e3e6').lineWidth(1).moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
       doc.moveDown(0.8);
+    };
+
+    grupper.forEach((g) => {
+      // Sektions-overskrift pr. spand - undgå forældreløs header nederst.
+      if (doc.y > doc.page.height - 200) {
+        doc.addPage();
+        doc.y = 50;
+      }
+      const gy = doc.y;
+      const aggr =
+        `${g.antal} ${g.antal === 1 ? t.post : t.poster}` +
+        `  -  ${g.stemmer} ${g.stemmer === 1 ? t.stemme : t.stemmer}`;
+      doc.rect(50, gy, sideBredde, 30).fill(GRAFIT);
+      doc.rect(50, gy, 5, 30).fill(KOBBER);
+      doc
+        .fillColor('#ffffff')
+        .fontSize(13)
+        .font('Helvetica-Bold')
+        .text(rapportKategoriLabel(g.slug, sprog), 64, gy + 6, { width: sideBredde - 200, lineBreak: false });
+      doc
+        .fillColor(KOBBER)
+        .fontSize(9)
+        .font('Helvetica-Bold')
+        .text(aggr, doc.page.width - 250, gy + 10, { width: 192, align: 'right', lineBreak: false });
+      doc.y = gy + 40;
+
+      g.fejl.forEach((f, i) => tegnFejl(f, i));
     });
 
     // Footer på alle sider (uden at skabe nye tomme sider)

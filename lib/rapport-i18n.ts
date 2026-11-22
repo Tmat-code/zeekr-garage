@@ -2,7 +2,7 @@
 // Selve meldings-teksten (titel + beskrivelse) oversættes separat i lib/oversaet.ts.
 // Sprog i eksporten: dansk (da), engelsk (en), svensk (sv).
 
-import { SITE } from '@/lib/config';
+import { SITE, kategoriLabel } from '@/lib/config';
 import type { Status } from '@/lib/config';
 
 export const RAPPORT_SPROG = ['da', 'en', 'sv'] as const;
@@ -41,6 +41,10 @@ type Tekster = {
   stemme: string;
   stemmer: string;
   svar: string;
+  post: string;
+  poster: string;
+  udenKategori: string;
+  grupperetNote: string;
   kommentarerOverskrift: string;
   sideAf: (n: number, af: number) => string;
   delta: { ny: string; mere: (n: number) => string };
@@ -59,10 +63,14 @@ export const I18N: Record<RapportSprog, Tekster> = {
     stemme: 'stemme',
     stemmer: 'stemmer',
     svar: 'svar',
+    post: 'melding',
+    poster: 'meldinger',
+    udenKategori: 'Uden kategori',
+    grupperetNote: 'Meldingerne er grupperet efter bilsystem. Hver sektion viser antal meldinger og samlede stemmer.',
     kommentarerOverskrift: 'Kommentarer',
     sideAf: (n, af) => `Side ${n} af ${af}`,
     delta: { ny: 'NY', mere: (n) => `+${n} siden sidst` },
-    csvKolonner: ['Placering', 'Stemmer', 'Ændring siden sidst', 'Biler bekræftet', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Softwareversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivelse', 'Oprettet', 'Kommentarer'],
+    csvKolonner: ['Placering', 'Stemmer', 'Ændring siden sidst', 'Biler bekræftet', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Kategori', 'Softwareversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivelse', 'Oprettet', 'Kommentarer'],
     disclaimer: `${SITE.domain} er et uofficielt, uafhængigt ejer-community. Siden er ikke tilknyttet, sponsoreret eller godkendt af ZEEKR, Geely eller deres datterselskaber.`,
     filnavn: 'da',
     status: { ny: 'Ny', bekraeftet: 'Bekræftet', sendt_til_zeekr: 'Sendt til Zeekr', afklaret: 'Afklaret', loest_i_ota: 'Løst i OTA' },
@@ -75,10 +83,14 @@ export const I18N: Record<RapportSprog, Tekster> = {
     stemme: 'vote',
     stemmer: 'votes',
     svar: 'replies',
+    post: 'entry',
+    poster: 'entries',
+    udenKategori: 'Uncategorized',
+    grupperetNote: 'Entries are grouped by vehicle subsystem. Each section shows the number of entries and total votes.',
     kommentarerOverskrift: 'Comments',
     sideAf: (n, af) => `Page ${n} of ${af}`,
     delta: { ny: 'NEW', mere: (n) => `+${n} since last` },
-    csvKolonner: ['Rank', 'Votes', 'Change since last', 'Cars confirmed', 'Variants', 'Replies', 'Title', 'Models', 'Software version', 'Phone', 'Phone OS', 'Status', 'Description', 'Created', 'Comments'],
+    csvKolonner: ['Rank', 'Votes', 'Change since last', 'Cars confirmed', 'Variants', 'Replies', 'Title', 'Models', 'Category', 'Software version', 'Phone', 'Phone OS', 'Status', 'Description', 'Created', 'Comments'],
     disclaimer: `${SITE.domain} is an unofficial, independent owner community. The site is not affiliated with, sponsored by or endorsed by ZEEKR, Geely or their subsidiaries.`,
     filnavn: 'en',
     status: { ny: 'New', bekraeftet: 'Confirmed', sendt_til_zeekr: 'Sent to Zeekr', afklaret: 'Clarified', loest_i_ota: 'Fixed in OTA' },
@@ -91,10 +103,14 @@ export const I18N: Record<RapportSprog, Tekster> = {
     stemme: 'röst',
     stemmer: 'röster',
     svar: 'svar',
+    post: 'post',
+    poster: 'poster',
+    udenKategori: 'Utan kategori',
+    grupperetNote: 'Posterna är grupperade efter fordonssystem. Varje sektion visar antal poster och totalt antal röster.',
     kommentarerOverskrift: 'Kommentarer',
     sideAf: (n, af) => `Sida ${n} av ${af}`,
     delta: { ny: 'NY', mere: (n) => `+${n} sedan sist` },
-    csvKolonner: ['Placering', 'Röster', 'Förändring sedan sist', 'Bilar bekräftade', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Programvaruversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivning', 'Skapad', 'Kommentarer'],
+    csvKolonner: ['Placering', 'Röster', 'Förändring sedan sist', 'Bilar bekräftade', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Kategori', 'Programvaruversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivning', 'Skapad', 'Kommentarer'],
     disclaimer: `${SITE.domain} är en inofficiell, oberoende ägargemenskap. Sidan är inte knuten till, sponsrad av eller godkänd av ZEEKR, Geely eller deras dotterbolag.`,
     filnavn: 'sv',
     status: { ny: 'Ny', bekraeftet: 'Bekräftad', sendt_til_zeekr: 'Skickad till Zeekr', afklaret: 'Klarlagt', loest_i_ota: 'Löst i OTA' },
@@ -122,6 +138,40 @@ export const RAPPORT_RAMME: Record<RapportSprog, Record<RapportType, { titel: st
 export function oversaetStatus(status: string, sprog: RapportSprog): string {
   const map = I18N[sprog].status as Record<string, string>;
   return map[status] ?? status;
+}
+
+// Visningslabel for en kategori-spand i rapportsproget. Dansk er kildesproget
+// (bruger config'ens kategoriLabel); en/sv har oversatte labels for de 9 faste
+// spande. Ukendte fri-tekst-slugs falder tilbage til den rå værdi. null = en
+// melding uden kategori.
+const RAPPORT_KATEGORI_LABEL: Partial<Record<RapportSprog, Record<string, string>>> = {
+  en: {
+    'koerehjaelp-adas': 'Driver assistance & ADAS',
+    'koersel-bremser-understel': 'Driving, brakes & chassis',
+    'opladning-raekkevidde': 'Charging & range',
+    'skaerm-infotainment': 'Screen, voice & infotainment',
+    'app-laas-forbindelse': 'App, lock & connectivity',
+    'lys-ruder-udsyn': 'Lights, windows & visibility',
+    'klima-saeder-kabine': 'Climate, seats & cabin',
+    'hjul-daek-tpms': 'Wheels, tyres & TPMS',
+    andet: 'Other',
+  },
+  sv: {
+    'koerehjaelp-adas': 'Körhjälp & ADAS',
+    'koersel-bremser-understel': 'Körning, bromsar & chassi',
+    'opladning-raekkevidde': 'Laddning & räckvidd',
+    'skaerm-infotainment': 'Skärm, röst & infotainment',
+    'app-laas-forbindelse': 'App, lås & anslutning',
+    'lys-ruder-udsyn': 'Ljus, rutor & sikt',
+    'klima-saeder-kabine': 'Klimat, säten & kupé',
+    'hjul-daek-tpms': 'Hjul, däck & TPMS',
+    andet: 'Övrigt',
+  },
+};
+
+export function rapportKategoriLabel(slug: string | null, sprog: RapportSprog): string {
+  if (!slug) return I18N[sprog].udenKategori;
+  return RAPPORT_KATEGORI_LABEL[sprog]?.[slug] ?? kategoriLabel(slug) ?? slug;
 }
 
 export function deltaTekst(

@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (backlog reprioriteret P1-P14 + auto-moderering (forum, flag-only) tænkt ind)
+**Sidst opdateret:** 2026-11-22 (P1 bygget: Zeekr-rapporten grupperet efter kategori-spand)
 
 ---
 
@@ -18,7 +18,6 @@
 
 ### Næste op (byg i denne rækkefølge)
 > QA-værdi øverst (bygges nu uanset trafik). **Forum-klyngen** (P4 søgning, P5 auto-moderering, P6 ejer-antal) forudsætter rigtig forum-trafik - forummet er pt. tomt for tråde - så de kan bygges proaktivt, men hastes ikke før der kommer liv i forummet.
-- [ ] **P1 - Gruppér Zeekr-rapporten efter kategori-spand.** QA-guld og den direkte vej mod målet; låst op nu hvor alle meldinger er mærket op. Rapporten grupperes/aggregeres pr. spand. Visning/aggregering, forventet ingen migration. Se "## Zeekr-rapport (porteret fra bugherrer)".
 - [ ] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** vote/status/alvor/kategori/løst/redigér/slet klemmer. Gør den daglige kuratering holdbar. Lille/medium, ingen migration. Se `components/admin/ModereringsTabel.tsx`.
 - [ ] **P3 - Billeder i feedback-meldinger.** Foto-bevis i fejlmeldinger styrker QA-sagen mod Zeekr markant. Større: storage + upload-flow. (Billed-sporet samlet: P3 → P8 → P9.)
 - [ ] **P4 - Tværgående tråd-søgning (forum).** IA-strategien hviler bevidst på søgning for findbarhed (ikke perfekt kategorisering). Medium.
@@ -43,6 +42,7 @@
 - [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
 
 ### Gjort 22-11-2026 (så intet glemmes)
+- [x] **P1 - Zeekr-rapporten grupperet efter kategori-spand** (PDF + CSV). QA-vinklen mod Zeekr. Ingen migration. Se "## Zeekr-rapport: gruppering efter kategori-spand (P1)".
 - [x] Multi-model garage (migration kørt + verificeret, live). Se "## Multi-model garage".
 - [x] `/admin/beskeder`: moderator-visning af besked-anmeldelser (migration kørt). Se "## Admin: besked-anmeldelser".
 - [x] Redigerbare forum-regler i UI (migration kørt). Se "## Redigerbare forum-regler".
@@ -326,6 +326,17 @@ Admin-eksport af fejl/ønsker til Zeekr som PDF/CSV, med oversættelse, delta-sp
 
 **Forskelle fra bugherrer:** zeekr-garage har eksplicit status (ingen `beregnStatus`); "biler bekræftet" = variant-fordeling fra konto-bundne bekræftelser (ikke browser-votes); multi-model (`modeller` som komma-liste). Notifikationer af følgere ved "sendt" er IKKE porteret (følg-funktionen findes ikke endnu).
 
+## Zeekr-rapport: gruppering efter kategori-spand (P1) - bygget 22-11-2026
+Rapporten (PDF + CSV) grupperer og aggregerer nu de udvalgte meldinger efter de 9 faste kategori-spande (`ISSUE_CATEGORIES`) i stedet for én flad stemme-sorteret liste. Det er QA-vinklen mod Zeekr: fejlene står systematiseret pr. bilsystem (Kørehjælp & ADAS, Opladning & rækkevidde osv.), så mønstre pr. subsystem er tydelige.
+
+- **Ingen migration.** Kategori ligger ikke i `rapport_fejl`-RPC'en; den hentes separat i `lib/rapport.ts:getRapportFejl()` fra `issues` (offentlig læsning) og mappes på pr. id. `RapportFejl` fik feltet `category: string | null`.
+- **Gruppering:** ny ren helper `grupperEfterKategori(fejl)` i `lib/rapport.ts` → `RapportGruppe[]`. Rækkefølge: de 9 spande i config-rækkefølge (kun ikke-tomme), derefter evt. ukendte fri-tekst-kategorier (første-forekomst), til sidst en "uden kategori"-gruppe (`slug = null`). Hver gruppe aggregerer `antal`, `stemmer` og `bilerBekraeftet`. Deler samme helper → PDF og CSV grupperer identisk.
+- **Visningslabel:** `rapportKategoriLabel(slug, sprog)` i `lib/rapport-i18n.ts`. Dansk bruger config'ens `kategoriLabel()` (fri-tekst-fallback til rå værdi); en/sv har oversatte labels for de 9 spande; `null` → sprogets "Uden kategori"/"Uncategorized"/"Utan kategori".
+- **PDF** (`app/api/admin/rapport/pdf/route.ts`): grafit sektions-bånd m. kobber-kant pr. spand + aggregat ("N meldinger - M stemmer"); meldinger nummereres pr. gruppe (`#1..#n`). Kort-layoutet pr. melding er uændret. Orphan-værn: sidebryd før en header der ikke har plads. Grafit/kobber-stilen holdt (ingen ny farve). Kort intro-note om grupperingen under rapportens intro.
+- **CSV** (`app/api/admin/rapport/csv/route.ts`): ny kolonne **Kategori** (efter Modeller) + rækker ordnet efter samme spand-rækkefølge; Placering løber globalt. Gør grupperingen filtrerbar i Excel/Calc.
+- **i18n:** `rapport-i18n.ts` fik `post/poster`, `udenKategori`, `grupperetNote` + "Kategori"-kolonne i `csvKolonner` (da/en/sv), og kategori-label-oversættelser for de 9 spande (en/sv).
+- `npm run build` grønt (tsc + Next). Ingen DB-ændring, så ingen Studio-kørsel.
+
 ## Legacy-import fra bugherrer (støtte bygget 20-11-2026, import afventer data)
 Migration `supabase/migrations/20261120210000_legacy_import.sql`: `issues.legacy_stemmer` + `legacy_biler` (jsonb variant-fordeling) + `legacy_bugherrer_id` (unik, idempotent re-import) + `comments.author_navn`. rapport_fejl/dan_rapport_markering/rapport_overblik opdateret så stemmer+variant = **live + legacy**. Display: `mapIssue` viser live+legacy; `getVariantFordeling` fletter; kommentarer viser `author_navn` når `author_id` er null. **Skal køres i Studio.**
 
@@ -535,7 +546,7 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - **Kuratering** (`components/admin/ModereringsTabel.tsx`): kategori-dropdown pr. række i Værkstedet + action `saetKategori` (moderator, validerer slug, revaliderer /admin + / + /feedback). Det er her de ~31 eksisterende mærkes op.
 - **Ingen migration, ingen databrud:** kolonnen var allerede tekst; `category` vises ingen steder som label (kun brugt i søgning), så gamle fri-tekst-værdier bevares urørt og dukker bare op under "Alle" indtil de re-mærkes. `kategoriLabel()`-helper falder tilbage til rå værdi hvis en slug ikke kendes.
 - `tsc` + build grønt.
-- **Næste (aftalt retning):** samme 9 spande genbruges som emne-mærker på forummet (tag + filter, ikke nestede rum) - men først når forummet har tråde. Overvej at vise kategori-chip på board-rækkerne og i rapporten (grupper efter spand → stærkt QA-materiale til Zeekr).
+- **Næste (aftalt retning):** samme 9 spande genbruges som emne-mærker på forummet (tag + filter, ikke nestede rum) - men først når forummet har tråde. Kategori-chip på board-rækkerne **gjort** (se "Gjort 22-11"); rapport grupperet efter spand **gjort 22-11** (se "## Zeekr-rapport: gruppering efter kategori-spand (P1)").
 
 ## Feedback-board: status-filter + dæmpede rækker (22-11-2026)
 Boardet (`/feedback`, `components/FejlBoard.tsx`) blev for langt til at bevare overblik. Nyt status-segment ved siden af type-filteret: **Aktive** (standard) / Afsluttet / Alle.

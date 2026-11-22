@@ -7,8 +7,9 @@ import {
   oversaetStatus,
   deltaTekst,
   erGyldigRapportType,
+  rapportKategoriLabel,
 } from '@/lib/rapport-i18n';
-import { getRapportFejl, getRapportKommentarer } from '@/lib/rapport';
+import { getRapportFejl, getRapportKommentarer, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
 
 export const dynamic = 'force-dynamic';
@@ -36,30 +37,42 @@ export async function GET(req: Request) {
     return `"${String(v).replace(/"/g, '""')}"`;
   }
 
-  const raekker = fejl.map((f, i) => {
-    const bilBekr = f.variant_fordeling.reduce((s, r) => s + r.n, 0);
-    const varianter = f.variant_fordeling.map((r) => `${r.n}× ${r.variant}`).join(', ');
-    const kommentarer = (kommMap[f.id] ?? []).map((k) => `${k.navn}: ${k.tekst}`).join('  |  ');
-    return [
-      i + 1,
-      f.stemmer,
-      deltaTekst(f, sprog),
-      bilBekr,
-      varianter,
-      f.antal_svar,
-      f.title,
-      f.modeller,
-      f.software_version ?? '',
-      f.phone_model ?? '',
-      f.phone_os ?? '',
-      oversaetStatus(f.status, sprog),
-      f.description,
-      f.created_at,
-      kommentarer,
-    ]
-      .map(esc)
-      .join(';');
-  });
+  // Grupperet efter kategori-spand (samme rækkefølge som PDF'en); "Kategori"-
+  // kolonnen gør grupperingen filtrerbar i Excel/Calc. Placering løber globalt.
+  const grupper = grupperEfterKategori(fejl);
+  let rang = 0;
+  const raekker: string[] = [];
+  for (const g of grupper) {
+    const katLabel = rapportKategoriLabel(g.slug, sprog);
+    for (const f of g.fejl) {
+      rang += 1;
+      const bilBekr = f.variant_fordeling.reduce((s, r) => s + r.n, 0);
+      const varianter = f.variant_fordeling.map((r) => `${r.n}× ${r.variant}`).join(', ');
+      const kommentarer = (kommMap[f.id] ?? []).map((k) => `${k.navn}: ${k.tekst}`).join('  |  ');
+      raekker.push(
+        [
+          rang,
+          f.stemmer,
+          deltaTekst(f, sprog),
+          bilBekr,
+          varianter,
+          f.antal_svar,
+          f.title,
+          f.modeller,
+          katLabel,
+          f.software_version ?? '',
+          f.phone_model ?? '',
+          f.phone_os ?? '',
+          oversaetStatus(f.status, sprog),
+          f.description,
+          f.created_at,
+          kommentarer,
+        ]
+          .map(esc)
+          .join(';'),
+      );
+    }
+  }
 
   // BOM + semikolon → åbner korrekt i dansk Excel/LibreOffice Calc.
   const csv = '﻿' + [t.csvKolonner.map(esc).join(';'), ...raekker].join('\r\n');
