@@ -31,6 +31,7 @@
 - [ ] **P12 - Gruppe-samtaler i beskeder** (datamodellen holder til det).
 - [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
 - [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
+- [ ] **P15 - "Skriv privat"-knap flere steder** (melding-kommentarer, garage-kort, evt. event-deltagere), ikke kun forum. Supplerer den nye compose med en indgang dér hvor man ser brugeren. Genbruger `startSamtaleMedBruger`, ingen migration. Lille. (Torbens tanke 22-11; byg-nu ikke aftalt - ligger som backlog.)
 
 ### Senere / roadmap (ikke planlagt endnu)
 - [ ] Q&A / guides-sektion.
@@ -485,6 +486,7 @@ Man kan nu skrive direkte til en anden ejer uden at gå via et forum-indlæg. Mo
 - **UI:** `/beskeder/ny` (`app/beskeder/ny/page.tsx` + `components/beskeder/NyBeskedView.tsx`): debounced søgefelt (min. 2 tegn, ignorerer forældede svar via seq-ref), resultatliste m. navn + garage-badge, klik → `startSamtaleMedBruger` → `/beskeder/<id>`. "Ny besked"-knap + opdateret tekst/empty-state på `/beskeder`. `ny` kolliderer ikke med `[id]` (statisk segment vinder; conv-id'er er uuid'er).
 - **Note (spam-flade):** cold-DM via navnesøgning er nu mulig. Afbødet af eksisterende blokér + anmeld + `message_reports`. Navne/bil-badges er i forvejen offentlige på forum, så søgningen afslører intet nyt. Kan gates senere (fx kun præcist navn) hvis det bliver et problem.
 - `npm run build` grønt. Ingen DB-ændring, ingen Studio-kørsel.
+- **Næste (ikke gjort):** live-verificér i Chrome når n8n har deployet - søg en testbruger, start samtale, bekræft at en blokeret bruger ikke dukker op som modtager. Supplerende indgange = P15.
 
 ## Admin: besked-anmeldelser (bygget 22-11-2026)
 Moderator-visning i Værkstedet af anmeldte private beskeder. Lukker backlog-punktet `/admin/beskeder`.
