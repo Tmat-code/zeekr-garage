@@ -303,7 +303,7 @@ En ejer kan nu registrere FLERE biler, og en bekræftelse knyttes til en konkret
 - `components/LoginForm.tsx`: ved signup oprettes nu BÅDE en `cars`-række OG primær-bil-pointeren (så nye brugere har en bil i cars fra start).
 - Fjerner man en bil, forsvinder dens bekræftelser med den (cascade) - bevidst: så tæller den ikke længere i rapporterne.
 
-**Verificeret:** `npx tsc --noEmit` + `npm run build` grønt; migration kørt + verificeret i Studio (se ovenfor); flettet til `main` (fast-forward) → n8n deployer. **Udestår: live-test i app'en** (bekræft med 2 biler på en PMA2+-fejl → tæller som 2; fjern; Min garage tilføj/fjern; ny signup opretter cars-række). Gør det, når deployet er grønt i Coolify.
+**Verificeret:** `npx tsc --noEmit` + `npm run build` grønt; migration kørt + verificeret i Studio; flettet til `main` (fast-forward) → deployet via n8n. **Live-test bestået 22-11-2026 (via Chrome, Torben):** tilføjede en anden 7GT (Long Range RWD) i Min garage → bekræftede en 7GT-fejl ("Fartpilot") → tæller gik **59 → 61** (én pr. bil, netop den sti den gamle constraint blokerede), variant-fordeling Core RWD 15→16 + Long Range RWD 11→12. Fjern-bekræftelse → tilbage til 59; fjernede testbilen → garage tilbage til 1 bil. Al testdata ryddet op. Tilføj/fjern-UI + primær-bil-synk virker.
 
 **Mangler/senere:** "antal ejere pr. model-forum" (separat backlog-punkt) bør når det bygges læse fra `cars`. Badget viser stadig kun den primære bil pr. forfatter (bevidst - kompakt); det er ikke længere en begrænsning, da man nu kan eje flere.
 
