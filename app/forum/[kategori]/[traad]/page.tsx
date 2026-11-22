@@ -60,7 +60,7 @@ export default async function TraadSide({
         <span aria-hidden="true">/</span>
         <Link href={`/forum/${traad.kategori.slug}`} className="hover:text-kobber-700">
           {traad.kategori.modelId ? (
-            <span className="mr-1.5 rounded bg-grafit-900 px-1 py-0.5 font-display text-[10px] font-semibold tabular-nums tracking-tight text-kobber-300">
+            <span className="mr-1.5 rounded bg-grafit-100 px-1 py-0.5 font-display text-[10px] font-semibold tabular-nums tracking-tight text-kobber-700">
               {modelBadge(traad.kategori.slug)}
             </span>
           ) : (

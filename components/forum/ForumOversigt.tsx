@@ -43,7 +43,7 @@ function KategoriRaekke({
     >
       {badge ? (
         <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-grafit-900 font-display text-[13px] font-semibold tabular-nums tracking-tight text-kobber-300"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-grafit-100 font-display text-[13px] font-semibold tabular-nums tracking-tight text-kobber-700"
           aria-hidden="true"
         >
           {badge}

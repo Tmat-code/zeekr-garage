@@ -33,7 +33,7 @@ export default async function KategoriSide({ params }: { params: { kategori: str
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           {kat.modelId ? (
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grafit-900 font-display text-base font-semibold tabular-nums tracking-tight text-kobber-300" aria-hidden="true">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grafit-100 font-display text-base font-semibold tabular-nums tracking-tight text-kobber-700" aria-hidden="true">
               {modelBadge(kat.slug)}
             </span>
           ) : (
