@@ -1,13 +1,19 @@
 import { getForumGrupper } from '@/lib/forum';
 import { getAdminForum } from '@/lib/queries-admin';
+import { getForumRegler } from '@/lib/forum-regler';
 import KategoriStyring from '@/components/admin/KategoriStyring';
 import ForumModerering from '@/components/admin/ForumModerering';
+import ForumReglerEditor from '@/components/admin/ForumReglerEditor';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
-  const [grupper, forum] = await Promise.all([getForumGrupper(), getAdminForum(25)]);
+  const [grupper, forum, regler] = await Promise.all([
+    getForumGrupper(),
+    getAdminForum(25),
+    getForumRegler(),
+  ]);
 
   const antalKategorier = grupper.reduce((s, g) => s + g.kategorier.length, 0);
 
@@ -35,6 +41,24 @@ export default async function AdminForumSide() {
           kategori kan kun moderatorer starte tråde i.
         </p>
         <KategoriStyring grupper={grupper} />
+      </section>
+
+      <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-grafit-900">Forum-regler</h2>
+          <a
+            href="/forum/regler"
+            target="_blank"
+            className="text-sm text-kobber-700 hover:underline"
+          >
+            Se på forummet →
+          </a>
+        </div>
+        <p className="mb-4 text-sm text-grafit-500">
+          De fælles spilleregler for forummet. Rediger her, så slår de igennem på{' '}
+          <span className="font-mono text-grafit-600">/forum/regler</span> med det samme.
+        </p>
+        <ForumReglerEditor initial={regler.content} updatedAt={regler.updatedAt} />
       </section>
     </div>
   );

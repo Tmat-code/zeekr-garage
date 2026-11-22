@@ -23,6 +23,27 @@ function revalider() {
   revalidatePath('/forum');
 }
 
+// Gem de fælles forum-regler (singleton). Moderator/admin.
+export async function gemForumRegler(content: string): Promise<void> {
+  await kraevModerator();
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const { error } = await sb
+    .from('forum_rules')
+    .update({
+      content: content.trim() || null,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+    })
+    .eq('id', 1);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/forum');
+  revalidatePath('/forum');
+  revalidatePath('/forum/regler');
+}
+
 async function kraevModerator() {
   if (!(await erModerator())) throw new Error('Kun moderator/admin.');
 }

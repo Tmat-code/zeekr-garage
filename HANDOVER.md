@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (admin: besked-anmeldelser)
+**Sidst opdateret:** 2026-11-22 (redigerbare forum-regler i UI)
 
 ---
 
@@ -19,7 +19,7 @@
 
 **Værkstedet/moderering**
 - [x] ~~`/admin/beskeder`: moderator-visning af besked-anmeldelser~~ **BYGGET 22-11-2026** (kræver 1 ny migration kørt i Studio - se "## Admin: besked-anmeldelser" nedenfor).
-- [ ] Redigerbare forum-regler i UI.
+- [x] ~~Redigerbare forum-regler i UI.~~ **BYGGET 22-11-2026** (kræver 1 ny migration kørt i Studio - se "## Redigerbare forum-regler (bygget 22-11-2026)" nedenfor).
 - [ ] Kategori-editor kan ikke flytte en kategori mellem grupper (kræver SQL i dag).
 - [ ] Tværgående tråd-søgning.
 - [ ] Antal ejere pr. model-forum.
@@ -513,7 +513,7 @@ Brugere kan selv skifte login-mail under **Min garage** med **dobbelt bekræftel
 - Forum-link i Værkstedet-header (`app/admin/layout.tsx`).
 - **Verificeret live 21-11 via Chrome (Torben, admin):** `/admin/forum` render + modereringskø fanger ny tråd/indlæg; kategori opret + slet (15→16→15) virker uden SQL; "Fjern tråd" virker. Test ryddet op.
 - **"Opret som feedback"-bro (BYGGET 21-11-2026):** på en forum-tråd kan en moderator (i `TraadModeration`) klikke "→ Opret som feedback" → `/meld?type=fejl&titel=…&beskrivelse=…&fra=/forum/…` med trådens titel + åbnings-indlæg forudfyldt (beskrivelse kortet til 1200 tegn i URL'en). `MeldForm`/`MeldFlow` fik `initialBody` + `fraForum` (banner om oprindelse); `/meld` læser `?titel/?beskrivelse/?fra` (`fra` kun interne `/forum/`-stier → ingen open-redirect). Moderator udfylder stadig model(ler) + OTA, så det bliver struktureret QA. Binder "forum = snak / Feedback = QA" sammen. **Verificeret live 21-11 via Chrome (Torben, admin):** knap → prefilled `/meld` (banner + titel + beskrivelse), søg-trin kørte dublet-tjek mod importerede 7GT-meldinger, formular nåede med alt forudfyldt. Test ryddet op.
-- **Mangler (senere):** redigerbare forum-regler i UI · antal ejere pr. model-forum · tråd-søgning.
+- **Mangler (senere):** ~~redigerbare forum-regler i UI~~ **BYGGET 22-11 (se "## Redigerbare forum-regler")** · antal ejere pr. model-forum · tråd-søgning.
 
 ## Model-badge på forum-ikoner (22-11-2026)
 De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typografisk model-badge** - modellens betegnelse (9X, 001, 001S, X, 7X, 7GT) i en lys grafit-100-chip (samme som emoji-kategorierne) med kobber-700-tekst (Archivo, tabular, tight). (Først prøvet grafit-900/kobber-300 = for sort/tungt på hvid liste, rettet til lys variant.) Ligner et trim-/datablad-mærke: differentierer hver model uden farve. Fravalgt: seks forskellige farver pr. model (ville blive "farvelade" og undergrave det rene/premium look - afklaret med Torben). Topiske kategorier (ikke-model) beholder deres emoji.
@@ -521,6 +521,26 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - Brugt i: `components/forum/ForumOversigt.tsx` (oversigts-rækker, `modelId != null`), `app/forum/[kategori]/page.tsx` (kategori-header), `app/forum/[kategori]/[traad]/page.tsx` (breadcrumb - lille badge). `getTraad` embedder nu `model_id`; `ForumTraadDetalje.kategori` fik `modelId`.
 - DB uændret: `forum_categories.icon` beholder stadig '🚗' for model-fora, men feltet ignoreres nu i rendering af model-rækker. Ingen migration.
 - `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+## Redigerbare forum-regler (bygget 22-11-2026)
+Forummets fælles spilleregler kan nu redigeres fra Værkstedet i stedet for kun at leve som en fastgjort tråd. Moderator/admin retter teksten ét sted; den vises offentligt på `/forum/regler`.
+
+- **⚠️ KRÆVER 1 MIGRATION KØRT I STUDIO (ellers viser siden bare en "reglerne er på vej"-besked - går ikke ned):** `supabase/migrations/20261122150000_forum_regler.sql`. Kør i Zeekr-instansens SQL-editor (`http://192.168.1.18:8002`, Studio). Idempotent (`create table if not exists` + `insert ... on conflict do nothing`), kan køres igen uden skade.
+- **Datamodel:** singleton-tabel `forum_rules` (id=1, content, updated_at/by) - samme mønster som `site_announcement`. RLS: læs alle (offentligt); **opdater gated på `er_moderator()`** (bevidst moderator, ikke admin - resten af `/admin/forum`, dvs. kategori-styring + moderering, er også moderator). Migrationen **seeder** et sæt default-regler på dansk (tone, hold trådene skarpe, billeder/privatliv, marked, moderering), så siden har indhold fra første stund.
+- **Robust før migration:** `lib/forum-regler.ts:getForumRegler()` fejler blødt (fanger læsefejl hvis tabellen mangler → returnerer tom) så `/forum`, `/forum/regler` og `/admin/forum` ikke vælter, mens migrationen afventer at blive kørt.
+- **Format (simpelt, ingen rå HTML):** `## ` = underoverskrift, `- ` = punkt, tom linje = nyt afsnit. Renderes sikkert som React-elementer i `components/forum/ReglerIndhold.tsx` (parser, ingen `dangerouslySetInnerHTML`).
+- **Filer:**
+  - Migration (ovenfor).
+  - `lib/forum-regler.ts` - `getForumRegler()` + type `ForumRegler`.
+  - `app/admin/forum-actions.ts` - `gemForumRegler(content)` (`kraevModerator()`-gated, revaliderer `/admin/forum` + `/forum` + `/forum/regler`).
+  - `components/admin/ForumReglerEditor.tsx` - klient-editor (textarea + "Gem regler" + "sidst ændret"-tid; kun aktiv når teksten er ændret).
+  - `app/admin/forum/page.tsx` - ny "Forum-regler"-sektion nederst (henter `getForumRegler()` parallelt med resten).
+  - `components/forum/ReglerIndhold.tsx` - sikker renderer.
+  - `app/forum/regler/page.tsx` - offentlig visning (breadcrumb Forum / Regler, "Opdateret {relativ tid}", Feedback-henvisning). Statisk segment `regler` vinder over dynamisk `[kategori]` (ingen kategori har slug `regler`).
+  - `app/forum/page.tsx` - synligt "Ny her? Læs forum-reglerne"-link i forum-intro'en.
+- **Forholdet til den fastgjorte regel-tråd:** den eksisterende fastgjorte tråd "Velkommen - sådan er tonen i Garagen" i Community-regler kan blive stående som velkomst/snak; de **kanoniske** regler bor nu på `/forum/regler` (redigerbare uden at poste/redigere en tråd).
+- **Verificering:** `npx tsc --noEmit` + `npm run build` grønt. **Live-test mangler** (kræver migrationen kørt i Studio): derefter som admin → Værkstedet → Forum → "Forum-regler" → ret tekst → Gem → se `/forum/regler`.
+- **Mangler/senere:** rich-text/preview i editoren (pt. rå tekst + simpelt format); evt. versionshistorik.
 
 ## Næste op
 - ~~**Alle manualer på /links**~~ **AFKLARET 21-11-2026:** zeekr.eu's manual-vælger (på `/contact`) er model→år→**variant**→sprog, og manualen er **variant-specifik** (fx 7GT: Core RWD / Long Range RWD / Privilege AWD → forskellig `ven=`). Derfor er ét direkte link pr. model forkert - `/links` bruger et **vælger-link** (`zeekr.eu/contact`) der dækker alle modeller + beholder det direkte 7GT-link. Vælgeren har 7X, 001, X, 7GT (+9X); ingen separat "001 Sport" (deler 001's manual). Verificeret i Torbens Chrome. Intet mere at gøre her, medmindre vi vil hardcode én default-variant pr. model.

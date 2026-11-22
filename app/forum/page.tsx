@@ -40,6 +40,17 @@ export default async function ForumSide() {
             </>
           )}
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <span aria-hidden>📋</span>
+          <span className="text-grafit-600">Ny her? Læs</span>
+          <Link
+            href="/forum/regler"
+            className="font-medium text-kobber-700 hover:underline"
+          >
+            forum-reglerne
+          </Link>
+          <span className="text-grafit-400">- sådan er tonen i Garagen.</span>
+        </div>
       </section>
 
       <div className="mt-8">
