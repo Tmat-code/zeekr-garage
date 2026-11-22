@@ -324,8 +324,33 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_kategorier_2.sql`, kørt i Studio): **Dæk, fælge & undervogn** + **DIY & FAQ** (Teknik), **Bilpleje & detailing** + **Forsikring, service & værksted** (Ejer-lounge), **Træf, køreture & events** (ny gruppe **Fællesskab**), **Køb, salg & bytte** (ny gruppe **Marked**). Forum har nu 21 kategorier / 6 grupper.
 - **"Køb, priser og levering"-tvivlen er dermed løst:** Ejer-lounge "Køb, priser & levering" = ny bil / forhandler / levering; Marked "Køb, salg & bytte" = brugt mellem ejere. De to dækker hver sit, ingen omdøbning nødvendig. (NB: kategori-editoren kan endnu IKKE flytte en kategori mellem grupper - det kræver SQL/mig, eller en udvidelse af editoren.)
 
-## Store forum-features ønsket (bruger-feedback 21-11-2026, IKKE bygget)
-- **Chat mellem brugere** (DM / privatbeskeder). Stort: egne tabeller (samtaler + beskeder), realtime via Supabase, moderering, ulæst-markering. Scopes separat.
+## NÆSTE SESSION - plan (aftalt med Torben 22-11-2026)
+Rækkefølge: **(1) notifikations-kerne + forum-svar-notifikationer → (2) Adgange: søg alle brugere + tildel rolle → (3) chat/PB oven på notifikationssystemet.** Notifikationer bygges FØRST, fordi de giver værdi alene (forum-svar) og afrisikerer plumbing'en inden den store chat-bid.
+
+### 1) Notifikationer (ét samlet system - byg først)
+Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "indbakke".
+- **`notifications`-tabel:** modtager_id, type (`forum_svar`, `pb_besked`, senere `mention`/`event`), aktoer_id (hvem udløste), reference (tråd-/samtale-id), kort denormaliseret tekst til visning, `href`, `er_laest`, created_at.
+- **`traad_foelgere`-tabel:** række pr. bruger pr. tråd, indsættes automatisk når man **opretter eller svarer** i en tråd. Mute = fjern/flag rækken.
+- **Trigger (security definer)** på nyt forum-indlæg: indsæt notifikation til alle følgere **undtagen forfatteren selv**.
+- **BESLUTTET: KUN tråde man selv har skrevet i** - IKKE hele model-fora (ville give for mange notifikationer). Ingen "følg et helt forum"-feature nu.
+- **UI:** klokke i nav + ulæst-badge, dropdown-liste, klik → markér læst + hop til `href`.
+- **Realtime:** Supabase Realtime på `notifications` filtreret på user_id → badge opdaterer live uden refresh. (realtime-servicen kører allerede i stakken.) Samme mekanik driver live-beskeder i chatten.
+- **E-mail: IN-APP FØRST.** E-mail pr. svar bliver støjende → senere som opt-in eller daglig samle-mail (Resend findes allerede).
+- **RLS:** ejer læser/markerer kun egne notifikationer; indsættelse sker kun via trigger (security definer), ikke direkte fra klient.
+
+### 2) Adgange-forbedring (Værkstedet) - søg alle brugere + tildel rolle
+- **Nu:** `admin_brugere()` viser KUN brugere der allerede har en rolle; roller gives via e-mail-invitation (`admin_inviter`). Torben vil kunne **søge en hvilken som helst oprettet bruger frem og give rollen direkte**, uden at kende mailen på forhånd.
+- **Mangler:** ny RPC `admin_alle_brugere(p_soeg text)` (security definer, `er_admin()`-gated) der returnerer ALLE profiler + email/display_name/role/sidst_logget/oprettet, filtreret på søgetekst (email ILIKE / display_name ILIKE), evt. pagineret. **`admin_saet_rolle(p_bruger, p_rolle)` FINDES allerede** (sætter/fjerner rolle, null = fjern) → genbruges direkte.
+- **UI i `components/admin/AdgangePanel.tsx`:** søgefelt over alle brugere; hver træffer viser navn/mail/nuværende rolle + rolle-vælger (Ingen / moderator / admin) → kalder eksisterende `saetRolle`-action. Behold e-mail-invitationen til folk der endnu ikke har oprettet sig.
+
+### 3) Chat / PB mellem brugere (byg oven på notifikationskernen)
+- **Tabeller:** samtaler + beskeder (+ deltagere); ulæst-markering pr. bruger pr. samtale.
+- **BESLUTTET (mit oplæg godkendt):** alle indloggede kan skrive til alle, **med blokér + anmeld**.
+- **Realtime via Supabase** → live beskeder. Ny PB → notifikation (`pb_besked`) via systemet fra pkt. 1, hvis modtager ikke har samtalen åben.
+- **Moderering:** blokér/anmeld; genbrug admin/moderator-roller.
+
+## Store forum-features ønsket (bruger-feedback 21-11-2026)
+- **Chat mellem brugere + notifikationer** - planlagt til næste session, se "## NÆSTE SESSION - plan" ovenfor.
 - **Meetup / events - BYGGET 21-11-2026.** Se eget afsnit "## Events / meetups" nedenfor.
 
 ## Events / meetups (bygget 21-11-2026)
