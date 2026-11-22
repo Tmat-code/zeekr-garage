@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { opretTraad } from '@/app/forum/actions';
+import BilledeUpload from '@/components/forum/BilledeUpload';
 
 export default function NyTraadForm({
   kategoriSlug,
@@ -14,6 +15,7 @@ export default function NyTraadForm({
   const router = useRouter();
   const [titel, setTitel] = useState('');
   const [body, setBody] = useState('');
+  const [billeder, setBilleder] = useState<string[]>([]);
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -21,7 +23,7 @@ export default function NyTraadForm({
     setFejl(null);
     start(async () => {
       try {
-        const url = await opretTraad(kategoriSlug, titel, body);
+        const url = await opretTraad(kategoriSlug, titel, body, billeder);
         router.push(url);
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke oprette tråden.');
@@ -55,6 +57,10 @@ export default function NyTraadForm({
           onChange={(e) => setBody(e.target.value)}
           placeholder="Skriv løs - spørgsmål, erfaring eller en god historie."
         />
+      </div>
+      <div>
+        <label className="label">Billeder (valgfrit)</label>
+        <BilledeUpload onChange={setBilleder} disabled={pending} />
       </div>
       <div className="flex items-center gap-3">
         <button

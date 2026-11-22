@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
 import type { ForumIndlaeg } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
+import BilledeUpload from '@/components/forum/BilledeUpload';
 import { svar, retIndlaeg, fjernIndlaeg } from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 
@@ -86,7 +87,23 @@ function IndlaegKort({
           </div>
         </div>
       ) : (
-        <p className="mt-2 whitespace-pre-line text-grafit-800">{p.body}</p>
+        p.body && <p className="mt-2 whitespace-pre-line text-grafit-800">{p.body}</p>
+      )}
+
+      {!redigerer && p.billeder.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {p.billeder.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt="Billede i indlæg"
+                loading="lazy"
+                className="max-h-64 rounded-lg border border-grafit-200 object-cover"
+              />
+            </a>
+          ))}
+        </div>
       )}
 
       {!redigerer && (kanRette || kanSkrive) && (
@@ -149,6 +166,8 @@ export default function ForumTraad({
   naeste: string;
 }) {
   const [ny, setNy] = useState('');
+  const [svarBilleder, setSvarBilleder] = useState<string[]>([]);
+  const [billedNulstil, setBilledNulstil] = useState(0);
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -179,8 +198,10 @@ export default function ForumTraad({
 
   function send() {
     koer(async () => {
-      await svar(threadId, kategoriSlug, traadSlug, ny);
+      await svar(threadId, kategoriSlug, traadSlug, ny, svarBilleder);
       setNy('');
+      setSvarBilleder([]);
+      setBilledNulstil((n) => n + 1); // nulstil upload-komponenten
     });
   }
 
@@ -222,10 +243,11 @@ export default function ForumTraad({
               onChange={(e) => setNy(e.target.value)}
               placeholder="Skriv et svar…"
             />
+            <BilledeUpload key={billedNulstil} onChange={setSvarBilleder} disabled={pending} />
             <div className="flex items-center gap-3">
               <button
                 className="btn-primary !py-2 text-sm"
-                disabled={pending || !ny.trim()}
+                disabled={pending || (!ny.trim() && svarBilleder.length === 0)}
                 onClick={send}
               >
                 Send svar

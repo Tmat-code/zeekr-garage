@@ -106,6 +106,7 @@ export type ForumIndlaeg = {
   createdAt: string;
   edited: boolean;
   isOpening: boolean;
+  billeder: string[]; // offentlige URL'er til vedhæftede billeder
 };
 
 // En traad med dens kategori (til detalje-siden).

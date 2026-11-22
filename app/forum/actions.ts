@@ -3,6 +3,24 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator } from '@/lib/admin';
+import { MAKS_ANTAL } from '@/lib/billeder';
+
+// Vedhæft uploadede billeder (storage-paths) til et indlæg. Validerer at hvert
+// path ligger i brugerens egen mappe (<user_id>/...). RLS tjekker også ejerskab.
+async function tilfoejBilleder(
+  sb: ReturnType<typeof supabaseServer>,
+  postId: string,
+  userId: string,
+  billeder: string[],
+): Promise<void> {
+  const rene = (billeder ?? [])
+    .filter((p) => typeof p === 'string' && p.startsWith(`${userId}/`))
+    .slice(0, MAKS_ANTAL);
+  if (rene.length === 0) return;
+  const rows = rene.map((path, i) => ({ post_id: postId, path, display_order: i }));
+  const { error } = await sb.from('forum_post_images').insert(rows);
+  if (error) throw new Error(error.message);
+}
 
 // Dansk-venlig slug: æøå -> ae/oe/aa, resten normaliseres.
 function slugify(s: string): string {
@@ -33,6 +51,7 @@ export async function opretTraad(
   kategoriSlug: string,
   title: string,
   body: string,
+  billeder: string[] = [],
 ): Promise<string> {
   const sb = supabaseServer();
   const {
@@ -63,14 +82,18 @@ export async function opretTraad(
     .single();
   if (error || !traad) throw new Error(error?.message ?? 'Kunne ikke oprette tråden.');
 
-  const { error: pe } = await sb
+  const { data: aabning, error: pe } = await sb
     .from('forum_posts')
-    .insert({ thread_id: traad.id, author_id: user.id, body: b, is_opening: true });
-  if (pe) {
+    .insert({ thread_id: traad.id, author_id: user.id, body: b, is_opening: true })
+    .select('id')
+    .single();
+  if (pe || !aabning) {
     // Ryd op, så vi ikke efterlader en tom tråd (RLS: egen tråd).
     await sb.from('forum_threads').delete().eq('id', traad.id);
-    throw new Error(pe.message);
+    throw new Error(pe?.message ?? 'Kunne ikke oprette indlægget.');
   }
+
+  await tilfoejBilleder(sb, aabning.id, user.id, billeder);
 
   revalider(kategoriSlug, traad.slug);
   return `/forum/${kategoriSlug}/${traad.slug}`;
@@ -82,6 +105,7 @@ export async function svar(
   kategoriSlug: string,
   traadSlug: string,
   body: string,
+  billeder: string[] = [],
 ): Promise<void> {
   const sb = supabaseServer();
   const {
@@ -89,13 +113,18 @@ export async function svar(
   } = await sb.auth.getUser();
   if (!user) throw new Error('Log ind for at svare.');
   const b = body.trim();
-  if (!b) throw new Error('Skriv et svar.');
+  const harBilleder = (billeder ?? []).length > 0;
+  if (!b && !harBilleder) throw new Error('Skriv et svar eller vedhæft et billede.');
   if (b.length > 10000) throw new Error('Svaret er for langt.');
 
-  const { error } = await sb
+  const { data: post, error } = await sb
     .from('forum_posts')
-    .insert({ thread_id: threadId, author_id: user.id, body: b });
-  if (error) throw new Error(error.message);
+    .insert({ thread_id: threadId, author_id: user.id, body: b })
+    .select('id')
+    .single();
+  if (error || !post) throw new Error(error?.message ?? 'Kunne ikke sende svaret.');
+
+  await tilfoejBilleder(sb, post.id, user.id, billeder);
   revalider(kategoriSlug, traadSlug);
 }
 
