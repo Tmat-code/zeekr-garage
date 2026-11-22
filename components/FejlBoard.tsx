@@ -73,7 +73,7 @@ export default function FejlBoard({
         ? b.created_at.localeCompare(a.created_at)
         : b.confirmations - a.confirmations,
     );
-  }, [issues, modelSlug, typeFilter, query, sort]);
+  }, [issues, modelSlug, typeFilter, statusFilter, query, sort]);
 
   return (
     <div>
@@ -90,9 +90,13 @@ export default function FejlBoard({
       </div>
 
       {/* Status- + type-filter */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* Status: Aktive (standard) / Afsluttet / Alle */}
-        <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-grafit-400">
+            Status
+          </span>
+          <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
           {([
             { key: 'aktive', navn: 'Aktive', antal: antalAktive },
             { key: 'afsluttet', navn: 'Afsluttet', antal: antalAfsluttet },
@@ -108,10 +112,15 @@ export default function FejlBoard({
               {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
             </button>
           ))}
+          </div>
         </div>
 
         {/* Type: Alle / Fejl / Ønsker */}
-        <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-grafit-400">
+            Type
+          </span>
+          <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
           {([
             { key: 'alle', navn: 'Alle', antal: issues.length },
             { key: 'fejl', navn: 'Fejl', antal: antalFejl },
@@ -127,6 +136,7 @@ export default function FejlBoard({
               {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
             </button>
           ))}
+          </div>
         </div>
       </div>
 
