@@ -6,6 +6,18 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 // Simpel mail-validering (ikke perfekt, men fanger de åbenlyse fejl).
 const MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// GoTrue svarer på engelsk - oversæt de almindelige fejl til dansk.
+function fejlPaaDansk(besked: string): string {
+  const b = besked.toLowerCase();
+  if (b.includes('already been registered') || b.includes('already registered') || b.includes('already in use'))
+    return 'Den e-mailadresse er allerede i brug.';
+  if (b.includes('invalid') && b.includes('email')) return 'E-mailadressen er ugyldig.';
+  if (b.includes('rate limit') || b.includes('for security purposes'))
+    return 'Der er sendt for mange forsøg - prøv igen om lidt.';
+  if (b.includes('same') && b.includes('email')) return 'Det er din nuværende mail.';
+  return 'Kunne ikke sende bekræftelse. Prøv igen.';
+}
+
 export default function SkiftMailForm({ nuvaerende }: { nuvaerende: string }) {
   const [mail, setMail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,7 +43,7 @@ export default function SkiftMailForm({ nuvaerende }: { nuvaerende: string }) {
       setSendt(true);
       setMail('');
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke sende bekræftelse.');
+      setFejl(fejlPaaDansk(e?.message ?? ''));
     } finally {
       setBusy(false);
     }
