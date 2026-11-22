@@ -3,6 +3,7 @@ import { adminKontekst } from '@/lib/admin';
 import { getSamtaler } from '@/lib/beskeder';
 import { relativTid } from '@/lib/tid';
 import GarageBadge from '@/components/forum/GarageBadge';
+import IndbakkeSletKnap from '@/components/beskeder/IndbakkeSletKnap';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Beskeder' };
@@ -51,34 +52,39 @@ export default async function BeskederSide() {
       ) : (
         <div className="mt-5 space-y-2">
           {samtaler.map((s) => (
-            <Link
+            <div
               key={s.id}
-              href={`/beskeder/${s.id}`}
-              className="flex items-start gap-3 rounded-xl border border-grafit-200 bg-white px-4 py-3 hover:border-kobber-300"
+              className="flex items-stretch gap-2 rounded-xl border border-grafit-200 bg-white pr-3 hover:border-kobber-300"
             >
-              {s.ulaest && (
-                <span
-                  className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full bg-kobber-500"
-                  aria-hidden="true"
-                />
-              )}
-              <div className={`min-w-0 flex-1 ${s.ulaest ? '' : 'pl-5'}`}>
-                <div className="flex items-center gap-2">
+              <Link
+                href={`/beskeder/${s.id}`}
+                className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3"
+              >
+                {s.ulaest && (
                   <span
-                    className={`truncate ${s.ulaest ? 'font-semibold text-grafit-900' : 'font-medium text-grafit-800'}`}
-                  >
-                    {s.andenPart.navn || 'Ejer'}
-                  </span>
-                  <GarageBadge bil={s.andenPart.bil} />
+                    className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full bg-kobber-500"
+                    aria-hidden="true"
+                  />
+                )}
+                <div className={`min-w-0 flex-1 ${s.ulaest ? '' : 'pl-5'}`}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`truncate ${s.ulaest ? 'font-semibold text-grafit-900' : 'font-medium text-grafit-800'}`}
+                    >
+                      {s.andenPart.navn || 'Ejer'}
+                    </span>
+                    <GarageBadge bil={s.andenPart.bil} />
+                  </div>
+                  <p className="mt-0.5 truncate text-sm text-grafit-500">
+                    {s.sidsteBesked ?? 'Ingen beskeder endnu'}
+                  </p>
                 </div>
-                <p className="mt-0.5 truncate text-sm text-grafit-500">
-                  {s.sidsteBesked ?? 'Ingen beskeder endnu'}
-                </p>
-              </div>
-              <span className="shrink-0 whitespace-nowrap text-xs text-grafit-400">
-                {relativTid(s.sidsteTidspunkt)}
-              </span>
-            </Link>
+                <span className="shrink-0 whitespace-nowrap text-xs text-grafit-400">
+                  {relativTid(s.sidsteTidspunkt)}
+                </span>
+              </Link>
+              <IndbakkeSletKnap convId={s.id} />
+            </div>
           ))}
         </div>
       )}

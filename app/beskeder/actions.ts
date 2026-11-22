@@ -69,6 +69,21 @@ export async function markLaest(convId: string): Promise<void> {
     .eq('er_laest', false);
 }
 
+// Skjul-for-mig (P15): fjern samtalen fra MIN indbakke ved at sætte min egen
+// deltager-rækkes hidden_at. Udsletter ikke den andens kopi; samtalen dukker op
+// igen hos mig, hvis den anden skriver (ny besked bumper last_message_at).
+// RLS conv_part_update_own tillader opdatering af egen række.
+export async function sletSamtale(convId: string): Promise<void> {
+  const { sb, user } = await kraevBruger();
+  const { error } = await sb
+    .from('conversation_participants')
+    .update({ hidden_at: new Date().toISOString() })
+    .eq('conversation_id', convId)
+    .eq('user_id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/beskeder');
+}
+
 export async function blokerBruger(convId: string, otherId: string): Promise<void> {
   const { sb, user } = await kraevBruger();
   const { error } = await sb

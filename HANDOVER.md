@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P1 + direkte besked-compose + in-context "skriv privat"-knap bygget)
+**Sidst opdateret:** 2026-11-22 (P15 - bruger-sletning af samtaler (skjul-for-mig) bygget)
 
 ---
 
@@ -31,7 +31,7 @@
 - [ ] **P12 - Gruppe-samtaler i beskeder** (datamodellen holder til det).
 - [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
 - [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
-- [ ] **P15 - Bruger-sletning af samtaler.** Lad brugere selv fjerne egne samtaler fra indbakken (rydde op), så det ikke kræver SQL i Studio. **Anbefalet semantik: skjul-for-mig** - `hidden_at`-kolonne på `conversation_participants`, filtreres fra i `getSamtaler`, dukker op igen hvis den anden skriver. Mindst destruktivt (kan ikke udslette den andens historik) vs. hård sletning for begge. Lille + én migration (Studio). Semantik ikke endeligt valgt af Torben endnu. (Torbens tanke 22-11.)
+- [x] **P15 - Bruger-sletning af samtaler.** BYGGET 22-11 (skjul-for-mig). Se "## Beskeder: bruger-sletning af samtaler (P15)".
 
 ### Senere / roadmap (ikke planlagt endnu)
 - [ ] Q&A / guides-sektion.
@@ -43,6 +43,7 @@
 - [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
 
 ### Gjort 22-11-2026 (så intet glemmes)
+- [x] **P15 - Bruger-sletning af samtaler (skjul-for-mig)** - brugere kan fjerne egne samtaler fra indbakken uden SQL i Studio. Migration `20261122180000_samtale_skjul.sql`. Se "## Beskeder: bruger-sletning af samtaler (P15)".
 - [x] **Direkte besked-compose + in-context-knap** - skriv til en ejer uden oplæg (`/beskeder/ny`, navnesøgning) + "✉️ Skriv privat" på kommentar-forfattere. Besked-indgangen er nu hel. Ingen migration. Se "## Beskeder: direkte compose".
 - [x] **P1 - Zeekr-rapporten grupperet efter kategori-spand** (PDF + CSV). QA-vinklen mod Zeekr. Ingen migration. Se "## Zeekr-rapport: gruppering efter kategori-spand (P1)".
 - [x] Multi-model garage (migration kørt + verificeret, live). Se "## Multi-model garage".
@@ -488,6 +489,18 @@ Man kan nu skrive direkte til en anden ejer uden at gå via et forum-indlæg. Mo
 - `npm run build` grønt. Ingen DB-ændring, ingen Studio-kørsel.
 - **In-context-indgang (bygget 22-11):** "✉️ Skriv privat"-knap på kommentar-forfattere (Byggemøde) i `components/Kommentarer.tsx` (ikke egne, kun indlogget) → `startSamtaleMedBruger` → `/beskeder/<id>`. Dermed er besked-indgangen hel: forum-forfattere + kommentar-forfattere + compose-søgning. **Ikke muligt andre steder:** `/garage` er brugerens egen (ingen andre ejere), melding-siden eksponerer ingen forfatter, og event-deltagere (`EventDeltager`) bærer kun navn/note - intet bruger-id at skrive til.
 - **VERIFICERET LIVE 22-11-2026 (Chrome, Torben):** compose virker - søg (`test` → Test konto, ingen bil-badge), compose → samtale åbnede rigtig samtale-id, og **blokeret-ekskludering bekræftet** (blokeret Test konto forsvandt fra søgningen → "Ingen ejere matcher", blokering fjernet igen). Rest: én tom samtale med Test konto (kan ryddes i Studio som sidst). In-context kommentar-knappen kunne IKKE øves live endnu - sitet er under opbygning, og board-kommentarerne er porteret seed-data uden `author_id` (knappen vises korrekt ikke på dem). Den dukker op af sig selv når en registreret bruger (ikke én selv) kommenterer.
+
+## Beskeder: bruger-sletning af samtaler (P15) (bygget 22-11-2026)
+Brugere kan nu selv fjerne egne samtaler fra indbakken, så oprydning ikke kræver SQL i Studio. **Semantik: skjul-for-mig** (ikke hård sletning).
+
+- **⚠️ KRÆVER 1 MIGRATION KØRT I STUDIO FØR koden pushes/deployes:** `supabase/migrations/20261122180000_samtale_skjul.sql`. Kør i Zeekr-instansens SQL-editor (`http://192.168.1.18:8002`, Studio). Idempotent (`add column if not exists`). Tilføjer kun én kolonne - ingen ny tabel/policy. PostgREST er all-or-nothing, så kolonnen SKAL findes før `getSamtaler` selecter `hidden_at`, ellers fejler alle besked-queries.
+- **Semantik:** "Slet" sætter MIN egen `conversation_participants`-rækkes `hidden_at = now()`. Samtalen filtreres fra i `getSamtaler` (`hidden_at` sat OG `last_message_at <= hidden_at`). Den **dukker op igen** hvis den anden skriver - en ny besked bumper `conversations.last_message_at > hidden_at` via den eksisterende `messages_after_insert`-trigger. Ingen hård sletning: den andens kopi/historik røres ikke, og skriver jeg selv i samtalen igen, kommer den også tilbage hos mig.
+- **Ingen ny RLS:** den eksisterende `conv_part_update_own` (update på egen række, `user_id = auth.uid()`) dækker allerede at sætte `hidden_at`.
+- **Backend:** `hidden_at` tilføjet til `PART_SELECT` + filter-loop i `getSamtaler` (`lib/beskeder.ts`). Ny server-action `sletSamtale(convId)` i `app/beskeder/actions.ts` (`kraevBruger`-gated, `revalidatePath('/beskeder')`).
+- **UI:** (1) "Slet"-knap i samtale-header (`components/beskeder/SamtaleView.tsx`) med inline bekræft ("Slet samtale?" / "Fortryd") → `router.push('/beskeder')` + refresh. (2) "Slet"-knap pr. indbakke-række (`components/beskeder/IndbakkeSletKnap.tsx`, ny client-komponent) med samme inline bekræft → `router.refresh()`. Rækken i `app/beskeder/page.tsx` er delt op, så `<Link>` er klikområdet og slet-knappen er en separat kontrol ved siden af (ikke en knap inde i et link).
+- **Stil:** grafit/kobber, ingen ny farve; inline bekræft i stedet for native dialog (samme mønster som moderering). Almindelige bindestreger.
+- `npm run build` grønt.
+- **Live-test mangler** (kræver migration kørt). Test-vej: åbn en samtale → "Slet" → bekræft → væk fra indbakken; få den anden til at skrive → den dukker op igen med ulæst-prik.
 
 ## Admin: besked-anmeldelser (bygget 22-11-2026)
 Moderator-visning i Værkstedet af anmeldte private beskeder. Lukker backlog-punktet `/admin/beskeder`.

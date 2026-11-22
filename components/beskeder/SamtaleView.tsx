@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/tid';
 import type { AndenPart, Besked } from '@/lib/types';
@@ -11,6 +12,7 @@ import {
   blokerBruger,
   fjernBlok,
   anmeldBesked,
+  sletSamtale,
 } from '@/app/beskeder/actions';
 
 type Props = {
@@ -36,8 +38,10 @@ export default function SamtaleView({
   const [ny, setNy] = useState('');
   const [blokeret, setBlokeret] = useState(initialBlokeret);
   const [fejl, setFejl] = useState<string | null>(null);
+  const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [pending, start] = useTransition();
   const bundRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Markér læst ved åbning.
   useEffect(() => {
@@ -117,6 +121,20 @@ export default function SamtaleView({
     });
   }
 
+  function slet() {
+    setFejl(null);
+    start(async () => {
+      try {
+        await sletSamtale(convId);
+        router.push('/beskeder');
+        router.refresh();
+      } catch (e: any) {
+        setFejl(e?.message ?? 'Kunne ikke slette samtalen.');
+        setBekraeftSlet(false);
+      }
+    });
+  }
+
   function anmeld() {
     const grund = window.prompt('Hvorfor anmelder du denne samtale? (valgfrit)') ?? '';
     const sidste = beskeder[beskeder.length - 1];
@@ -153,6 +171,32 @@ export default function SamtaleView({
           >
             {blokeret ? 'Fjern blokering' : 'Blokér'}
           </button>
+          {bekraeftSlet ? (
+            <span className="flex items-center gap-2">
+              <button
+                className="font-medium text-kobber-700 hover:text-kobber-800"
+                disabled={pending}
+                onClick={slet}
+              >
+                Slet samtale?
+              </button>
+              <button
+                className="text-grafit-400 hover:text-grafit-600"
+                disabled={pending}
+                onClick={() => setBekraeftSlet(false)}
+              >
+                Fortryd
+              </button>
+            </span>
+          ) : (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              disabled={pending}
+              onClick={() => setBekraeftSlet(true)}
+            >
+              Slet
+            </button>
+          )}
         </div>
       </div>
 
