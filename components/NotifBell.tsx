@@ -30,27 +30,49 @@ export default function NotifBell({ userId, initialUnread }: Props) {
   const rodRef = useRef<HTMLDivElement>(null);
 
   // --- Realtime: nye notifikationer for netop denne bruger ---
+  // VIGTIGT: realtime SKAL autentificere med brugerens JWT (setAuth), ellers
+  // evalueres RLS (modtager_id = auth.uid()) med auth.uid() = null for anon ->
+  // alle rækker filtreres væk, og klienten får ingen postgres_changes-events.
   useEffect(() => {
     const sb = supabaseBrowser();
-    const kanal = sb
-      .channel(`notif:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `modtager_id=eq.${userId}`,
-        },
-        (payload) => {
-          const n = mapRow(payload.new);
-          setItems((prev) => [n, ...prev.filter((p) => p.id !== n.id)].slice(0, 15));
-          if (!n.erLaest) setUnread((u) => u + 1);
-        },
-      )
-      .subscribe();
+    let kanal: ReturnType<typeof sb.channel> | null = null;
+    let aktiv = true;
+
+    (async () => {
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+      if (!aktiv) return;
+      if (session?.access_token) sb.realtime.setAuth(session.access_token);
+
+      kanal = sb
+        .channel(`notif:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `modtager_id=eq.${userId}`,
+          },
+          (payload) => {
+            const n = mapRow(payload.new);
+            setItems((prev) => [n, ...prev.filter((p) => p.id !== n.id)].slice(0, 15));
+            if (!n.erLaest) setUnread((u) => u + 1);
+          },
+        )
+        .subscribe();
+    })();
+
+    // Hold realtime-token frisk når sessionen fornyes.
+    const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) sb.realtime.setAuth(session.access_token);
+    });
+
     return () => {
-      sb.removeChannel(kanal);
+      aktiv = false;
+      authSub.subscription.unsubscribe();
+      if (kanal) sb.removeChannel(kanal);
     };
   }, [userId]);
 
@@ -74,6 +96,19 @@ export default function NotifBell({ userId, initialUnread }: Props) {
     setUnread(count ?? 0);
     setLoaded(true);
   }, [userId]);
+
+  // --- Sikkerhedsnet: opfrisk når fanen bliver aktiv igen (hvis realtime missede noget) ---
+  useEffect(() => {
+    const opfrisk = () => {
+      if (document.visibilityState === 'visible') void hent();
+    };
+    document.addEventListener('visibilitychange', opfrisk);
+    window.addEventListener('focus', opfrisk);
+    return () => {
+      document.removeEventListener('visibilitychange', opfrisk);
+      window.removeEventListener('focus', opfrisk);
+    };
+  }, [hent]);
 
   // --- Luk ved klik udenfor + Escape ---
   useEffect(() => {
