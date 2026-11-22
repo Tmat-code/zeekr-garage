@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser, getModels, getVarianter, getMyCar, getMitNavn } from '@/lib/queries';
 import MinGarageForm from '@/components/MinGarageForm';
 import VisningsnavnForm from '@/components/VisningsnavnForm';
+import SkiftMailForm from '@/components/SkiftMailForm';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Min garage' };
@@ -29,6 +30,7 @@ export default async function GarageSide() {
         varianter={varianter}
         initial={bil ? { modelId: bil.modelId, variantId: bil.variantId } : null}
       />
+      <SkiftMailForm nuvaerende={user.email ?? ''} />
     </div>
   );
 }

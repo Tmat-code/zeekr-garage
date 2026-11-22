@@ -343,6 +343,16 @@ Brugere kan nu selv ændre deres visningsnavn under **Min garage** - før var de
 - `lib/queries.ts`: `getMitNavn()`. `app/garage/page.tsx`: felt placeret over bil-vælgeren; intro-tekst justeret ("navn + bil"). Mail vises aldrig offentligt - kun `display_name`.
 - SQL-genvej til admin (fx sæt en bruger til et ønsket navn): `update public.profiles set display_name = 'Venø' where id = (select id from auth.users where email = '...');`
 
+## Selvbetjent mail-skift (bygget 22-11-2026 - afventer Supabase-opsætning)
+Brugere kan selv skifte login-mail under **Min garage** med **dobbelt bekræftelse** (klik på både gammel og ny adresse). Kode klar; kræver 2 GoTrue-env + genstart hos Torben før det virker.
+- **App (BYGGET):** `components/SkiftMailForm.tsx` (klient): `auth.updateUser({ email }, { emailRedirectTo: <origin>/auth/confirm?next=/garage })`, mail-validering, "sendt"-kvittering der forklarer dobbelt-bekræftelse. Viser nuværende mail. `app/garage/page.tsx`: felt under bil-vælgeren (bruger `user.email`). Genbruger den eksisterende `/auth/confirm`-rute (`verifyOtp({type:'email_change', token_hash})` - samme cross-browser-flow som recovery).
+- **Dansk skabelon (BYGGET):** `app/auth/email-change-email/route.ts` - samme mønster som `recovery-email`, link peger på `/auth/confirm?...&type=email_change&next=/garage`.
+- **MANGLER (Torben, i Coolify → Zeekr-Supabase kilde-vars, derefter genstart):**
+  - `MAILER_TEMPLATES_EMAIL_CHANGE=https://zeekr-garage.dk/auth/email-change-email`
+  - `MAILER_SUBJECTS_EMAIL_CHANGE=Bekræft din nye e-mail - Zeekr Garage`
+  - `MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` (dobbelt-bekræftelse; er GoTrue-default, men sæt den eksplicit). `ADDITIONAL_REDIRECT_URLS` dækker allerede `/**`.
+- **VIGTIGT - admin-vej:** rediger IKKE `auth.users.email` direkte i Table Editor (opdaterer ikke `auth.identities` → login kan gå i stykker). Admin skifter en brugers mail via **Studio → Authentication → Users → rediger** (går gennem admin-API, retter identity korrekt). `display_name` i `profiles` må gerne rettes direkte (det er bare tekst).
+
 ## Værkstedet - samlet administration (bygget 21-11-2026)
 Ét kontrolrum for HELE sitet: forum + feedback styres ét sted. **Ingen migration** - forum-RLS giver allerede moderator skriveadgang (inkl. `forum_categories` CRUD), så bygget + pushet uden Studio. `npm run build` grønt; deployet via n8n.
 - **Akse 1 - Overblik (BYGGET):** `components/admin/Overblik.tsx` har nu forum-tiles (kategorier/tråde/indlæg) + et **samlet aktivitets-feed** der fletter meldinger, bekræftelser, forum-tråde OG forum-indlæg i én tidslinje - nu **klikbart** (hvert punkt linker til meldingen/tråden). `lib/queries-admin.ts`: `getForumOverblik()` + udvidet `getSenesteAktivitet()` (nye kinds `forum_traad`/`forum_indlaeg` + `href`) + `getAdminForum()`.
