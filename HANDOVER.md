@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-21
+**Sidst opdateret:** 2026-11-22
 
 ---
 
@@ -327,8 +327,21 @@ Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_ka
 ## NÆSTE SESSION - plan (aftalt med Torben 22-11-2026)
 Rækkefølge: **(1) notifikations-kerne + forum-svar-notifikationer → (2) Adgange: søg alle brugere + tildel rolle → (3) chat/PB oven på notifikationssystemet.** Notifikationer bygges FØRST, fordi de giver værdi alene (forum-svar) og afrisikerer plumbing'en inden den store chat-bid.
 
-### 1) Notifikationer (ét samlet system - byg først)
-Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "indbakke".
+**Status 22-11-2026: trin (1) BYGGET + LIVE** (se afsnit nedenfor). **← NÆSTE: trin (2) Adgange-forbedring**, derefter trin (3) chat/PB oven på notifikations-kernen.
+
+### 1) Notifikationer (ét samlet system) - BYGGET + LIVE 22-11-2026
+Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "indbakke". **Trin 1 af planen færdigt.** Første kilde: forum-svar. Plumbingen (tabeller + realtime + RLS + klokke-UI) ligger klar til at chatten (trin 3) kan skrive til samme indbakke.
+- **Migration `supabase/migrations/20261122100000_notifikationer.sql` (KØRT i Studio + verificeret 22-11-2026):** 2 tabeller, 7 policies, 1 trigger, notifications i `supabase_realtime`-publication.
+  - `notifications` (modtager_id, type, aktoer_id, reference, tekst [denorm.], href, er_laest, created_at) + indeks på (modtager_id, created_at) og partielt ulæst-indeks. `replica identity full` (realtime-UPDATE-payloads).
+  - `traad_foelgere` (thread_id, user_id, muted, PK(thread_id,user_id)) - række pr. bruger pr. tråd man selv har skrevet i.
+  - **Trigger `forum_posts_notify` (security definer) på `forum_posts` insert:** dækker BÅDE opret (åbnings-indlæg) OG svar. Et svar indsætter notifikation til alle aktive følgere undtagen forfatteren; derefter gøres forfatteren selv til følger (idempotent upsert). Åbnings-indlæg notificerer ingen (ingen andre følgere endnu), men gør opretteren til følger. **Ingen ændring i server-actions nødvendig** - trigger'en gør alt.
+  - RLS: ejer læser/markerer/sletter KUN egne notifikationer; INGEN insert-policy (kun trigger via security definer kan oprette). traad_foelgere: ejer styrer egne (mute/unfollow).
+- **UI - `components/NotifBell.tsx` (klient):** klokke i headeren (kun indloggede), ulæst-badge (9+ cap), dropdown med seneste 15, klik → markér læst + hop til href, "Markér alle læst". **Supabase Realtime** på `notifications` filtreret på modtager_id → badge opdaterer live uden refresh. Luk ved klik-udenfor/Escape.
+- **`lib/notifikationer.ts`:** `getUlaestAntal()` (SSR start-tal, ingen tom-blink) + `getNotifikationer()`. `Notifikation`-type i `lib/types.ts`. `components/Header.tsx` henter start-tallet og rendrer klokken før Nav (synlig på desktop + mobil, uden for burger-menuen).
+- **Beslutning (bevaret):** KUN tråde man selv har skrevet i (ikke hele model-fora). In-app først, ingen e-mail pr. svar endnu.
+- `npm run build` + `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+**Oprindelig plan (nu opfyldt):**
 - **`notifications`-tabel:** modtager_id, type (`forum_svar`, `pb_besked`, senere `mention`/`event`), aktoer_id (hvem udløste), reference (tråd-/samtale-id), kort denormaliseret tekst til visning, `href`, `er_laest`, created_at.
 - **`traad_foelgere`-tabel:** række pr. bruger pr. tråd, indsættes automatisk når man **opretter eller svarer** i en tråd. Mute = fjern/flag rækken.
 - **Trigger (security definer)** på nyt forum-indlæg: indsæt notifikation til alle følgere **undtagen forfatteren selv**.

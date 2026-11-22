@@ -152,3 +152,15 @@ export type EventDetalje = EventRow & {
 
 // Brugerens egen tilmelding til et event.
 export type MinTilmelding = { tilmeldt: boolean; note: string | null };
+
+// =========================================================================
+// Notifikationer
+// =========================================================================
+export type Notifikation = {
+  id: string;
+  type: string;        // forum_svar | pb_besked | ...
+  tekst: string;       // denormaliseret visningstekst
+  href: string;        // hvor klik foerer hen
+  erLaest: boolean;
+  createdAt: string;
+};
