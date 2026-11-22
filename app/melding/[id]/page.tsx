@@ -8,7 +8,7 @@ import {
   getVariantFordeling,
 } from '@/lib/queries';
 import { adminKontekst } from '@/lib/admin';
-import { TYPE_META } from '@/lib/config';
+import { TYPE_META, kategoriLabel } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 import Kommentarer from '@/components/Kommentarer';
@@ -48,6 +48,11 @@ export default async function MeldingSide({ params }: { params: { id: string } }
       {/* Badges */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
         <span className={`chip ${TYPE_META[issue.type].chip}`}>{TYPE_META[issue.type].badge}</span>
+        {kategoriLabel(issue.category) && (
+          <span className="chip border border-kobber-200 bg-kobber-50 text-kobber-700">
+            {kategoriLabel(issue.category)}
+          </span>
+        )}
         {(issue.status === 'sendt_til_zeekr' ||
           issue.status === 'loest_i_ota' ||
           issue.status === 'afklaret' ||

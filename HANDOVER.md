@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (feedback-kategorier: 9 faste spande + filter + kuratering)
+**Sidst opdateret:** 2026-11-22 (kategori-chip på board-rækker + melding-detalje)
 
 ---
 
@@ -34,7 +34,7 @@
 - [x] ~~Status-filter (Aktive/Afsluttet/Alle) + dæmpede afsluttede rækker~~ **BYGGET 22-11**.
 - [x] ~~9 faste kategori-spande + filter på board + krævet dropdown ved oprettelse + kuratering i Værkstedet~~ **BYGGET 22-11** (ingen migration). Se "## Feedback-kategorier".
 - [ ] **Mærk de ~31 eksisterende meldinger op med kategori** (Torben, engangs, i Værkstedet).
-- [ ] Kategori-chip på board-rækkerne (visning, så spanden ses uden at filtrere).
+- [x] ~~Kategori-chip på board-rækkerne (visning, så spanden ses uden at filtrere).~~ **BYGGET 22-11** (ingen migration). Kobber-tonet tag lige efter type-badgen i `components/FejlBoard.tsx` OG på `/melding/[id]`; bruger `kategoriLabel()` (fri-tekst-fallback) og vises kun når meldingen har en kategori. Stil: `chip border border-kobber-200 bg-kobber-50 text-kobber-700` (grafit/kobber, ingen ny farve).
 - [ ] Gruppér rapporten til Zeekr efter kategori-spand (QA-guld).
 - [ ] Ryd op i den tætpakkede moderings-række i Værkstedet (vote/status/alvor/kategori/løst/redigér/slet begynder at klemme).
 
@@ -196,7 +196,7 @@ Forum-indhold (kategorier, tråde, indlæg) får egne custom-tabeller i samme Su
 - **Meldingstyper:** fejl + ønske (bugherrer-paritet). Samme maskineri, kun `issues.type` (enum `issue_type`) adskiller. Migration `supabase/migrations/20261120110000_issue_type.sql` - anvendt på Pixa-instansen.
 - **/meld-flow (bugherrer-paritet, `MeldFlow.tsx`):** trin-indikator + 4 trin - (1) **vælg** type (to kort: Fejl / Ønske; springes over hvis `?type=` i URL), (2) **søg** eksisterende (ordmatch filtreret på type, viser match m. "mig med" så dubletter undgås), (3) **tjek** genstart/OTA (kun fejl - bugherrers "Fejl-40"-trin), (4) **udfyld** (`MeldForm`). Ønske springer "tjek" over (Søg → Udfyld).
 - **Issue-felter (migration `20261120113000_issue_fields.sql`, anvendt på Pixa):** `software_version` (påkrævet for fejl, mono-chip på board-kort), `phone_model` + `phone_os` (valgfri, kun fejl - telefon-boks i formular). Fanget pr. melding, jf. "model + softwareversion"-princippet.
-- Komponenter: `FejlBoard` (filter/søg/sortér, type-badge, softwareversion-chip), `MeldFlow` (4-trins-flow), `MeldForm` (type-bevidst: felter/ordlyd skifter på fejl vs. ønske), `ConfirmButton` ("mig med" m. modelvalg), `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
+- Komponenter: `FejlBoard` (filter/søg/sortér, type-badge, kategori-chip, softwareversion-chip), `MeldFlow` (4-trins-flow), `MeldForm` (type-bevidst: felter/ordlyd skifter på fejl vs. ønske), `ConfirmButton` ("mig med" m. modelvalg), `LoginForm`, `Header`, `Footer`, `Tags` (status/alvorlighed/platform-signal).
 - RLS styrer alt: læsning fri, skrivning kun egne rækker (authenticated).
 - **Deploy-noter:** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` skal gives som **build-args** i Coolify (bages ind ved build). Anon-key hentes fra Supabase-servicens Environment Variables (`SERVICE_SUPABASEANON_KEY`). Browser-URL skal kunne nås udefra (Cloudflare Tunnel) ELLER på LAN via `http://192.168.1.18:8002` (Kong serverer /rest + /auth med anon-key uden basic-auth; kun Studio-ruten er basic-auth-beskyttet). SSR kan bruge intern Kong-URL via `SUPABASE_INTERNAL_URL`.
 - Åbent: Supabase-auth kræver evt. SMTP (GoTrue) for email-bekræftelse, ellers slå auto-confirm til for at password-signup virker uden mail.

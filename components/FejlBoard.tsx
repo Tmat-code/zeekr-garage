@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IssueRow, Model, GarageBil } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
-import { TYPE_META, ISSUE_CATEGORIES, type Status } from '@/lib/config';
+import { TYPE_META, ISSUE_CATEGORIES, kategoriLabel, type Status } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 
@@ -222,6 +222,11 @@ export default function FejlBoard({
                 </h3>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                   <span className={`chip ${TYPE_META[i.type].chip}`}>{TYPE_META[i.type].badge}</span>
+                  {kategoriLabel(i.category) && (
+                    <span className="chip border border-kobber-200 bg-kobber-50 text-kobber-700">
+                      {kategoriLabel(i.category)}
+                    </span>
+                  )}
                   {i.models.map((m) => (
                     <span key={m.slug} className="chip bg-grafit-100 text-grafit-700">
                       {m.name.replace('Zeekr ', '')}
