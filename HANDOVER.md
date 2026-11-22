@@ -25,6 +25,9 @@
 - [ ] Antal ejere pr. model-forum.
 - [ ] Live-verifikation af rolletildeling i Adgange (Torben kører selv - blev bevidst ikke automatiseret).
 
+**Sikkerhed/lints**
+- [x] ~~Supabase security-lints: `touch_updated_at` mutable search_path + `issue_models` INSERT `with check (true)`~~ **FIX SKREVET 22-11** (migration `20261122170000_lint_fixes.sql` - KRÆVER kørsel i Studio). Fast search_path + ejerskabs-tjek på issue_models-INSERT. Ikke-brydende.
+
 **Feedback-board** (stort dagsværk 22-11)
 - [x] ~~Status "afklaret" (afsluttet uden OTA-fix)~~ **BYGGET 22-11** (migration kørt i Studio). Se "## Status "afklaret" + kommentar-badge".
 - [x] ~~Kommentar-badge + "Markér løst" som valg (Løst i OTA / Afklaret) i Værkstedet~~ **BYGGET 22-11**.
