@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (kategori-chip på board-rækker + melding-detalje)
+**Sidst opdateret:** 2026-11-22 (backlog reprioriteret P1-P14 + auto-moderering (forum, flag-only) tænkt ind)
 
 ---
 
@@ -11,63 +11,51 @@
 - **Én opgave pr. session.** Når en opgave er løst (bygget + verificeret + HANDOVER opdateret + pushet), lægger Claude SELV op til at starte en NY session til næste opgave - vi fortsætter ikke bare i samme session. Backloggen nedenfor er broen, så den friske session har alt med.
 - Grunden: hver session holder sig fokuseret og kontekst-let, og de gode opbygnings-vinkler går ikke tabt i en lang, komprimeret tråd.
 
-## Backlog - samlet (sidst opdateret 22-11-2026)
-> Ét sted for "hvad mangler". Stryg punkter efterhånden som de bygges. Detaljer står i de relevante sektioner nedenfor.
+## Backlog - prioriteret (sidst opdateret 22-11-2026)
+> Ét sted for "hvad mangler", i den rækkefølge vi tager det. **Én opgave pr. session**, oppefra og ned. Tag altid P1; spring kun ned hvis P1 er blokeret. Stryg et punkt når det er bygget + verificeret + pushet + HANDOVER opdateret. Detaljer står i sektionerne nedenfor.
+>
+> Prioriterings-logik: 1) styrk QA-sagen mod Zeekr (= målet), 2) gør Torbens daglige kuratering holdbar, 3) forum-findbarhed/liv, 4) polish/roadmap.
 
-**Datamodel/kerne**
-- [x] ~~**Multi-model garage**~~ **BYGGET + LIVE 22-11-2026** (migration kørt i Studio + verificeret, flettet til main, deployer via n8n). Se eget afsnit "## Multi-model garage" nedenfor.
+### Næste op (byg i denne rækkefølge)
+> QA-værdi øverst (bygges nu uanset trafik). **Forum-klyngen** (P4 søgning, P5 auto-moderering, P6 ejer-antal) forudsætter rigtig forum-trafik - forummet er pt. tomt for tråde - så de kan bygges proaktivt, men hastes ikke før der kommer liv i forummet.
+- [ ] **P1 - Gruppér Zeekr-rapporten efter kategori-spand.** QA-guld og den direkte vej mod målet; låst op nu hvor alle meldinger er mærket op. Rapporten grupperes/aggregeres pr. spand. Visning/aggregering, forventet ingen migration. Se "## Zeekr-rapport (porteret fra bugherrer)".
+- [ ] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** vote/status/alvor/kategori/løst/redigér/slet klemmer. Gør den daglige kuratering holdbar. Lille/medium, ingen migration. Se `components/admin/ModereringsTabel.tsx`.
+- [ ] **P3 - Billeder i feedback-meldinger.** Foto-bevis i fejlmeldinger styrker QA-sagen mod Zeekr markant. Større: storage + upload-flow. (Billed-sporet samlet: P3 → P8 → P9.)
+- [ ] **P4 - Tværgående tråd-søgning (forum).** IA-strategien hviler bevidst på søgning for findbarhed (ikke perfekt kategorisering). Medium.
+- [ ] **P5 - Auto-moderering (forum): AI-flagning af grov tone/personangreb.** Mål: holde forummet civilt - "et forum Zeekr kan være stolt af". **Fase 1 = flag-only:** AI markerer forum-tråde/svar med mulig grov tone/personangreb og lægger dem i en kø i Værkstedet; moderator bekræfter. **Ingen auto-skjul/slet** (passer på "kø, ikke patrulje" + undgår at gøre brugerne uret). **Kun forum-indhold** - IKKE feedback-meldinger (dem kuraterer Torben selv før rapport, og de 31 er allerede i god tone). Autonomi (auto-skjul-til-review) kan øges senere. Beslægtet med AI-dedup-roadmap. Medium/større (model-kald + kø-UI).
+- [ ] **P6 - Antal ejere pr. model-forum.** Social proof / "her sker der noget". Lille/medium.
+- [ ] **P7 - Kategori-editor: flyt en kategori mellem grupper i UI.** Fjerner en tilbageværende SQL-only pligt. Medium.
+- [ ] **P8 - Redigering af et indlægs billeder** (edit er pt. kun tekst). Følger naturligt efter P3.
+- [ ] **P9 - Oprydning af forældreløse storage-filer** ved soft-remove af indlæg. Afslutter billed-sporet.
+- [ ] **P10 - Billeder i beskeder.**
+- [ ] **P11 - Opt-in mail (eller daglig samle-mail) pr. forum-svar.** In-app virker; mail er valgt fra indtil videre.
+- [ ] **P12 - Gruppe-samtaler i beskeder** (datamodellen holder til det).
+- [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
+- [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
 
-**Værkstedet/moderering**
-- [x] ~~`/admin/beskeder`: moderator-visning af besked-anmeldelser~~ **BYGGET 22-11-2026** (kræver 1 ny migration kørt i Studio - se "## Admin: besked-anmeldelser" nedenfor).
-- [x] ~~Redigerbare forum-regler i UI.~~ **BYGGET 22-11-2026** (kræver 1 ny migration kørt i Studio - se "## Redigerbare forum-regler (bygget 22-11-2026)" nedenfor).
-- [ ] Kategori-editor kan ikke flytte en kategori mellem grupper (kræver SQL i dag).
-- [ ] Tværgående tråd-søgning.
-- [ ] Antal ejere pr. model-forum.
-- [ ] Live-verifikation af rolletildeling i Adgange (Torben kører selv - blev bevidst ikke automatiseret).
-
-**Sikkerhed/lints**
-- [x] ~~Supabase security-lints: `touch_updated_at` mutable search_path + `issue_models` INSERT `with check (true)`~~ **FIX SKREVET 22-11** (migration `20261122170000_lint_fixes.sql` - KRÆVER kørsel i Studio). Fast search_path + ejerskabs-tjek på issue_models-INSERT. Ikke-brydende.
-
-**Feedback-board** (stort dagsværk 22-11)
-- [x] ~~Status "afklaret" (afsluttet uden OTA-fix)~~ **BYGGET 22-11** (migration kørt i Studio). Se "## Status "afklaret" + kommentar-badge".
-- [x] ~~Kommentar-badge + "Markér løst" som valg (Løst i OTA / Afklaret) i Værkstedet~~ **BYGGET 22-11**.
-- [x] ~~Status-filter (Aktive/Afsluttet/Alle) + dæmpede afsluttede rækker~~ **BYGGET 22-11**.
-- [x] ~~9 faste kategori-spande + filter på board + krævet dropdown ved oprettelse + kuratering i Værkstedet~~ **BYGGET 22-11** (ingen migration). Se "## Feedback-kategorier".
-- [ ] **Mærk de ~31 eksisterende meldinger op med kategori** (Torben, engangs, i Værkstedet).
-- [x] ~~Kategori-chip på board-rækkerne (visning, så spanden ses uden at filtrere).~~ **BYGGET 22-11** (ingen migration). Kobber-tonet tag lige efter type-badgen i `components/FejlBoard.tsx` OG på `/melding/[id]`; bruger `kategoriLabel()` (fri-tekst-fallback) og vises kun når meldingen har en kategori. Stil: `chip border border-kobber-200 bg-kobber-50 text-kobber-700` (grafit/kobber, ingen ny farve).
-- [ ] Gruppér rapporten til Zeekr efter kategori-spand (QA-guld).
-- [ ] Ryd op i den tætpakkede moderings-række i Værkstedet (vote/status/alvor/kategori/løst/redigér/slet begynder at klemme).
-
-**Forum - struktur (IA-beslutning 22-11, uddybet i "## Feedback-kategorier")**
-- Beslutning: forummet **struktureres ikke mere nu** - det er tomt for tråde, så det er et indholds-, ikke et strukturproblem. Lad struktur vokse ud af rigtige tråde.
-- Beslutning: når det struktureres, bruges de **9 feedback-spande som emne-tags/filter**, ikke nestede rum pr. model (undgår model×emne tomme-rum-eksplosion). Model forbliver rum/filter; emne er et mærke man vælger ved oprettelse; findbarhed bæres af **søgning**, ikke af perfekt kategorisering (brugeren vælger aldrig helt rigtigt - moderator kuraterer).
-- Den gamle model-først-plan i "## Næste op" er hermed forfinet på struktur-spørgsmålet.
-
-**Billeder**
-- [ ] Redigering af et indlægs billeder (edit er pt. kun tekst).
-- [ ] Oprydning af forældreløse storage-filer ved soft-remove af indlæg.
-- [ ] Billeder i beskeder + i feedback-meldinger.
-
-**Beskeder/chat**
-- [ ] Gruppe-samtaler (datamodellen holder til det).
-
-**Events**
-- [ ] .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
-
-**Notifikationer/mail**
-- [ ] Opt-in e-mail eller daglig samle-mail pr. forum-svar (in-app virker; mail er valgt fra indtil videre).
-
-**Feedback-board**
-- [ ] "Følg denne fejl" uden konto (email) + anonyme kommentarer (navn + captcha). Parkeret.
-
-**Større roadmap (ikke bygget)**
+### Senere / roadmap (ikke planlagt endnu)
 - [ ] Q&A / guides-sektion.
 - [ ] AI-dedup af fejlmeldinger på `/meld` (match ny melding mod eksisterende - "kø, ikke patrulje").
-
-**Oprydning/polish**
-- [ ] End-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
-- [ ] Fjern ubrugt `ForsideOverblik.tsx`.
 - [ ] Ikke-AI-redesign (Torben udskød; grafit+kobber står). Ved palet-skift skal PDF-rapport + `tailwind.config.ts` + komponenter følge med.
+
+### Parkeret / bevidst manuelt
+- [ ] "Følg denne fejl" uden konto (email) + anonyme kommentarer (navn + captcha). Parkeret.
+- [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
+
+### Gjort 22-11-2026 (så intet glemmes)
+- [x] Multi-model garage (migration kørt + verificeret, live). Se "## Multi-model garage".
+- [x] `/admin/beskeder`: moderator-visning af besked-anmeldelser (migration kørt). Se "## Admin: besked-anmeldelser".
+- [x] Redigerbare forum-regler i UI (migration kørt). Se "## Redigerbare forum-regler".
+- [x] Supabase security-lints lukket - migration `20261122170000_lint_fixes.sql` **kørt i Studio 22-11** (fast search_path + ejerskabs-tjek på issue_models-INSERT).
+- [x] Status "afklaret" + kommentar-badge + "Markér løst"-valg (Løst i OTA / Afklaret) i Værkstedet (migration kørt).
+- [x] Status-filter (Aktive/Afsluttet/Alle) + dæmpede afsluttede rækker.
+- [x] 9 faste kategori-spande + filter + krævet dropdown ved oprettelse + kuratering i Værkstedet. Se "## Feedback-kategorier".
+- [x] **Alle eksisterende meldinger mærket op med kategori** (Torben, engangs, i Værkstedet) - 22-11.
+- [x] Kategori-chip på board-rækker + melding-detalje (kobber-tag efter type-badgen, `kategoriLabel()`-fallback, kun når kategori findes). `components/FejlBoard.tsx` + `/melding/[id]`.
+
+### Beslutning - forum-struktur (IA 22-11, uddybet i "## Feedback-kategorier")
+- Forummet **struktureres ikke mere nu** - det er tomt for tråde, så det er et indholds-, ikke et strukturproblem. Lad struktur vokse ud af rigtige tråde.
+- Når det struktureres, bruges de **9 feedback-spande som emne-tags/filter**, ikke nestede rum pr. model (undgår model×emne tomme-rum-eksplosion). Model forbliver rum/filter; emne er et mærke man vælger ved oprettelse; findbarhed bæres af **søgning**, ikke af perfekt kategorisering (moderator kuraterer).
 
 ## Formål & positionering
 - Nyt, uafhængigt, **uofficielt** Zeekr-ejer-community. Afløser/udvider bugherrer.dk (7GT-fejl-boardet folder ind her).
