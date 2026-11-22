@@ -122,7 +122,7 @@ export default function SamtaleView({
     const sidste = beskeder[beskeder.length - 1];
     start(async () => {
       try {
-        await anmeldBesked(convId, sidste?.id ?? '', grund);
+        await anmeldBesked(convId, sidste?.id ?? null, grund);
         setFejl('Tak - samtalen er anmeldt til moderatorerne.');
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke anmelde.');

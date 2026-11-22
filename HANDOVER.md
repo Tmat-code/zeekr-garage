@@ -377,6 +377,8 @@ Privat besked-system oven på notifikations-kernen. (Bygget på gren `trin-3-bes
 - **UI:** `/beskeder` (indbakke-liste m. anden part + garage-badge + ulæst-prik), `/beskeder/[id]` (`components/beskeder/SamtaleView.tsx` - bobler mig/dig, composer, **realtime m. setAuth-JWT** (samme fix som klokken), markér-læst ved åbning, blokér/fjern-blok + anmeld).
 - **Indgang:** "✉️ Skriv"-knap på forum-indlæg (ikke egne, kun indlogget) i `ForumTraad.tsx` → `startSamtaleMedBruger` → hopper til samtalen. "✉️ Beskeder"-link i nav (desktop + mobil) for indloggede.
 - **pb_besked i klokken:** notifikations-kernens `NotifBell` viser pb_besked generisk (tekst + href `/beskeder/<id>`); klik hopper til samtalen. `markLaest` rydder pb_besked-notifikationer for samtalen.
+- **VERIFICERET LIVE 22-11-2026 (via Chrome, Torben + Test konto):** "✉️ Skriv" på forum-indlæg → samtale oprettet + navigeret; send besked (RLS insert) → boble; **realtime begge veje** (svar indsat i Studio dukkede op live uden reload, setAuth-JWT); **pb_besked-klokke** tikkede live da samtalen var lukket, dropdown viste "Test konto sendte dig en besked", klik → samtale + markér læst; **blokér** → composer deaktiveret. Al testdata ryddet op bagefter (convs/parts/msgs/blocks/pb_notifs = 0).
+- **Rettet edge (commit efter):** at anmelde en samtale UDEN beskeder sendte et tomt (ugyldigt) besked-id → `anmeldBesked` sender nu `null` som message_id.
 - **Mangler/senere:** moderator-visning af anmeldelser i Værkstedet (`message_reports` + RLS er klar, men ingen `/admin/beskeder`-side endnu); gruppe-samtaler (modellen holder til det); billeder i beskeder.
 
 ## Store forum-features ønsket (bruger-feedback 21-11-2026)

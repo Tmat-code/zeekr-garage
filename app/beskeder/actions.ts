@@ -82,12 +82,13 @@ export async function fjernBlok(convId: string, otherId: string): Promise<void> 
 
 export async function anmeldBesked(
   convId: string,
-  messageId: string,
+  messageId: string | null,
   reason: string,
 ): Promise<void> {
   const { sb, user } = await kraevBruger();
   const { error } = await sb.from('message_reports').insert({
-    message_id: messageId,
+    // Tom streng er ikke et gyldigt uuid -> brug null (anmeld hele samtalen).
+    message_id: messageId || null,
     conversation_id: convId,
     reporter_id: user.id,
     reason: reason.trim() || null,
