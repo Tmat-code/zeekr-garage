@@ -7,6 +7,50 @@
 
 ---
 
+## Arbejdsgang - sessioner (regel 22-11-2026)
+- **Én opgave pr. session.** Når en opgave er løst (bygget + verificeret + HANDOVER opdateret + pushet), lægger Claude SELV op til at starte en NY session til næste opgave - vi fortsætter ikke bare i samme session. Backloggen nedenfor er broen, så den friske session har alt med.
+- Grunden: hver session holder sig fokuseret og kontekst-let, og de gode opbygnings-vinkler går ikke tabt i en lang, komprimeret tråd.
+
+## Backlog - samlet (sidst opdateret 22-11-2026)
+> Ét sted for "hvad mangler". Stryg punkter efterhånden som de bygges. Detaljer står i de relevante sektioner nedenfor.
+
+**Datamodel/kerne**
+- [ ] **Multi-model garage** (NÆSTE, aftalt 22-11): flyt app'en fra den ene profil-bil (`profiles.car_model_id`/`car_variant_id`) over på den eksisterende `cars`-tabel (findes fra init, med RLS + `car_private`/VIN - "Min garage" tog en genvej). Retter en rigtig skævhed: en ejer med to modeller kan i dag kun registrere én, kan derfor ikke bekræfte feedback på sin anden model, garage-badge viser kun én bil, og rapportens bil-fordeling undertæller. Arbejde: `getMyCar()` -> `getMyCars()`; ConfirmButton matcher *nogen* af brugerens biler mod meldingens model(ler); Min garage bliver tilføj/fjern bil; badge + rapport-fordeling + "antal ejere pr. forum" læser fra `cars`; datamigrering = én `cars`-række pr. eksisterende profil-bil (ingen mister sin bil). **Åben beslutning:** cross-platform-fejl (fx PMA2+ på både 7X + 7GT) - bekræft én gang pr. ejet bil (præcis optælling, anbefalet for QA) eller kun én gang pr. person?
+
+**Værkstedet/moderering**
+- [ ] `/admin/beskeder`: moderator-visning af besked-anmeldelser (`message_reports` + RLS er klar, siden mangler).
+- [ ] Redigerbare forum-regler i UI.
+- [ ] Kategori-editor kan ikke flytte en kategori mellem grupper (kræver SQL i dag).
+- [ ] Tværgående tråd-søgning.
+- [ ] Antal ejere pr. model-forum.
+- [ ] Live-verifikation af rolletildeling i Adgange (Torben kører selv - blev bevidst ikke automatiseret).
+
+**Billeder**
+- [ ] Redigering af et indlægs billeder (edit er pt. kun tekst).
+- [ ] Oprydning af forældreløse storage-filer ved soft-remove af indlæg.
+- [ ] Billeder i beskeder + i feedback-meldinger.
+
+**Beskeder/chat**
+- [ ] Gruppe-samtaler (datamodellen holder til det).
+
+**Events**
+- [ ] .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
+
+**Notifikationer/mail**
+- [ ] Opt-in e-mail eller daglig samle-mail pr. forum-svar (in-app virker; mail er valgt fra indtil videre).
+
+**Feedback-board**
+- [ ] "Følg denne fejl" uden konto (email) + anonyme kommentarer (navn + captcha). Parkeret.
+
+**Større roadmap (ikke bygget)**
+- [ ] Q&A / guides-sektion.
+- [ ] AI-dedup af fejlmeldinger på `/meld` (match ny melding mod eksisterende - "kø, ikke patrulje").
+
+**Oprydning/polish**
+- [ ] End-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
+- [ ] Fjern ubrugt `ForsideOverblik.tsx`.
+- [ ] Ikke-AI-redesign (Torben udskød; grafit+kobber står). Ved palet-skift skal PDF-rapport + `tailwind.config.ts` + komponenter følge med.
+
 ## Formål & positionering
 - Nyt, uafhængigt, **uofficielt** Zeekr-ejer-community. Afløser/udvider bugherrer.dk (7GT-fejl-boardet folder ind her).
 - Mål: så lækkert og værdifuldt, at Zeekr selv tager kontakt → åbner en jobmulighed for Torben.
