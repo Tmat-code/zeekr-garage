@@ -13,8 +13,18 @@ export type Variant = { id: string; name: string };
 // model_id -> dens varianter (til "mig med"-flowet).
 export type VariantMap = Record<string, Variant[]>;
 
-// Brugerens registrerede bil (til ét-kliks "mig med").
+// Brugerens primaere bil (den der vises i garage-badget overalt).
 export type MinBil = {
+  modelId: string;
+  variantId: string | null;
+  modelName: string;
+  variantName: string | null;
+};
+
+// En konkret bil i brugerens garage (cars-raekke) - baerer sit eget id,
+// saa en bekraeftelse kan knyttes til netop denne bil.
+export type GarageBil = {
+  carId: string;
   modelId: string;
   variantId: string | null;
   modelName: string;

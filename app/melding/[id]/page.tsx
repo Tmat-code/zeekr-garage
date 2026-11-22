@@ -3,8 +3,8 @@ import Link from 'next/link';
 import {
   getIssueDetalje,
   getComments,
-  getMyConfirmedIssueIds,
-  getMyCar,
+  getMyConfirmedCounts,
+  getMyCars,
   getVariantFordeling,
 } from '@/lib/queries';
 import { adminKontekst } from '@/lib/admin';
@@ -24,12 +24,12 @@ function daDato(iso: string): string {
 }
 
 export default async function MeldingSide({ params }: { params: { id: string } }) {
-  const [issue, kommentarer, mineSet, ctx, userCar, fordeling] = await Promise.all([
+  const [issue, kommentarer, myCounts, ctx, userCars, fordeling] = await Promise.all([
     getIssueDetalje(params.id),
     getComments(params.id),
-    getMyConfirmedIssueIds(),
+    getMyConfirmedCounts(),
     adminKontekst(),
-    getMyCar(),
+    getMyCars(),
     getVariantFordeling(params.id),
   ]);
 
@@ -84,9 +84,9 @@ export default async function MeldingSide({ params }: { params: { id: string } }
         <ConfirmButton
           issueId={issue.id}
           issueModelIds={issue.models.map((m) => m.id)}
-          userCar={userCar}
+          userCars={userCars}
           initialCount={issue.confirmations}
-          initialConfirmed={mineSet.has(issue.id)}
+          initialMine={myCounts[issue.id] ?? 0}
           isLoggedIn={isLoggedIn}
           naeste={naeste}
         />

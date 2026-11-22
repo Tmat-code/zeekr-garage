@@ -9,11 +9,14 @@ export default function BilVaelger({
   varianter,
   value,
   onChange,
+  skjulEjerIkke = false,
 }: {
   models: { id: string; name: string }[];
   varianter: VariantMap;
   value: BilValg;
   onChange: (v: BilValg) => void;
+  // Skjul "Ejer ikke en Zeekr endnu" (fx naar man tilfoejer en bil til garagen).
+  skjulEjerIkke?: boolean;
 }) {
   const vs = value.modelId ? (varianter[value.modelId] ?? []) : [];
 
@@ -58,14 +61,16 @@ export default function BilVaelger({
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-grafit-600">
-        <input
-          type="checkbox"
-          checked={value.ejerIkke}
-          onChange={(e) => onChange({ modelId: '', variantId: '', ejerIkke: e.target.checked })}
-        />
-        Ejer ikke en Zeekr endnu
-      </label>
+      {!skjulEjerIkke && (
+        <label className="flex items-center gap-2 text-sm text-grafit-600">
+          <input
+            type="checkbox"
+            checked={value.ejerIkke}
+            onChange={(e) => onChange({ modelId: '', variantId: '', ejerIkke: e.target.checked })}
+          />
+          Ejer ikke en Zeekr endnu
+        </label>
+      )}
     </div>
   );
 }

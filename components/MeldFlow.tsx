@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { IssueRow, Model, MinBil } from '@/lib/types';
+import type { IssueRow, Model, GarageBil } from '@/lib/types';
 import type { IssueType } from '@/lib/config';
 import { PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
@@ -13,8 +13,8 @@ type Trin = 'vaelg' | 'soeg' | 'tjek' | 'formular';
 export default function MeldFlow({
   issues,
   models,
-  userCar,
-  myConfirmedIds,
+  userCars,
+  myCounts,
   initialType = null,
   initialTitle = '',
   initialBody = '',
@@ -22,8 +22,8 @@ export default function MeldFlow({
 }: {
   issues: IssueRow[];
   models: Model[];
-  userCar: MinBil | null;
-  myConfirmedIds: string[];
+  userCars: GarageBil[];
+  myCounts: Record<string, number>;
   initialType?: IssueType | null;
   initialTitle?: string;
   initialBody?: string;
@@ -34,7 +34,6 @@ export default function MeldFlow({
   const [trin, setTrin] = useState<Trin>(initialType ? 'soeg' : 'vaelg');
   const [query, setQuery] = useState(initialTitle);
   const [harSoegt, setHarSoegt] = useState(false);
-  const mine = useMemo(() => new Set(myConfirmedIds), [myConfirmedIds]);
 
   const erOenske = type === 'oenske';
   const naesteEfterSoeg: Trin = erOenske ? 'formular' : 'tjek';
@@ -175,9 +174,9 @@ export default function MeldFlow({
                         <ConfirmButton
                           issueId={i.id}
                           issueModelIds={i.models.map((m) => m.id)}
-                          userCar={userCar}
+                          userCars={userCars}
                           initialCount={i.confirmations}
-                          initialConfirmed={mine.has(i.id)}
+                          initialMine={myCounts[i.id] ?? 0}
                           isLoggedIn
                         />
                         <div className="min-w-0 flex-1">

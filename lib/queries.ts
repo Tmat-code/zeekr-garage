@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
-import type { IssueRow, Model, Kommentar, VariantMap, MinBil } from '@/lib/types';
+import type { IssueRow, Model, Kommentar, VariantMap, MinBil, GarageBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
@@ -100,6 +100,31 @@ export async function getMyCar(): Promise<MinBil | null> {
   };
 }
 
+// --- Alle brugerens biler (til multi-model "mig med") ---
+export async function getMyCars(): Promise<GarageBil[]> {
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await sb
+    .from('cars')
+    .select(
+      'id, model_id, variant_id, model:models!cars_model_id_fkey ( name ), variant:variants!cars_variant_id_fkey ( name )',
+    )
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true });
+
+  return ((data ?? []) as any[]).map((r) => ({
+    carId: r.id,
+    modelId: r.model_id,
+    variantId: r.variant_id ?? null,
+    modelName: r.model?.name ?? '',
+    variantName: r.variant?.name ?? null,
+  }));
+}
+
 // --- Mit visningsnavn (det der vises som forfatter overalt) ---
 export async function getMitNavn(): Promise<string> {
   const sb = supabaseServer();
@@ -176,20 +201,27 @@ export async function getComments(issueId: string): Promise<Kommentar[]> {
   }));
 }
 
-// --- Den aktuelle brugers egne bekraeftelser (til "stemt"-markering) ---
-export async function getMyConfirmedIssueIds(): Promise<Set<string>> {
+// --- Den aktuelle brugers egne bekraeftelser pr. melding (antal egne biler) ---
+// issue_id -> hvor mange af MINE biler der har bekraeftet meldingen. Bruges
+// til "stemt"-markering (antal > 0) og til praecis optimistisk optaelling naar
+// man bekraefter/fjerner med flere biler.
+export async function getMyConfirmedCounts(): Promise<Record<string, number>> {
   const sb = supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) return new Set();
+  if (!user) return {};
 
   const { data } = await sb
     .from('confirmations')
     .select('issue_id')
     .eq('user_id', user.id);
 
-  return new Set((data ?? []).map((r: any) => r.issue_id as string));
+  const counts: Record<string, number> = {};
+  for (const r of (data ?? []) as any[]) {
+    counts[r.issue_id] = (counts[r.issue_id] ?? 0) + 1;
+  }
+  return counts;
 }
 
 // --- Aktuel bruger (login-tilstand i header m.m.) ---

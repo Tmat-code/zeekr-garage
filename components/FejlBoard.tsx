@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { IssueRow, Model, MinBil } from '@/lib/types';
+import type { IssueRow, Model, GarageBil } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
 import { TYPE_META } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
@@ -14,21 +14,20 @@ type TypeFilter = 'alle' | 'fejl' | 'oenske';
 export default function FejlBoard({
   issues,
   models,
-  userCar,
-  myConfirmedIds,
+  userCars,
+  myCounts,
   isLoggedIn,
 }: {
   issues: IssueRow[];
   models: Model[];
-  userCar: MinBil | null;
-  myConfirmedIds: string[];
+  userCars: GarageBil[];
+  myCounts: Record<string, number>;
   isLoggedIn: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [modelSlug, setModelSlug] = useState<string | 'alle'>('alle');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('alle');
   const [sort, setSort] = useState<Sortering>('stemmer');
-  const mine = useMemo(() => new Set(myConfirmedIds), [myConfirmedIds]);
 
   const antalFejl = useMemo(() => issues.filter((i) => i.type === 'fejl').length, [issues]);
   const antalOensker = useMemo(() => issues.filter((i) => i.type === 'oenske').length, [issues]);
@@ -133,9 +132,9 @@ export default function FejlBoard({
               <ConfirmButton
                 issueId={i.id}
                 issueModelIds={i.models.map((m) => m.id)}
-                userCar={userCar}
+                userCars={userCars}
                 initialCount={i.confirmations}
-                initialConfirmed={mine.has(i.id)}
+                initialMine={myCounts[i.id] ?? 0}
                 isLoggedIn={isLoggedIn}
               />
               <div className="min-w-0 flex-1">

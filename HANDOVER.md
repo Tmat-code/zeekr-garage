@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22
+**Sidst opdateret:** 2026-11-22 (multi-model garage)
 
 ---
 
@@ -15,7 +15,7 @@
 > Ét sted for "hvad mangler". Stryg punkter efterhånden som de bygges. Detaljer står i de relevante sektioner nedenfor.
 
 **Datamodel/kerne**
-- [ ] **Multi-model garage** (NÆSTE, aftalt 22-11): flyt app'en fra den ene profil-bil (`profiles.car_model_id`/`car_variant_id`) over på den eksisterende `cars`-tabel (findes fra init, med RLS + `car_private`/VIN - "Min garage" tog en genvej). Retter en rigtig skævhed: en ejer med to modeller kan i dag kun registrere én, kan derfor ikke bekræfte feedback på sin anden model, garage-badge viser kun én bil, og rapportens bil-fordeling undertæller. Arbejde: `getMyCar()` -> `getMyCars()`; ConfirmButton matcher *nogen* af brugerens biler mod meldingens model(ler); Min garage bliver tilføj/fjern bil; badge + rapport-fordeling + "antal ejere pr. forum" læser fra `cars`; datamigrering = én `cars`-række pr. eksisterende profil-bil (ingen mister sin bil). **Beslutning (låst 22-11):** en bruger bekræfter for HVER af sine biler - ejer man to ramte modeller (fx PMA2+-fejl på både 7X + 7GT), tæller det som to bekræftelser (én pr. bil). Begrundelse: de har reelt mere end én bil, og det giver præcis optælling af ramte biler i rapporterne. UI skal gøre klart at det er pr. bil, ikke en dobbeltstemme.
+- [x] ~~**Multi-model garage**~~ **BYGGET 22-11-2026** (gren `multi-model-garage`, afventer Studio + merge). Se eget afsnit "## Multi-model garage" nedenfor.
 
 **Værkstedet/moderering**
 - [ ] `/admin/beskeder`: moderator-visning af besked-anmeldelser (`message_reports` + RLS er klar, siden mangler).
@@ -279,6 +279,35 @@ Admin-panelet var færdigt, men bruger-siden haltede. To huller (brugerens obser
 - **Min garage** (`/garage` + `MinGarageForm`): ret bilen senere. Link i header for indloggede.
 - **Stemme bil-baseret:** `ConfirmButton` omskrevet - ét klik, bruger `getMyCar()`. Ingen bil → "registrér"-boks (til /garage), kan ikke stemme. Bil men meldingen rammer ikke din model → disabled ("Rammer ikke din X"). Variant-picker'en fra forrige commit er FJERNET (overflødig: man stemmer kun på sin egen bil). `varianter`-prop fjernet fra board/meld/detalje; `getVarianter` bruges nu kun af oprettelse + Min garage, `getVariantFordeling` af detalje.
 - `MinBil`-type i `lib/types.ts`.
+
+## Multi-model garage (bygget 22-11-2026 - gren `multi-model-garage`)
+En ejer kan nu registrere FLERE biler, og en bekræftelse knyttes til en konkret bil. Retter skævheden: før kunne man kun have én bil (profil-genvejen), kunne ikke bekræfte på sin anden model, og rapportens bil-fordeling undertalte. **Kilden til alle biler er nu `cars`-tabellen;** `profiles.car_model_id`/`car_variant_id` beholdes som "primær bil" = den der vises i garage-badget overalt (forum/beskeder-embeds er dermed uændrede).
+
+**Beslutning (låst 22-11, implementeret):** en bruger bekræfter for HVER af sine biler. Ejer man to ramte modeller (fx PMA2+-fejl på både 7X + 7GT), bliver det to bekræftelser (én pr. bil) → rapporterne tæller ramte biler præcist. Hver `confirmations`-række bærer stadig `model_id` + `variant_id` (afledt af bilen), så rapport-RPC'erne (`rapport_fejl` m.fl.) er UÆNDREDE - de tæller rækker + joiner variant_id som før; nu er der bare potentielt flere rækker pr. bruger.
+
+**Migration `supabase/migrations/20261122140000_multi_model_garage.sql` - SKAL KØRES I STUDIO FØR gren flettes til main:**
+- `cars.variant_id` (FK til `variants`, nullable) - en bil bærer nu samme trim-reference som bekræftelser (det gamle `cars.variant` tekst-felt er urørt hardware-metadata).
+- `confirmations.car_id` (FK til `cars`, cascade, nullable) - hvilken bil bekræftede.
+- **Datamigrering:** én `cars`-række pr. eksisterende profil-bil (kun for profiler uden bil i cars → re-kørbar). Ingen mister sin bil.
+- **Backfill:** `confirmations.car_id` sættes fra brugerens bil med samme model (entydigt, da hver bruger havde én bil). Findes ingen match → NULL (rækken tæller stadig).
+- **Ombyttet unique-constraint:** fra `(user_id, issue_id, model_id)` til `(issue_id, car_id)`. Den gamle blokerede to biler af samme model (brød "én pr. bil"); den nye forhindrer at én bil stemmer to gange. NULL `car_id` kolliderer ikke (NULL != NULL i Postgres), så gamle/ikke-matchede rækker er uberørte.
+- **Hærdet insert-policy:** bilen skal tilhøre brugeren selv (`cars.owner_id = auth.uid()`), udover `user_id = auth.uid()`.
+
+**Kode:**
+- `lib/queries.ts`: `getMyCars()` (alle brugerens biler fra `cars`, m. model/variant-navne) + `getMyConfirmedCounts()` (issue_id → antal af MINE biler der har bekræftet; afløser `getMyConfirmedIssueIds`). `getMyCar()` (primær bil) beholdt, men ikke længere brugt af siderne.
+- `lib/types.ts`: ny `GarageBil`-type (`carId` + model/variant).
+- `components/ConfirmButton.tsx`: tager nu `userCars: GarageBil[]` + `initialMine`. Matcher brugerens biler mod meldingens model(ler); ét klik bekræfter én række pr. matchende bil (upsert på `issue_id,car_id`, idempotent); "fjern" sletter alle egne bekræftelser på meldingen. Titel/tilstand gør pr.-bil tydeligt ("Bekræft med dine 2 biler (én stemme pr. bil)"). Optimistisk optælling = antal matchende biler minus allerede-stemte.
+- `components/FejlBoard.tsx` + `MeldFlow.tsx`: `userCar`→`userCars`, `myConfirmedIds`→`myCounts`.
+- Siderne `/feedback`, `/meld`, `/melding/[id]`: `getMyCars()` + `getMyConfirmedCounts()`, nye props.
+- `components/MinGarageForm.tsx`: omskrevet til liste med **tilføj/fjern bil** (skriver `cars`); synkroniserer profilens primær-bil (tidligste bil, eller ryddet hvis garagen er tom) efter hver ændring. `components/BilVaelger.tsx`: ny `skjulEjerIkke`-prop til tilføj-formen. `app/garage/page.tsx`: henter `getMyCars()`.
+- `components/LoginForm.tsx`: ved signup oprettes nu BÅDE en `cars`-række OG primær-bil-pointeren (så nye brugere har en bil i cars fra start).
+- Fjerner man en bil, forsvinder dens bekræftelser med den (cascade) - bevidst: så tæller den ikke længere i rapporterne.
+
+**Verificeret:** `npx tsc --noEmit` + `npm run build` grønt. Live-test (bekræft med 2 biler, fjern, Min garage tilføj/fjern, signup) udestår til efter Studio + merge.
+
+**Mangler/senere:** "antal ejere pr. model-forum" (separat backlog-punkt) bør når det bygges læse fra `cars`. Badget viser stadig kun den primære bil pr. forfatter (bevidst - kompakt); det er ikke længere en begrænsning, da man nu kan eje flere.
+
+**NÆSTE SKRIDT (rækkefølge vigtig):** (1) kør migrationen i Zeekr-Studio (`http://192.168.1.18:8002`), (2) flet gren `multi-model-garage` → `main` (n8n auto-deployer kun main), (3) live-verificér. Grenen deployer IKKE af sig selv.
 
 ## Zeekr-rapport (porteret fra bugherrer) - bygget 20-11-2026
 Admin-eksport af fejl/ønsker til Zeekr som PDF/CSV, med oversættelse, delta-sporing og log. `/admin/rapport` (link 📮 Rapport i Værkstedet-header). Analyseret direkte i bugherrer-repoet.

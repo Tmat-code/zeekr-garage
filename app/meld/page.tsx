@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation';
 import {
   getModels,
   getIssues,
-  getMyConfirmedIssueIds,
+  getMyConfirmedCounts,
   getCurrentUser,
-  getMyCar,
+  getMyCars,
 } from '@/lib/queries';
 import type { IssueType } from '@/lib/config';
 import MeldFlow from '@/components/MeldFlow';
@@ -27,11 +27,11 @@ export default async function MeldSide({
   // Kun interne stier accepteres som "fra" (undgå open-redirect i linket).
   const fraForum =
     searchParams?.fra && searchParams.fra.startsWith('/forum/') ? searchParams.fra : undefined;
-  const [models, issues, mineSet, userCar] = await Promise.all([
+  const [models, issues, myCounts, userCars] = await Promise.all([
     getModels(),
     getIssues(),
-    getMyConfirmedIssueIds(),
-    getMyCar(),
+    getMyConfirmedCounts(),
+    getMyCars(),
   ]);
 
   return (
@@ -43,8 +43,8 @@ export default async function MeldSide({
       <MeldFlow
         issues={issues}
         models={models}
-        userCar={userCar}
-        myConfirmedIds={[...mineSet]}
+        userCars={userCars}
+        myCounts={myCounts}
         initialType={initialType}
         initialTitle={initialTitle}
         initialBody={initialBody}

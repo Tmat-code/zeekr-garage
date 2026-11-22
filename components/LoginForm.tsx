@@ -88,9 +88,13 @@ export default function LoginForm({
           setBusy(false);
           return;
         }
-        // Gem bilen på profilen (hvis ejer).
+        // Gem bilen (hvis ejer): én raekke i cars (kilden til alle biler) +
+        // samme bil som profilens primaere bil (den der vises i garage-badget).
         if (!bil.ejerIkke && bil.modelId && data.user) {
           const variantId = bil.variantId || varianterForModel[0]?.id || null;
+          await sb
+            .from('cars')
+            .insert({ owner_id: data.user.id, model_id: bil.modelId, variant_id: variantId });
           await sb
             .from('profiles')
             .update({ car_model_id: bil.modelId, car_variant_id: variantId })

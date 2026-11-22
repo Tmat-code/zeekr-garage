@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import type { MinBil } from '@/lib/types';
+import type { GarageBil } from '@/lib/types';
 
 function Boks({
   count,
@@ -40,24 +40,33 @@ function Boks({
 export default function ConfirmButton({
   issueId,
   issueModelIds,
-  userCar,
+  userCars,
   initialCount,
-  initialConfirmed,
+  initialMine,
   isLoggedIn,
   naeste = '/',
 }: {
   issueId: string;
   issueModelIds: string[];
-  userCar: MinBil | null;
+  userCars: GarageBil[];
   initialCount: number;
-  initialConfirmed: boolean;
+  // Hvor mange af MINE biler der allerede har bekraeftet denne melding.
+  initialMine: number;
   isLoggedIn: boolean;
   naeste?: string;
 }) {
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
-  const [confirmed, setConfirmed] = useState(initialConfirmed);
+  // Antal af mine biler der har bekraeftet (0 = ikke stemt).
+  const [mine, setMine] = useState(initialMine);
   const [busy, setBusy] = useState(false);
+
+  // De af brugerens biler som meldingens model(ler) faktisk rammer.
+  const matchendeBiler = useMemo(
+    () => userCars.filter((c) => issueModelIds.includes(c.modelId)),
+    [userCars, issueModelIds],
+  );
+  const confirmed = mine > 0;
 
   // Ikke logget ind → knappen fører til login.
   if (!isLoggedIn) {
@@ -72,7 +81,7 @@ export default function ConfirmButton({
   }
 
   // Logget ind, men ingen bil registreret → kan ikke stemme.
-  if (!userCar) {
+  if (userCars.length === 0) {
     return (
       <Boks
         count={count}
@@ -83,40 +92,54 @@ export default function ConfirmButton({
     );
   }
 
-  // Har bil, men meldingen rammer ikke din model → kan ikke stemme.
-  if (!issueModelIds.includes(userCar.modelId)) {
+  // Har bil(er), men meldingen rammer ingen af dem → kan ikke stemme.
+  if (matchendeBiler.length === 0) {
     return (
       <Boks
         count={count}
         tilstand="mig med"
         disabled
-        title={`Rammer ikke din ${userCar.modelName}`}
+        title={
+          userCars.length === 1
+            ? `Rammer ikke din ${userCars[0].modelName}`
+            : 'Rammer ingen af dine biler'
+        }
       />
     );
   }
 
   async function bekraeft() {
-    if (busy || !userCar) return;
+    if (busy) return;
     setBusy(true);
-    setConfirmed(true);
-    setCount((c) => c + 1);
+    const forrigeCount = count;
+    const forrigeMine = mine;
+    // Optimistisk: alle matchende biler bekraefter nu (delta = dem der manglede).
+    const delta = matchendeBiler.length - mine;
+    setMine(matchendeBiler.length);
+    setCount((c) => c + Math.max(0, delta));
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
       if (!user) throw new Error('ingen bruger');
-      const { error } = await sb.from('confirmations').insert({
+      const raekker = matchendeBiler.map((c) => ({
         issue_id: issueId,
-        model_id: userCar.modelId,
+        model_id: c.modelId,
+        variant_id: c.variantId,
+        car_id: c.carId,
         user_id: user.id,
-        variant_id: userCar.variantId,
-      });
+      }));
+      // Upsert paa (issue_id, car_id): indsaetter kun de biler der mangler,
+      // så gentryk eller en allerede-stemt bil ikke laver dubletter/fejl.
+      const { error } = await sb
+        .from('confirmations')
+        .upsert(raekker, { onConflict: 'issue_id,car_id', ignoreDuplicates: true });
       if (error) throw error;
       router.refresh();
     } catch {
-      setConfirmed(false);
-      setCount((c) => Math.max(0, c - 1));
+      setMine(forrigeMine);
+      setCount(forrigeCount);
     } finally {
       setBusy(false);
     }
@@ -125,15 +148,17 @@ export default function ConfirmButton({
   async function fjern() {
     if (busy) return;
     setBusy(true);
-    const forrige = count;
-    setConfirmed(false);
-    setCount((c) => Math.max(0, c - 1));
+    const forrigeCount = count;
+    const forrigeMine = mine;
+    setCount((c) => Math.max(0, c - mine));
+    setMine(0);
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
       if (!user) throw new Error('ingen bruger');
+      // Fjern ALLE mine bilers bekraeftelser paa denne melding.
       const { error } = await sb
         .from('confirmations')
         .delete()
@@ -142,12 +167,23 @@ export default function ConfirmButton({
       if (error) throw error;
       router.refresh();
     } catch {
-      setConfirmed(true);
-      setCount(forrige);
+      setMine(forrigeMine);
+      setCount(forrigeCount);
     } finally {
       setBusy(false);
     }
   }
+
+  const flere = matchendeBiler.length > 1;
+  const titel = confirmed
+    ? flere
+      ? `Fjern mine ${mine} bekræftelser`
+      : 'Fjern min bekræftelse'
+    : flere
+      ? `Bekræft med dine ${matchendeBiler.length} biler (én stemme pr. bil)`
+      : `Bekræft med din ${matchendeBiler[0].modelName}${
+          matchendeBiler[0].variantName ? ' ' + matchendeBiler[0].variantName : ''
+        }`;
 
   return (
     <Boks
@@ -155,11 +191,7 @@ export default function ConfirmButton({
       tilstand={confirmed ? 'stemt' : 'mig med'}
       onClick={confirmed ? fjern : bekraeft}
       disabled={busy}
-      title={
-        confirmed
-          ? 'Fjern min bekræftelse'
-          : `Bekræft med din ${userCar.modelName}${userCar.variantName ? ' ' + userCar.variantName : ''}`
-      }
+      title={titel}
     />
   );
 }

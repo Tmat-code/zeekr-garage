@@ -2,9 +2,9 @@ import Link from 'next/link';
 import {
   getModels,
   getIssues,
-  getMyConfirmedIssueIds,
+  getMyConfirmedCounts,
   getCurrentUser,
-  getMyCar,
+  getMyCars,
 } from '@/lib/queries';
 import FejlBoard from '@/components/FejlBoard';
 
@@ -14,12 +14,12 @@ export const metadata = { title: 'Feedback' };
 export const dynamic = 'force-dynamic';
 
 export default async function FeedbackSide() {
-  const [models, issues, mineSet, user, userCar] = await Promise.all([
+  const [models, issues, myCounts, user, userCars] = await Promise.all([
     getModels(),
     getIssues(),
-    getMyConfirmedIssueIds(),
+    getMyConfirmedCounts(),
     getCurrentUser(),
-    getMyCar(),
+    getMyCars(),
   ]);
 
   return (
@@ -47,8 +47,8 @@ export default async function FeedbackSide() {
         <FejlBoard
           issues={issues}
           models={models}
-          userCar={userCar}
-          myConfirmedIds={[...mineSet]}
+          userCars={userCars}
+          myCounts={myCounts}
           isLoggedIn={!!user}
         />
       </section>
