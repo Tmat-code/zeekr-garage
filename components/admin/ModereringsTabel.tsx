@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   STATUSES,
@@ -49,16 +49,76 @@ function HandlingerMenu({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const knapRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Naar menuen aabner: flyt fokus til foerste punkt, så tastatur-brugere
+  // lander inde i menuen (ikke efterladt paa ⋯-knappen).
+  useEffect(() => {
+    if (!open) return;
+    const foerste = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    foerste?.focus();
+  }, [open]);
+
+  function luk(returFokus = true) {
+    setOpen(false);
+    // Tilbage til ⋯-knappen, så fokus ikke falder til toppen af siden.
+    if (returFokus) knapRef.current?.focus();
+  }
+
+  // Tastatur paa selve ⋯-knappen: Enter/Mellemrum/Pil-ned aabner.
+  function knapTaster(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setOpen(true);
+    } else if (e.key === 'Escape' && open) {
+      e.preventDefault();
+      luk();
+    }
+  }
+
+  // Tastatur inde i menuen: pile + Home/End flytter mellem punkter,
+  // Escape lukker (fokus tilbage til knappen), Tab lukker paent.
+  function menuTaster(e: React.KeyboardEvent) {
+    const punkter = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+    );
+    if (punkter.length === 0) return;
+    const i = punkter.indexOf(document.activeElement as HTMLElement);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      punkter[(i + 1) % punkter.length].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      punkter[(i - 1 + punkter.length) % punkter.length].focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      punkter[0].focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      punkter[punkter.length - 1].focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      luk();
+    } else if (e.key === 'Tab') {
+      luk(false);
+    }
+  }
+
   return (
     <div className="relative">
       <button
+        ref={knapRef}
         type="button"
         className="rounded-lg border border-grafit-200 px-2.5 py-1 text-base leading-none text-grafit-500 hover:border-grafit-300 hover:text-grafit-700"
         aria-label="Flere handlinger"
         aria-haspopup="menu"
         aria-expanded={open}
+        title="Flere handlinger"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={knapTaster}
       >
         ⋯
       </button>
@@ -70,12 +130,15 @@ function HandlingerMenu({
             aria-hidden
             tabIndex={-1}
             className="fixed inset-0 z-10 cursor-default"
-            onClick={() => setOpen(false)}
+            onClick={() => luk(false)}
           />
           <div
+            ref={menuRef}
             role="menu"
+            aria-label="Flere handlinger"
             className="absolute right-0 z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-grafit-200 bg-white py-1 shadow-lg"
-            onClick={() => setOpen(false)}
+            onKeyDown={menuTaster}
+            onClick={() => luk(false)}
           >
             {children}
           </div>
