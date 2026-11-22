@@ -327,7 +327,7 @@ Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_ka
 ## NÆSTE SESSION - plan (aftalt med Torben 22-11-2026)
 Rækkefølge: **(1) notifikations-kerne + forum-svar-notifikationer → (2) Adgange: søg alle brugere + tildel rolle → (3) chat/PB oven på notifikationssystemet.** Notifikationer bygges FØRST, fordi de giver værdi alene (forum-svar) og afrisikerer plumbing'en inden den store chat-bid.
 
-**Status 22-11-2026: trin (1) + (2) BYGGET + LIVE** (se afsnit nedenfor). **← NÆSTE: trin (3) chat/PB oven på notifikations-kernen.**
+**Status 22-11-2026: trin (1) + (2) BYGGET + LIVE. Trin (3) chat/PB BYGGET + build-grøn, men AFVENTER migration-kørsel i Studio + push** (Claude var på mobil uden Chrome-adgang → kunne ikke nå Studio). Se trin (3)-afsnittet for hvad der mangler for at gøre det live.
 
 ### 1) Notifikationer (ét samlet system) - BYGGET + LIVE 22-11-2026
 Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "indbakke". **Trin 1 af planen færdigt.** Første kilde: forum-svar. Plumbingen (tabeller + realtime + RLS + klokke-UI) ligger klar til at chatten (trin 3) kan skrive til samme indbakke.
@@ -370,11 +370,15 @@ Admin kan nu søge en hvilken som helst oprettet bruger frem (på navn eller ema
 - **`components/admin/AdgangePanel.tsx`:** nyt "Søg brugere"-afsnit (søgefelt + knap). Hver træffer: navn/mail + nuværende rolle-badge (eller "ingen rolle") + rolle-vælger (Ingen / Moderator / Admin) → kalder `saetRolle`; egen konto = lockout-værn ("kan ikke ændre egen adgang"). Efter rolle-skift genindlæses søgeresultatet. Viser op til 50.
 - `npx tsc --noEmit` + `npm run build` grønt. Deployet via n8n-poller. **Mangler kun: live-verifikation i app'en som admin.**
 
-### 3) Chat / PB mellem brugere (byg oven på notifikationskernen)
-- **Tabeller:** samtaler + beskeder (+ deltagere); ulæst-markering pr. bruger pr. samtale.
-- **BESLUTTET (mit oplæg godkendt):** alle indloggede kan skrive til alle, **med blokér + anmeld**.
-- **Realtime via Supabase** → live beskeder. Ny PB → notifikation (`pb_besked`) via systemet fra pkt. 1, hvis modtager ikke har samtalen åben.
-- **Moderering:** blokér/anmeld; genbrug admin/moderator-roller.
+### 3) Chat / PB mellem brugere - BYGGET 22-11-2026 (AFVENTER migration + push)
+Alt kode er skrevet og `tsc`/`build` er grøn. **Mangler kun to ting for at gå live:** (1) kør migrationen i Studio, (2) push (holdt tilbage, da migration SKAL køres før push - ellers 500'er `/beskeder` live). Claude kunne ikke nå Studio (var på mobil uden Chrome). Committen ligger lokalt i arbejdstræet, ikke pushet endnu.
+- **Migration `supabase/migrations/20261122120000_beskeder.sql` - SKAL KØRES I STUDIO:** tabeller `conversations`, `conversation_participants` (m. `last_read_at`), `messages`, `user_blocks`, `message_reports`. Security-definer-helpere `er_deltager(conv)` + `er_blokeret(conv)` (undgår RLS-rekursion på conversation_participants - samme mønster som er_admin). RPC `start_samtale(p_other)` (find-eller-opret 1:1, blok-tjek). Trigger `message_after_insert` (bump last_message_at + **pb_besked-notifikation** til modtager via kernen - én ulæst pr. samtale, opdateres i stedet for at spamme). RLS: deltagere læser samtale/beskeder; send = egen afsender + deltager + ikke blokeret; blokeringer/anmeldelser egne; moderator læser anmeldelser + må slette beskeder. `messages` lagt i `supabase_realtime` + replica identity full.
+- **Backend:** `lib/beskeder.ts` (`getSamtaler`, `getSamtale`, `getUlaesteSamtaler` - separate robuste queries, ingen embedded order/limit). `app/beskeder/actions.ts` (`startSamtaleMedBruger`, `sendBesked`, `markLaest`, `blokerBruger`, `fjernBlok`, `anmeldBesked`). Typer i `lib/types.ts` (`SamtaleRow`/`Besked`/`SamtaleDetalje`/`AndenPart`).
+- **UI:** `/beskeder` (indbakke-liste m. anden part + garage-badge + ulæst-prik), `/beskeder/[id]` (`components/beskeder/SamtaleView.tsx` - bobler mig/dig, composer, **realtime m. setAuth-JWT** (samme fix som klokken), markér-læst ved åbning, blokér/fjern-blok + anmeld).
+- **Indgang:** "✉️ Skriv"-knap på forum-indlæg (ikke egne, kun indlogget) i `ForumTraad.tsx` → `startSamtaleMedBruger` → hopper til samtalen. "✉️ Beskeder"-link i nav (desktop + mobil) for indloggede.
+- **pb_besked i klokken:** notifikations-kernens `NotifBell` viser pb_besked generisk (tekst + href `/beskeder/<id>`); klik hopper til samtalen. `markLaest` rydder pb_besked-notifikationer for samtalen.
+- **NÅR DU ER VED EN COMPUTER:** 1) kør `supabase/migrations/20261122120000_beskeder.sql` i Studio (`http://192.168.1.18:8002`), 2) sig til, så pusher Claude (eller push selv), 3) verificér live: to konti, "✉️ Skriv" på et forum-indlæg → send → realtime-boble + klokke-notifikation hos modtager; test blokér + anmeld.
+- **Mangler/senere:** moderator-visning af anmeldelser i Værkstedet (tabellen + RLS er klar, men ingen `/admin/beskeder`-side endnu); gruppe-samtaler (modellen holder til det); billeder.
 
 ## Store forum-features ønsket (bruger-feedback 21-11-2026)
 - **Chat mellem brugere + notifikationer** - planlagt til næste session, se "## NÆSTE SESSION - plan" ovenfor.

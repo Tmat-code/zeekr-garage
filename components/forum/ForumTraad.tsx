@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
 import type { ForumIndlaeg } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
 import { svar, retIndlaeg, fjernIndlaeg } from '@/app/forum/actions';
+import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 
 function IndlaegKort({
   p,
@@ -13,7 +15,9 @@ function IndlaegKort({
   traadSlug,
   megId,
   erModerator,
+  isLoggedIn,
   koer,
+  skrivTil,
   pending,
 }: {
   p: ForumIndlaeg;
@@ -21,7 +25,9 @@ function IndlaegKort({
   traadSlug: string;
   megId: string | null;
   erModerator: boolean;
+  isLoggedIn: boolean;
   koer: (fn: () => Promise<void>) => void;
+  skrivTil: (authorId: string) => void;
   pending: boolean;
 }) {
   const [redigerer, setRedigerer] = useState(false);
@@ -30,6 +36,8 @@ function IndlaegKort({
   const kanRette = minEgen || erModerator;
   // Åbnings-indlægget fjernes ikke her (brug "Fjern tråd" i moderering).
   const kanFjerne = kanRette && !p.isOpening;
+  // Skriv privat til forfatteren (ikke dig selv, kun indlogget).
+  const kanSkrive = isLoggedIn && !!p.authorId && !minEgen;
 
   return (
     <div
@@ -81,14 +89,16 @@ function IndlaegKort({
         <p className="mt-2 whitespace-pre-line text-grafit-800">{p.body}</p>
       )}
 
-      {!redigerer && kanRette && (
+      {!redigerer && (kanRette || kanSkrive) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-          <button
-            className="text-grafit-500 hover:text-kobber-700"
-            onClick={() => setRedigerer(true)}
-          >
-            ✏️ Ret
-          </button>
+          {kanRette && (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              onClick={() => setRedigerer(true)}
+            >
+              ✏️ Ret
+            </button>
+          )}
           {kanFjerne && (
             <button
               className="text-grafit-500 hover:text-kobber-700"
@@ -100,6 +110,15 @@ function IndlaegKort({
               }}
             >
               🗑 Fjern
+            </button>
+          )}
+          {kanSkrive && (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              disabled={pending}
+              onClick={() => skrivTil(p.authorId!)}
+            >
+              ✉️ Skriv
             </button>
           )}
         </div>
@@ -132,6 +151,7 @@ export default function ForumTraad({
   const [ny, setNy] = useState('');
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const router = useRouter();
 
   function koer(fn: () => Promise<void>) {
     setFejl(null);
@@ -140,6 +160,19 @@ export default function ForumTraad({
         await fn();
       } catch (e: any) {
         setFejl(e?.message ?? 'Noget gik galt.');
+      }
+    });
+  }
+
+  // Start (eller genåbn) en privat samtale med en forfatter og hop derhen.
+  function skrivTil(authorId: string) {
+    setFejl(null);
+    start(async () => {
+      try {
+        const id = await startSamtaleMedBruger(authorId);
+        router.push(`/beskeder/${id}`);
+      } catch (e: any) {
+        setFejl(e?.message ?? 'Kunne ikke starte samtalen.');
       }
     });
   }
@@ -164,7 +197,9 @@ export default function ForumTraad({
             traadSlug={traadSlug}
             megId={megId}
             erModerator={erModerator}
+            isLoggedIn={isLoggedIn}
             koer={koer}
+            skrivTil={skrivTil}
             pending={pending}
           />
         ))}

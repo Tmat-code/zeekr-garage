@@ -154,6 +154,37 @@ export type EventDetalje = EventRow & {
 export type MinTilmelding = { tilmeldt: boolean; note: string | null };
 
 // =========================================================================
+// Private beskeder (PB / chat)
+// =========================================================================
+// Den anden part i en 1:1-samtale.
+export type AndenPart = { id: string; navn: string | null; bil: string | null };
+
+// En samtale i indbakke-listen.
+export type SamtaleRow = {
+  id: string;
+  andenPart: AndenPart;
+  sidsteBesked: string | null;
+  sidsteTidspunkt: string;
+  ulaest: boolean;
+};
+
+// En enkelt besked.
+export type Besked = {
+  id: string;
+  body: string;
+  senderId: string | null;
+  createdAt: string;
+};
+
+// En samtale med dens beskeder (detalje-siden).
+export type SamtaleDetalje = {
+  id: string;
+  andenPart: AndenPart;
+  beskeder: Besked[];
+  jegHarBlokeret: boolean;
+};
+
+// =========================================================================
 // Notifikationer
 // =========================================================================
 export type Notifikation = {

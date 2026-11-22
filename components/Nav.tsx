@@ -43,6 +43,9 @@ export default function Nav({ erModerator, indlogget }: Props) {
         )}
         {indlogget ? (
           <div className="flex items-center gap-2 pl-1">
+            <Link href="/beskeder" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+              ✉️ Beskeder
+            </Link>
             <Link href="/garage" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
               🚗 Min garage
             </Link>
@@ -109,6 +112,13 @@ export default function Nav({ erModerator, indlogget }: Props) {
             <div className="mt-1 border-t border-grafit-100 pt-2">
               {indlogget ? (
                 <div className="flex flex-col gap-1">
+                  <Link
+                    href="/beskeder"
+                    onClick={luk}
+                    className="rounded-lg px-3 py-2.5 text-grafit-700 hover:bg-grafit-100"
+                  >
+                    ✉️ Beskeder
+                  </Link>
                   <Link
                     href="/garage"
                     onClick={luk}
