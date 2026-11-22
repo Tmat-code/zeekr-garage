@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (redigerbare forum-regler i UI)
+**Sidst opdateret:** 2026-11-22 (tydelig kommentar-badge på feedback-boardet)
 
 ---
 
@@ -521,6 +521,10 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - Brugt i: `components/forum/ForumOversigt.tsx` (oversigts-rækker, `modelId != null`), `app/forum/[kategori]/page.tsx` (kategori-header), `app/forum/[kategori]/[traad]/page.tsx` (breadcrumb - lille badge). `getTraad` embedder nu `model_id`; `ForumTraadDetalje.kategori` fik `modelId`.
 - DB uændret: `forum_categories.icon` beholder stadig '🚗' for model-fora, men feltet ignoreres nu i rendering af model-rækker. Ingen migration.
 - `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+## Kommentar-badge på feedback-boardet (22-11-2026)
+Kommentartallet pr. melding på `/feedback` var en lille grå `· 💬 N` sidst i chip-rækken - nem at overse. Nu vises det som en tydelig kobber-badge (`bg-kobber-50 text-kobber-700`, "💬 N svar"), så man straks ser hvilke meldinger der har svar. Ren visning: `components/FejlBoard.tsx`, intet nyt data (comments-tallet fandtes allerede via `getIssues`), ingen migration. `tsc` + build grønt.
+- **Senere (ikke bygget):** "nyt siden sidst"-markering (uløste/nye svar siden brugeren sidst så meldingen) kræver per-bruger læse-tracking (ny tabel) - bevidst fravalgt til denne lille opgave.
 
 ## Redigerbare forum-regler (bygget 22-11-2026)
 Forummets fælles spilleregler kan nu redigeres fra Værkstedet i stedet for kun at leve som en fastgjort tråd. Moderator/admin retter teksten ét sted; den vises offentligt på `/forum/regler`.

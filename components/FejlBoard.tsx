@@ -160,7 +160,9 @@ export default function FejlBoard({
                   )}
                   <span className="text-grafit-400">· {relativTid(i.created_at)}</span>
                   {i.comments > 0 && (
-                    <span className="text-grafit-400">· 💬 {i.comments}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-kobber-50 px-2 py-0.5 font-semibold text-kobber-700">
+                      💬 {i.comments} svar
+                    </span>
                   )}
                 </div>
               </div>
