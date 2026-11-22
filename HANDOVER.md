@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P2 - oprydning af moderings-rækken i Værkstedet bygget)
+**Sidst opdateret:** 2026-11-22 (P2 - oprydning af moderings-rækken + tastatur-tilgængelig ⋯-menu bygget)
 
 ---
 
