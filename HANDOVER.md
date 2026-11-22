@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (tydelig kommentar-badge på feedback-boardet)
+**Sidst opdateret:** 2026-11-22 (status "afklaret" + kommentar-badge i Værkstedet)
 
 ---
 
@@ -521,6 +521,18 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - Brugt i: `components/forum/ForumOversigt.tsx` (oversigts-rækker, `modelId != null`), `app/forum/[kategori]/page.tsx` (kategori-header), `app/forum/[kategori]/[traad]/page.tsx` (breadcrumb - lille badge). `getTraad` embedder nu `model_id`; `ForumTraadDetalje.kategori` fik `modelId`.
 - DB uændret: `forum_categories.icon` beholder stadig '🚗' for model-fora, men feltet ignoreres nu i rendering af model-rækker. Ingen migration.
 - `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+## Status "afklaret" + kommentar-badge i Værkstedet (22-11-2026)
+To ting Torben manglede i moderingen (`/admin` → "Alle meldinger", `components/admin/ModereringsTabel.tsx`):
+
+1. **Kommentar-synlighed:** moderings-rækkerne viste ikke om en melding havde svar. Nu en kobber-badge "💬 N svar" i titelrækken der **linker til `/melding/{id}`** (åbner i ny fane), så man kan læse kommentaren inden man sætter status.
+2. **"Markér løst" tvang "Løst i OTA":** knappen satte altid status `loest_i_ota`, selv når der ingen OTA-fix var (fx en fejlinformeret bruger afklaret i en kommentar). Nu er "✅ Markér løst" et **valg** ("Løst hvordan?" → **✅ Løst i OTA** eller **💬 Afklaret**), samme to-trins-mønster som Slet.
+
+- **⚠️ KRÆVER 1 MIGRATION KØRT I STUDIO:** `supabase/migrations/20261122160000_status_afklaret.sql` - `alter type public.issue_status add value if not exists 'afklaret'`. Idempotent. **Indtil den er kørt vil "Afklaret"-knappen fejle** (enum-værdien findes ikke i DB endnu) - resten virker fint.
+- **Ny status `afklaret`** = afsluttet uden OTA-fix. Tilføjet i `lib/config.ts` (STATUSES + STATUS_STYLE, chip `bg-grafit-200 text-grafit-700`, 💬), `lib/rapport-i18n.ts` (da "Afklaret" / en "Clarified" / sv "Klarlagt"), og vises som StatusTag på `/melding/[id]` + det offentlige FejlBoard. Statuslisten er nu `ny → bekraeftet → sendt_til_zeekr → (afklaret | loest_i_ota)`.
+- **TPMS-meldingen Torben fejl-markerede:** når migrationen er kørt, kan han selv rette den fra "Løst i OTA" til "Afklaret" via status-dropdownen i rækken.
+- **Ikke rørt:** rapport-generering inkluderer stadig alle statusser (afklaret-items vises som "Afklaret" i en rapport). Hvis afklarede/ikke-fejl skal ude af Zeekr-rapporten, er det en separat opgave.
+- `tsc` + build grønt (i18n er `Record<Status,...>`, så typecheck tvang alle 3 sprog med).
 
 ## Kommentar-badge på feedback-boardet (22-11-2026)
 Kommentartallet pr. melding på `/feedback` var en lille grå `· 💬 N` sidst i chip-rækken - nem at overse. Nu vises det som en tydelig kobber-badge (`bg-kobber-50 text-kobber-700`, "💬 N svar"), så man straks ser hvilke meldinger der har svar. Ren visning: `components/FejlBoard.tsx`, intet nyt data (comments-tallet fandtes allerede via `getIssues`), ingen migration. `tsc` + build grønt.

@@ -155,7 +155,7 @@ export default function FejlBoard({
                     <span className="chip bg-grafit-100 font-mono text-grafit-600">{i.software_version}</span>
                   )}
                   {i.type === 'fejl' && <SeverityTag severity={i.severity} />}
-                  {(i.status === 'sendt_til_zeekr' || i.status === 'loest_i_ota' || i.status === 'bekraeftet') && (
+                  {(i.status === 'sendt_til_zeekr' || i.status === 'loest_i_ota' || i.status === 'afklaret' || i.status === 'bekraeftet') && (
                     <StatusTag status={i.status} />
                   )}
                   <span className="text-grafit-400">· {relativTid(i.created_at)}</span>

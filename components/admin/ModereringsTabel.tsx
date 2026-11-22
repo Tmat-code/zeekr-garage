@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import {
   STATUSES,
   SEVERITIES,
@@ -24,6 +25,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
   const [fejl, setFejl] = useState<string | null>(null);
   const [redigerer, setRedigerer] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
+  const [markerer, setMarkerer] = useState(false);
   const [titel, setTitel] = useState(issue.title);
   const [beskrivelse, setBeskrivelse] = useState(issue.description);
 
@@ -105,6 +107,16 @@ function Raekke({ issue }: { issue: IssueRow }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-grafit-900">{issue.title}</span>
                 <span className={`chip ${type.chip}`}>{type.badge}</span>
+                {issue.comments > 0 && (
+                  <Link
+                    href={`/melding/${issue.id}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1 rounded-full bg-kobber-50 px-2 py-0.5 text-xs font-semibold text-kobber-700 hover:bg-kobber-100"
+                    title="Se kommentarer"
+                  >
+                    💬 {issue.comments} svar
+                  </Link>
+                )}
               </div>
               <p className="mt-0.5 text-xs text-grafit-500">
                 {modelTekst}
@@ -158,16 +170,55 @@ function Raekke({ issue }: { issue: IssueRow }) {
 
           <span className="flex-1" />
 
-          {issue.status !== 'loest_i_ota' && (
-            <button
-              className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
-              style={{ borderColor: '#4f6f4a', color: '#4f6f4a' }}
-              disabled={pending}
-              onClick={() => koer(() => markerLoest(issue.id))}
-            >
-              ✅ Markér løst
-            </button>
-          )}
+          {issue.status !== 'loest_i_ota' &&
+            issue.status !== 'afklaret' &&
+            (markerer ? (
+              <span className="flex flex-wrap items-center gap-1">
+                <span className="text-xs text-grafit-500">Løst hvordan?</span>
+                <button
+                  className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
+                  style={{ borderColor: '#4f6f4a', color: '#4f6f4a' }}
+                  disabled={pending}
+                  onClick={() =>
+                    koer(async () => {
+                      await markerLoest(issue.id);
+                      setMarkerer(false);
+                    })
+                  }
+                  title="Zeekr har rettet det i en software-opdatering"
+                >
+                  ✅ Løst i OTA
+                </button>
+                <button
+                  className="rounded-lg border border-grafit-300 px-2.5 py-1 text-sm font-medium text-grafit-700 hover:bg-grafit-50"
+                  disabled={pending}
+                  onClick={() =>
+                    koer(async () => {
+                      await saetStatus(issue.id, 'afklaret');
+                      setMarkerer(false);
+                    })
+                  }
+                  title="Afsluttet uden OTA-fix, fx fejlinformeret bruger eller afklaret i en kommentar"
+                >
+                  💬 Afklaret
+                </button>
+                <button
+                  className="btn-ghost !px-2 !py-1 text-sm"
+                  onClick={() => setMarkerer(false)}
+                >
+                  Fortryd
+                </button>
+              </span>
+            ) : (
+              <button
+                className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
+                style={{ borderColor: '#4f6f4a', color: '#4f6f4a' }}
+                disabled={pending}
+                onClick={() => setMarkerer(true)}
+              >
+                ✅ Markér løst
+              </button>
+            ))}
 
           <button
             className="btn-ghost !px-2.5 !py-1 text-sm"

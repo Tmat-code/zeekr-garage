@@ -50,6 +50,7 @@ export default async function MeldingSide({ params }: { params: { id: string } }
         <span className={`chip ${TYPE_META[issue.type].chip}`}>{TYPE_META[issue.type].badge}</span>
         {(issue.status === 'sendt_til_zeekr' ||
           issue.status === 'loest_i_ota' ||
+          issue.status === 'afklaret' ||
           issue.status === 'bekraeftet') && <StatusTag status={issue.status} />}
         {issue.models.map((m) => (
           <span key={m.slug} className="chip bg-grafit-100 text-grafit-700">

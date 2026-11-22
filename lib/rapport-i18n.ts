@@ -65,7 +65,7 @@ export const I18N: Record<RapportSprog, Tekster> = {
     csvKolonner: ['Placering', 'Stemmer', 'Ændring siden sidst', 'Biler bekræftet', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Softwareversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivelse', 'Oprettet', 'Kommentarer'],
     disclaimer: `${SITE.domain} er et uofficielt, uafhængigt ejer-community. Siden er ikke tilknyttet, sponsoreret eller godkendt af ZEEKR, Geely eller deres datterselskaber.`,
     filnavn: 'da',
-    status: { ny: 'Ny', bekraeftet: 'Bekræftet', sendt_til_zeekr: 'Sendt til Zeekr', loest_i_ota: 'Løst i OTA' },
+    status: { ny: 'Ny', bekraeftet: 'Bekræftet', sendt_til_zeekr: 'Sendt til Zeekr', afklaret: 'Afklaret', loest_i_ota: 'Løst i OTA' },
   },
   en: {
     sprognavn: 'English',
@@ -81,7 +81,7 @@ export const I18N: Record<RapportSprog, Tekster> = {
     csvKolonner: ['Rank', 'Votes', 'Change since last', 'Cars confirmed', 'Variants', 'Replies', 'Title', 'Models', 'Software version', 'Phone', 'Phone OS', 'Status', 'Description', 'Created', 'Comments'],
     disclaimer: `${SITE.domain} is an unofficial, independent owner community. The site is not affiliated with, sponsored by or endorsed by ZEEKR, Geely or their subsidiaries.`,
     filnavn: 'en',
-    status: { ny: 'New', bekraeftet: 'Confirmed', sendt_til_zeekr: 'Sent to Zeekr', loest_i_ota: 'Fixed in OTA' },
+    status: { ny: 'New', bekraeftet: 'Confirmed', sendt_til_zeekr: 'Sent to Zeekr', afklaret: 'Clarified', loest_i_ota: 'Fixed in OTA' },
   },
   sv: {
     sprognavn: 'Svenska',
@@ -97,7 +97,7 @@ export const I18N: Record<RapportSprog, Tekster> = {
     csvKolonner: ['Placering', 'Röster', 'Förändring sedan sist', 'Bilar bekräftade', 'Varianter', 'Antal svar', 'Titel', 'Modeller', 'Programvaruversion', 'Telefon', 'Telefon-OS', 'Status', 'Beskrivning', 'Skapad', 'Kommentarer'],
     disclaimer: `${SITE.domain} är en inofficiell, oberoende ägargemenskap. Sidan är inte knuten till, sponsrad av eller godkänd av ZEEKR, Geely eller deras dotterbolag.`,
     filnavn: 'sv',
-    status: { ny: 'Ny', bekraeftet: 'Bekräftad', sendt_til_zeekr: 'Skickad till Zeekr', loest_i_ota: 'Löst i OTA' },
+    status: { ny: 'Ny', bekraeftet: 'Bekräftad', sendt_til_zeekr: 'Skickad till Zeekr', afklaret: 'Klarlagt', loest_i_ota: 'Löst i OTA' },
   },
 };
 

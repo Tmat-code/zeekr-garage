@@ -51,13 +51,15 @@ export const SEVERITY_STYLE: Record<Severity, { label: string; chip: string }> =
 };
 
 // --- Status-flow ---
-// ny -> bekraeftet -> sendt_til_zeekr -> loest_i_ota
-export const STATUSES = ['ny', 'bekraeftet', 'sendt_til_zeekr', 'loest_i_ota'] as const;
+// ny -> bekraeftet -> sendt_til_zeekr -> (afklaret | loest_i_ota)
+// afklaret = afsluttet uden OTA-fix (fx fejlinformeret bruger, afklaret i kommentar).
+export const STATUSES = ['ny', 'bekraeftet', 'sendt_til_zeekr', 'afklaret', 'loest_i_ota'] as const;
 export type Status = (typeof STATUSES)[number];
 
 export const STATUS_STYLE: Record<Status, { label: string; chip: string; ikon: string }> = {
   ny: { label: 'Ny', chip: 'bg-grafit-100 text-grafit-600', ikon: '•' },
   bekraeftet: { label: 'Bekræftet', chip: 'bg-kobber-500 text-white', ikon: '✓' },
   sendt_til_zeekr: { label: 'Sendt til Zeekr', chip: 'bg-grafit-900 text-white', ikon: '→' },
+  afklaret: { label: 'Afklaret', chip: 'bg-grafit-200 text-grafit-700', ikon: '💬' },
   loest_i_ota: { label: 'Løst i OTA', chip: 'bg-loest text-white', ikon: '✓' },
 };
