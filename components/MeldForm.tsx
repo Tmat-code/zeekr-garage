@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { SEVERITIES, SEVERITY_STYLE, type Severity, type IssueType } from '@/lib/config';
+import { SEVERITIES, SEVERITY_STYLE, ISSUE_CATEGORIES, type Severity, type IssueType } from '@/lib/config';
 import type { Model } from '@/lib/types';
 
 export default function MeldForm({
@@ -138,13 +138,19 @@ export default function MeldForm({
         </div>
         <div>
           <label htmlFor="kat" className="label">Kategori <span className="font-normal text-grafit-400">(valgfri)</span></label>
-          <input
+          <select
             id="kat"
             value={kategori}
             onChange={(e) => setKategori(e.target.value)}
-            placeholder="Infotainment, lad, ADAS…"
             className="input"
-          />
+          >
+            <option value="">– vælg kategori –</option>
+            {ISSUE_CATEGORIES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

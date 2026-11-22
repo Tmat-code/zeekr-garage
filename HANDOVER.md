@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (feedback-board: status-filter + dæmpede afsluttede rækker)
+**Sidst opdateret:** 2026-11-22 (feedback-kategorier: 9 faste spande + filter + kuratering)
 
 ---
 
@@ -521,6 +521,15 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - Brugt i: `components/forum/ForumOversigt.tsx` (oversigts-rækker, `modelId != null`), `app/forum/[kategori]/page.tsx` (kategori-header), `app/forum/[kategori]/[traad]/page.tsx` (breadcrumb - lille badge). `getTraad` embedder nu `model_id`; `ForumTraadDetalje.kategori` fik `modelId`.
 - DB uændret: `forum_categories.icon` beholder stadig '🚗' for model-fora, men feltet ignoreres nu i rendering af model-rækker. Ingen migration.
 - `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+## Feedback-kategorier: 9 faste spande (22-11-2026)
+`issues.category` var et frit tekstfelt (alle skrev deres eget → ubrugeligt til filter). Nu en **fast liste af 9 spande** (`ISSUE_CATEGORIES` i `lib/config.ts`, lagret som slug): Kørehjælp & ADAS · Kørsel, bremser & understel · Opladning & rækkevidde · Skærm, stemme & infotainment · App, lås & forbindelse · Lys, ruder & udsyn · Klima, sæder & kabine · Hjul, dæk & TPMS · Andet. Udledt af meldingerne + Zeekr-manualens 22 afsnit komprimeret til ejer-venlige spande.
+- **Oprettelse** (`components/MeldForm.tsx`): fri-tekst-feltet er nu en dropdown (stadig valgfri - oprettelse brydes ikke). Gemmer slug.
+- **Board-filter** (`components/FejlBoard.tsx`): "Alle kategorier"-dropdown ved siden af søgefeltet. **Standard = Alle**, så intet skjules.
+- **Kuratering** (`components/admin/ModereringsTabel.tsx`): kategori-dropdown pr. række i Værkstedet + action `saetKategori` (moderator, validerer slug, revaliderer /admin + / + /feedback). Det er her de ~31 eksisterende mærkes op.
+- **Ingen migration, ingen databrud:** kolonnen var allerede tekst; `category` vises ingen steder som label (kun brugt i søgning), så gamle fri-tekst-værdier bevares urørt og dukker bare op under "Alle" indtil de re-mærkes. `kategoriLabel()`-helper falder tilbage til rå værdi hvis en slug ikke kendes.
+- `tsc` + build grønt.
+- **Næste (aftalt retning):** samme 9 spande genbruges som emne-mærker på forummet (tag + filter, ikke nestede rum) - men først når forummet har tråde. Overvej at vise kategori-chip på board-rækkerne og i rapporten (grupper efter spand → stærkt QA-materiale til Zeekr).
 
 ## Feedback-board: status-filter + dæmpede rækker (22-11-2026)
 Boardet (`/feedback`, `components/FejlBoard.tsx`) blev for langt til at bevare overblik. Nyt status-segment ved siden af type-filteret: **Aktive** (standard) / Afsluttet / Alle.

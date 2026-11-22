@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   STATUSES,
   SEVERITIES,
+  ISSUE_CATEGORIES,
   STATUS_STYLE,
   SEVERITY_STYLE,
   TYPE_META,
@@ -15,6 +16,7 @@ import type { IssueRow } from '@/lib/types';
 import {
   saetStatus,
   saetSeverity,
+  saetKategori,
   markerLoest,
   sletMelding,
   gemRedigering,
@@ -163,6 +165,24 @@ function Raekke({ issue }: { issue: IssueRow }) {
               {SEVERITIES.map((s) => (
                 <option key={s} value={s}>
                   {SEVERITY_STYLE[s].label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* Kategori (kuratering) */}
+          <label className="flex items-center gap-1.5 text-xs text-grafit-500">
+            Kategori
+            <select
+              className="rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm text-grafit-900"
+              value={issue.category ?? ''}
+              disabled={pending}
+              onChange={(e) => koer(() => saetKategori(issue.id, e.target.value))}
+            >
+              <option value="">– ingen –</option>
+              {ISSUE_CATEGORIES.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.label}
                 </option>
               ))}
             </select>

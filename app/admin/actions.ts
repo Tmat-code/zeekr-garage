@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
-import { STATUSES, SEVERITIES, type Status, type Severity } from '@/lib/config';
+import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
 import type { AlleBruger } from '@/lib/queries-admin';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB,
@@ -35,6 +35,20 @@ export async function saetSeverity(issueId: string, severity: Severity): Promise
   const { error } = await sb.from('issues').update({ severity }).eq('id', issueId);
   if (error) throw new Error(error.message);
   revalider();
+}
+
+export async function saetKategori(issueId: string, kategori: string): Promise<void> {
+  await kraevModerator();
+  const gyldig = kategori === '' || ISSUE_CATEGORIES.some((c) => c.slug === kategori);
+  if (!gyldig) throw new Error('Ugyldig kategori.');
+  const sb = supabaseServer();
+  const { error } = await sb
+    .from('issues')
+    .update({ category: kategori || null })
+    .eq('id', issueId);
+  if (error) throw new Error(error.message);
+  revalider();
+  revalidatePath('/feedback');
 }
 
 export async function markerLoest(issueId: string): Promise<void> {

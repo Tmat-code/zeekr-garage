@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IssueRow, Model, GarageBil } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
-import { TYPE_META, type Status } from '@/lib/config';
+import { TYPE_META, ISSUE_CATEGORIES, type Status } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 
@@ -33,6 +33,7 @@ export default function FejlBoard({
   const [modelSlug, setModelSlug] = useState<string | 'alle'>('alle');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('alle');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('aktive');
+  const [kategoriFilter, setKategoriFilter] = useState<string>('alle');
   const [sort, setSort] = useState<Sortering>('stemmer');
 
   const antalFejl = useMemo(() => issues.filter((i) => i.type === 'fejl').length, [issues]);
@@ -60,6 +61,9 @@ export default function FejlBoard({
     if (modelSlug !== 'alle') {
       r = r.filter((i) => i.models.some((m) => m.slug === modelSlug));
     }
+    if (kategoriFilter !== 'alle') {
+      r = r.filter((i) => i.category === kategoriFilter);
+    }
     if (q) {
       r = r.filter(
         (i) =>
@@ -73,7 +77,7 @@ export default function FejlBoard({
         ? b.created_at.localeCompare(a.created_at)
         : b.confirmations - a.confirmations,
     );
-  }, [issues, modelSlug, typeFilter, statusFilter, query, sort]);
+  }, [issues, modelSlug, typeFilter, statusFilter, kategoriFilter, query, sort]);
 
   return (
     <div>
@@ -140,15 +144,30 @@ export default function FejlBoard({
         </div>
       </div>
 
-      {/* Søg + sortering */}
+      {/* Søg + kategori + sortering */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søg i fejl…"
-          className="input sm:max-w-xs"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Søg i fejl…"
+            className="input sm:max-w-xs"
+          />
+          <select
+            value={kategoriFilter}
+            onChange={(e) => setKategoriFilter(e.target.value)}
+            className="input sm:max-w-[13rem]"
+            aria-label="Filtrér på kategori"
+          >
+            <option value="alle">Alle kategorier</option>
+            {ISSUE_CATEGORIES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-grafit-500">
             {viste.length}{' '}

@@ -63,3 +63,31 @@ export const STATUS_STYLE: Record<Status, { label: string; chip: string; ikon: s
   afklaret: { label: 'Afklaret', chip: 'bg-grafit-200 text-grafit-700', ikon: '💬' },
   loest_i_ota: { label: 'Løst i OTA', chip: 'bg-loest text-white', ikon: '✓' },
 };
+
+// --- Feedback-kategorier (bil-subsystemer, "de 9 spande") ---
+// Udledt af meldingerne + Zeekr-manualens inddeling, komprimeret til
+// ejer-venlige spande. Lagres som slug i issues.category. Kurateres i
+// Værkstedet; brugeren vælger groft ved oprettelse. Fri-tekst-værdier fra
+// før denne liste bevares urørt og vises som sig selv (se kategoriLabel).
+export const ISSUE_CATEGORIES = [
+  { slug: 'koerehjaelp-adas', label: 'Kørehjælp & ADAS' },
+  { slug: 'koersel-bremser-understel', label: 'Kørsel, bremser & understel' },
+  { slug: 'opladning-raekkevidde', label: 'Opladning & rækkevidde' },
+  { slug: 'skaerm-infotainment', label: 'Skærm, stemme & infotainment' },
+  { slug: 'app-laas-forbindelse', label: 'App, lås & forbindelse' },
+  { slug: 'lys-ruder-udsyn', label: 'Lys, ruder & udsyn' },
+  { slug: 'klima-saeder-kabine', label: 'Klima, sæder & kabine' },
+  { slug: 'hjul-daek-tpms', label: 'Hjul, dæk & TPMS' },
+  { slug: 'andet', label: 'Andet' },
+] as const;
+
+export type IssueCategorySlug = (typeof ISSUE_CATEGORIES)[number]['slug'];
+
+// slug -> label, med fallback til den rå værdi for gamle fri-tekst-kategorier.
+export const KATEGORI_LABEL: Record<string, string> = Object.fromEntries(
+  ISSUE_CATEGORIES.map((c) => [c.slug, c.label]),
+);
+export function kategoriLabel(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  return KATEGORI_LABEL[slug] ?? slug;
+}
