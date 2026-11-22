@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P1 bygget: Zeekr-rapporten grupperet efter kategori-spand)
+**Sidst opdateret:** 2026-11-22 (P1 + direkte besked-compose bygget)
 
 ---
 
@@ -42,6 +42,7 @@
 - [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
 
 ### Gjort 22-11-2026 (så intet glemmes)
+- [x] **Direkte besked-compose** - skriv til en ejer uden at gå via et oplæg (`/beskeder/ny`, navnesøgning). Ingen migration. Se "## Beskeder: direkte compose".
 - [x] **P1 - Zeekr-rapporten grupperet efter kategori-spand** (PDF + CSV). QA-vinklen mod Zeekr. Ingen migration. Se "## Zeekr-rapport: gruppering efter kategori-spand (P1)".
 - [x] Multi-model garage (migration kørt + verificeret, live). Se "## Multi-model garage".
 - [x] `/admin/beskeder`: moderator-visning af besked-anmeldelser (migration kørt). Se "## Admin: besked-anmeldelser".
@@ -471,11 +472,19 @@ Privat besked-system oven på notifikations-kernen. (Bygget på gren `trin-3-bes
 - **Migration `supabase/migrations/20261122120000_beskeder.sql` (KØRT i Studio 22-11, verificeret: 5 tabeller, 4 funktioner, 1 trigger, 12 policies, messages i realtime):** tabeller `conversations`, `conversation_participants` (m. `last_read_at`), `messages`, `user_blocks`, `message_reports`. Security-definer-helpere `er_deltager(conv)` + `er_blokeret(conv)` (undgår RLS-rekursion på conversation_participants - samme mønster som er_admin). RPC `start_samtale(p_other)` (find-eller-opret 1:1, blok-tjek). Trigger `message_after_insert` (bump last_message_at + **pb_besked-notifikation** til modtager via kernen - én ulæst pr. samtale, opdateres i stedet for at spamme). RLS: deltagere læser samtale/beskeder; send = egen afsender + deltager + ikke blokeret; blokeringer/anmeldelser egne; moderator læser anmeldelser + må slette beskeder. `messages` lagt i `supabase_realtime` + replica identity full.
 - **Backend:** `lib/beskeder.ts` (`getSamtaler`, `getSamtale`, `getUlaesteSamtaler` - separate robuste queries, ingen embedded order/limit). `app/beskeder/actions.ts` (`startSamtaleMedBruger`, `sendBesked`, `markLaest`, `blokerBruger`, `fjernBlok`, `anmeldBesked`). Typer i `lib/types.ts` (`SamtaleRow`/`Besked`/`SamtaleDetalje`/`AndenPart`).
 - **UI:** `/beskeder` (indbakke-liste m. anden part + garage-badge + ulæst-prik), `/beskeder/[id]` (`components/beskeder/SamtaleView.tsx` - bobler mig/dig, composer, **realtime m. setAuth-JWT** (samme fix som klokken), markér-læst ved åbning, blokér/fjern-blok + anmeld).
-- **Indgang:** "✉️ Skriv"-knap på forum-indlæg (ikke egne, kun indlogget) i `ForumTraad.tsx` → `startSamtaleMedBruger` → hopper til samtalen. "✉️ Beskeder"-link i nav (desktop + mobil) for indloggede.
+- **Indgang:** (1) "✉️ Skriv"-knap på forum-indlæg (ikke egne, kun indlogget) i `ForumTraad.tsx` → `startSamtaleMedBruger` → hopper til samtalen. (2) **Ny: "Ny besked"-compose** (`/beskeder/ny`) - direkte mellem brugere uden oplæg, se "## Beskeder: direkte compose". "✉️ Beskeder"-link i nav (desktop + mobil) for indloggede.
 - **pb_besked i klokken:** notifikations-kernens `NotifBell` viser pb_besked generisk (tekst + href `/beskeder/<id>`); klik hopper til samtalen. `markLaest` rydder pb_besked-notifikationer for samtalen.
 - **VERIFICERET LIVE 22-11-2026 (via Chrome, Torben + Test konto):** "✉️ Skriv" på forum-indlæg → samtale oprettet + navigeret; send besked (RLS insert) → boble; **realtime begge veje** (svar indsat i Studio dukkede op live uden reload, setAuth-JWT); **pb_besked-klokke** tikkede live da samtalen var lukket, dropdown viste "Test konto sendte dig en besked", klik → samtale + markér læst; **blokér** → composer deaktiveret. Al testdata ryddet op bagefter (convs/parts/msgs/blocks/pb_notifs = 0).
 - **Rettet edge (commit efter):** at anmelde en samtale UDEN beskeder sendte et tomt (ugyldigt) besked-id → `anmeldBesked` sender nu `null` som message_id.
 - **Mangler/senere:** gruppe-samtaler (modellen holder til det); billeder i beskeder. (Moderator-visning af anmeldelser er nu bygget - se "## Admin: besked-anmeldelser".)
+
+## Beskeder: direkte compose (bygget 22-11-2026)
+Man kan nu skrive direkte til en anden ejer uden at gå via et forum-indlæg. Motoren (conversations/messages/blokering/anmeldelse/ulæst) fandtes i forvejen - det der manglede var en modtager-indgang. **Ingen migration:** profiler er offentligt læsbare (`profiles_read_all`), og `start_samtale`-RPC'en håndterer alle vagtværker (ikke dig selv, bruger findes, ikke blokeret).
+
+- **Søgning:** `soegBrugere(q)` i `lib/beskeder.ts` - delstrengs-match på `display_name` (renset for PostgREST-metategn), bil-badge med, ekskluderer mig selv + blokerede begge veje, limit 10. Server-action `soegModtagere(q)` i `app/beskeder/actions.ts` (kræver login).
+- **UI:** `/beskeder/ny` (`app/beskeder/ny/page.tsx` + `components/beskeder/NyBeskedView.tsx`): debounced søgefelt (min. 2 tegn, ignorerer forældede svar via seq-ref), resultatliste m. navn + garage-badge, klik → `startSamtaleMedBruger` → `/beskeder/<id>`. "Ny besked"-knap + opdateret tekst/empty-state på `/beskeder`. `ny` kolliderer ikke med `[id]` (statisk segment vinder; conv-id'er er uuid'er).
+- **Note (spam-flade):** cold-DM via navnesøgning er nu mulig. Afbødet af eksisterende blokér + anmeld + `message_reports`. Navne/bil-badges er i forvejen offentlige på forum, så søgningen afslører intet nyt. Kan gates senere (fx kun præcist navn) hvis det bliver et problem.
+- `npm run build` grønt. Ingen DB-ændring, ingen Studio-kørsel.
 
 ## Admin: besked-anmeldelser (bygget 22-11-2026)
 Moderator-visning i Værkstedet af anmeldte private beskeder. Lukker backlog-punktet `/admin/beskeder`.

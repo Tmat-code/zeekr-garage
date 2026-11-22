@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
+import { soegBrugere } from '@/lib/beskeder';
+import type { AndenPart } from '@/lib/types';
 
 async function kraevBruger() {
   const sb = supabaseServer();
@@ -10,6 +12,13 @@ async function kraevBruger() {
   } = await sb.auth.getUser();
   if (!user) throw new Error('Log ind for at skrive beskeder.');
   return { sb, user };
+}
+
+// Søg modtagere til "Ny besked"-compose. Kræver login; selve filtreringen
+// (mig selv + blokerede) ligger i soegBrugere.
+export async function soegModtagere(q: string): Promise<AndenPart[]> {
+  await kraevBruger();
+  return soegBrugere(q);
 }
 
 // Find-eller-opret en 1:1-samtale med en anden bruger. Returnerer samtale-id.

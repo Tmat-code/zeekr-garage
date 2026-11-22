@@ -31,14 +31,22 @@ export default async function BeskederSide() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Beskeder</h1>
-      <p className="mt-1 text-sm text-grafit-500">
-        Private samtaler med andre ejere. Start en samtale fra et forum-indlæg.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Beskeder</h1>
+          <p className="mt-1 text-sm text-grafit-500">
+            Private samtaler med andre ejere.
+          </p>
+        </div>
+        <Link href="/beskeder/ny" className="btn-primary shrink-0 !py-2 text-sm">
+          Ny besked
+        </Link>
+      </div>
 
       {samtaler.length === 0 ? (
         <div className="mt-6 rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-6 text-center text-sm text-grafit-500">
-          Du har ingen samtaler endnu. Klik "✉️ Skriv" ved en andens forum-indlæg for at starte en.
+          Du har ingen samtaler endnu. Klik "Ny besked" for at skrive direkte til en ejer -
+          eller start en fra en andens forum-indlæg.
         </div>
       ) : (
         <div className="mt-5 space-y-2">

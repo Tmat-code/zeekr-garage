@@ -115,3 +115,50 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
 export async function getUlaesteSamtaler(): Promise<number> {
   return (await getSamtaler()).filter((s) => s.ulaest).length;
 }
+
+// Søg brugere på visningsnavn (til "Ny besked"-compose - direkte mellem
+// brugere uden at gå via et oplæg). Profiler er offentligt læsbare
+// (profiles_read_all), så ingen RPC/migration nødvendig. Ekskluderer mig selv
+// og brugere jeg har blokeret eller er blokeret af (begge veje), så en
+// blokeret bruger ikke dukker op som ny modtager.
+export async function soegBrugere(q: string): Promise<AndenPart[]> {
+  const sb = supabaseServer();
+  const meg = await minId();
+  if (!meg) return [];
+
+  // Rens input: fjern PostgREST-wildcards/metategn så søgningen er et rent
+  // delstrengs-match (ingen injektion i ilike-mønstret).
+  const term = q.trim().replace(/[%,()*\\]/g, ' ').trim();
+  if (term.length < 2) return [];
+
+  const udeluk = new Set<string>([meg]);
+  const { data: blocks } = await sb
+    .from('user_blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${meg},blocked_id.eq.${meg}`);
+  for (const b of (blocks ?? []) as any[]) {
+    udeluk.add(b.blocker_id === meg ? b.blocked_id : b.blocker_id);
+  }
+
+  const { data } = await sb
+    .from('profiles')
+    .select(
+      `id, display_name,
+       bil:models!profiles_car_model_id_fkey ( name ),
+       variant:variants!profiles_car_variant_id_fkey ( name )`,
+    )
+    .not('display_name', 'is', null)
+    .ilike('display_name', `%${term}%`)
+    .order('display_name', { ascending: true })
+    .limit(25);
+
+  return ((data ?? []) as any[])
+    .filter((p) => !udeluk.has(p.id))
+    .slice(0, 10)
+    .map((p): AndenPart => {
+      const modelNavn = p.bil?.name ?? null;
+      const variantNavn = p.variant?.name ?? null;
+      const bil = modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
+      return { id: p.id, navn: p.display_name ?? null, bil };
+    });
+}
