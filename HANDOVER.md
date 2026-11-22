@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (status "afklaret" + kommentar-badge i Værkstedet)
+**Sidst opdateret:** 2026-11-22 (feedback-board: status-filter + dæmpede afsluttede rækker)
 
 ---
 
@@ -521,6 +521,15 @@ De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typog
 - Brugt i: `components/forum/ForumOversigt.tsx` (oversigts-rækker, `modelId != null`), `app/forum/[kategori]/page.tsx` (kategori-header), `app/forum/[kategori]/[traad]/page.tsx` (breadcrumb - lille badge). `getTraad` embedder nu `model_id`; `ForumTraadDetalje.kategori` fik `modelId`.
 - DB uændret: `forum_categories.icon` beholder stadig '🚗' for model-fora, men feltet ignoreres nu i rendering af model-rækker. Ingen migration.
 - `npx tsc --noEmit` grønt. Deployet via n8n-poller.
+
+## Feedback-board: status-filter + dæmpede rækker (22-11-2026)
+Boardet (`/feedback`, `components/FejlBoard.tsx`) blev for langt til at bevare overblik. Nyt status-segment ved siden af type-filteret: **Aktive** (standard) / Afsluttet / Alle.
+- Aktive = ny + bekraeftet + sendt_til_zeekr (den røde tråd). Afsluttet = afklaret + loest_i_ota (udfald).
+- Standard-visning er nu kun aktive, så listen er kortere fra start. I "Alle"-visning **dæmpes** afsluttede rækker (`opacity-60`), så aktive står frem. Rent klient, data fandtes allerede, ingen migration. `tsc` + build grønt.
+- Arkitektur-retning aftalt (ikke bygget endnu, så visionen ikke smuldrer):
+  - **Fælles emne-rygrad** for feedback + forum: bil-subsystemer (Kørehjælp & ADAS, Lys & udsyn, Skærm & infotainment, Opladning & rækkevidde, Klima & komfort, App & forbindelse, Kørsel/understel/bremser, Hjul/dæk/TPMS, + Andet). Udkast - skal afprøves på feedback først.
+  - **Feedback-kategorier (næste konkrete skridt):** `issues.category` er allerede fri tekst (MeldForm beder om det frit → derfor rodet). Lav det om til en **fast liste** (dropdown ved oprettelse + filter på board + kuraterbar i Værkstedet). Ingen migration (kolonnen er tekst). Kræver en engangs-kategorisering af de ~31 eksisterende.
+  - **Forum:** allerede struktureret (model-rum under "Modellerne" + emne-rum under Teknik/Ejer-lounge/Fællesskab/Marked/Velkommen) - men **tomt for tråde**. Konklusion: strukturér IKKE mere nu; et tomt forum er et indholdsproblem. Lad struktur vokse ud af rigtige tråde; favorisér søgning + visninger ("seneste aktivitet", "ubesvarede", "min model") frem for flere tomme rum. Polestar-forummet (272 sider, flad) er advarslen, ikke skabelonen.
 
 ## Status "afklaret" + kommentar-badge i Værkstedet (22-11-2026)
 To ting Torben manglede i moderingen (`/admin` → "Alle meldinger", `components/admin/ModereringsTabel.tsx`):

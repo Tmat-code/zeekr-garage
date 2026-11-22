@@ -4,12 +4,17 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IssueRow, Model, GarageBil } from '@/lib/types';
 import { relativTid } from '@/lib/tid';
-import { TYPE_META } from '@/lib/config';
+import { TYPE_META, type Status } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 
 type Sortering = 'stemmer' | 'nyeste';
 type TypeFilter = 'alle' | 'fejl' | 'oenske';
+type StatusFilter = 'aktive' | 'afsluttet' | 'alle';
+
+// Aktive = i spil; Afsluttet = løst/afklaret (udfald, ikke den røde tråd).
+const AKTIVE_STATUS: Status[] = ['ny', 'bekraeftet', 'sendt_til_zeekr'];
+const AFSLUTTET_STATUS: Status[] = ['afklaret', 'loest_i_ota'];
 
 export default function FejlBoard({
   issues,
@@ -27,14 +32,28 @@ export default function FejlBoard({
   const [query, setQuery] = useState('');
   const [modelSlug, setModelSlug] = useState<string | 'alle'>('alle');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('alle');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('aktive');
   const [sort, setSort] = useState<Sortering>('stemmer');
 
   const antalFejl = useMemo(() => issues.filter((i) => i.type === 'fejl').length, [issues]);
   const antalOensker = useMemo(() => issues.filter((i) => i.type === 'oenske').length, [issues]);
+  const antalAktive = useMemo(
+    () => issues.filter((i) => AKTIVE_STATUS.includes(i.status)).length,
+    [issues],
+  );
+  const antalAfsluttet = useMemo(
+    () => issues.filter((i) => AFSLUTTET_STATUS.includes(i.status)).length,
+    [issues],
+  );
 
   const viste = useMemo(() => {
     const q = query.trim().toLowerCase();
     let r = issues;
+    if (statusFilter === 'aktive') {
+      r = r.filter((i) => AKTIVE_STATUS.includes(i.status));
+    } else if (statusFilter === 'afsluttet') {
+      r = r.filter((i) => AFSLUTTET_STATUS.includes(i.status));
+    }
     if (typeFilter !== 'alle') {
       r = r.filter((i) => i.type === typeFilter);
     }
@@ -70,23 +89,45 @@ export default function FejlBoard({
         ))}
       </div>
 
-      {/* Type-filter: Alle / Fejl / Ønsker */}
-      <div className="mb-4 inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
-        {([
-          { key: 'alle', navn: 'Alle', antal: issues.length },
-          { key: 'fejl', navn: 'Fejl', antal: antalFejl },
-          { key: 'oenske', navn: 'Ønsker', antal: antalOensker },
-        ] as const).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTypeFilter(t.key)}
-            className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
-              typeFilter === t.key ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'
-            }`}
-          >
-            {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
-          </button>
-        ))}
+      {/* Status- + type-filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* Status: Aktive (standard) / Afsluttet / Alle */}
+        <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
+          {([
+            { key: 'aktive', navn: 'Aktive', antal: antalAktive },
+            { key: 'afsluttet', navn: 'Afsluttet', antal: antalAfsluttet },
+            { key: 'alle', navn: 'Alle', antal: issues.length },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setStatusFilter(t.key)}
+              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                statusFilter === t.key ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'
+              }`}
+            >
+              {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Type: Alle / Fejl / Ønsker */}
+        <div className="inline-flex gap-1 rounded-lg bg-grafit-100 p-1">
+          {([
+            { key: 'alle', navn: 'Alle', antal: issues.length },
+            { key: 'fejl', navn: 'Fejl', antal: antalFejl },
+            { key: 'oenske', navn: 'Ønsker', antal: antalOensker },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTypeFilter(t.key)}
+              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                typeFilter === t.key ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'
+              }`}
+            >
+              {t.navn} <span className="font-normal opacity-60">({t.antal})</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Søg + sortering */}
@@ -128,7 +169,14 @@ export default function FejlBoard({
       ) : (
         <ul className="grid gap-3">
           {viste.map((i) => (
-            <li key={i.id} className="kort flex items-start gap-4 p-4 sm:p-5">
+            <li
+              key={i.id}
+              className={`kort flex items-start gap-4 p-4 sm:p-5 ${
+                statusFilter === 'alle' && AFSLUTTET_STATUS.includes(i.status)
+                  ? 'opacity-60'
+                  : ''
+              }`}
+            >
               <ConfirmButton
                 issueId={i.id}
                 issueModelIds={i.models.map((m) => m.id)}
