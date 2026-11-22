@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
 import type { Kommentar } from '@/lib/types';
 import {
@@ -10,6 +11,7 @@ import {
   sletKommentar,
   markerLoesning,
 } from '@/app/melding/actions';
+import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 
 function KommentarKort({
   k,
@@ -26,10 +28,13 @@ function KommentarKort({
   koer: (fn: () => Promise<void>) => void;
   pending: boolean;
 }) {
+  const router = useRouter();
   const [redigerer, setRedigerer] = useState(false);
   const [tekst, setTekst] = useState(k.body);
   const minEgen = !!megId && k.author_id === megId;
   const kanRette = minEgen || erModerator;
+  // Skriv privat til en anden ejer direkte fra deres kommentar (ikke egne, kun indlogget).
+  const kanSkrive = !!megId && !!k.author_id && k.author_id !== megId;
 
   return (
     <div
@@ -83,8 +88,22 @@ function KommentarKort({
         <p className="mt-1.5 whitespace-pre-line text-grafit-800">{k.body}</p>
       )}
 
-      {!redigerer && (erModerator || kanRette) && (
+      {!redigerer && (erModerator || kanRette || kanSkrive) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+          {kanSkrive && (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              disabled={pending}
+              onClick={() =>
+                koer(async () => {
+                  const convId = await startSamtaleMedBruger(k.author_id!);
+                  router.push(`/beskeder/${convId}`);
+                })
+              }
+            >
+              ✉️ Skriv privat
+            </button>
+          )}
           {erModerator && (
             <button
               className="font-medium"
