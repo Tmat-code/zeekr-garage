@@ -301,6 +301,16 @@ export type AdgangBruger = {
 };
 export type AdgangInvitation = { email: string; role: string; created_at: string };
 
+// Som AdgangBruger, men role kan være null (en vilkårlig oprettet bruger uden rolle).
+export type AlleBruger = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: string | null;
+  sidst_logget: string | null;
+  oprettet: string;
+};
+
 export async function getAdgange(): Promise<{
   brugere: AdgangBruger[];
   invitationer: AdgangInvitation[];

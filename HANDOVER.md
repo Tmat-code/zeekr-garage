@@ -327,7 +327,7 @@ Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_ka
 ## NÆSTE SESSION - plan (aftalt med Torben 22-11-2026)
 Rækkefølge: **(1) notifikations-kerne + forum-svar-notifikationer → (2) Adgange: søg alle brugere + tildel rolle → (3) chat/PB oven på notifikationssystemet.** Notifikationer bygges FØRST, fordi de giver værdi alene (forum-svar) og afrisikerer plumbing'en inden den store chat-bid.
 
-**Status 22-11-2026: trin (1) BYGGET + LIVE** (se afsnit nedenfor). **← NÆSTE: trin (2) Adgange-forbedring**, derefter trin (3) chat/PB oven på notifikations-kernen.
+**Status 22-11-2026: trin (1) + (2) BYGGET + LIVE** (se afsnit nedenfor). **← NÆSTE: trin (3) chat/PB oven på notifikations-kernen.**
 
 ### 1) Notifikationer (ét samlet system) - BYGGET + LIVE 22-11-2026
 Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "indbakke". **Trin 1 af planen færdigt.** Første kilde: forum-svar. Plumbingen (tabeller + realtime + RLS + klokke-UI) ligger klar til at chatten (trin 3) kan skrive til samme indbakke.
@@ -362,10 +362,13 @@ Facebook-agtig klokke i nav'en med ulæst-tal; alle features skriver til samme "
 - **E-mail: IN-APP FØRST.** E-mail pr. svar bliver støjende → senere som opt-in eller daglig samle-mail (Resend findes allerede).
 - **RLS:** ejer læser/markerer kun egne notifikationer; indsættelse sker kun via trigger (security definer), ikke direkte fra klient.
 
-### 2) Adgange-forbedring (Værkstedet) - søg alle brugere + tildel rolle
-- **Nu:** `admin_brugere()` viser KUN brugere der allerede har en rolle; roller gives via e-mail-invitation (`admin_inviter`). Torben vil kunne **søge en hvilken som helst oprettet bruger frem og give rollen direkte**, uden at kende mailen på forhånd.
-- **Mangler:** ny RPC `admin_alle_brugere(p_soeg text)` (security definer, `er_admin()`-gated) der returnerer ALLE profiler + email/display_name/role/sidst_logget/oprettet, filtreret på søgetekst (email ILIKE / display_name ILIKE), evt. pagineret. **`admin_saet_rolle(p_bruger, p_rolle)` FINDES allerede** (sætter/fjerner rolle, null = fjern) → genbruges direkte.
-- **UI i `components/admin/AdgangePanel.tsx`:** søgefelt over alle brugere; hver træffer viser navn/mail/nuværende rolle + rolle-vælger (Ingen / moderator / admin) → kalder eksisterende `saetRolle`-action. Behold e-mail-invitationen til folk der endnu ikke har oprettet sig.
+### 2) Adgange-forbedring (Værkstedet) - søg alle brugere + tildel rolle - BYGGET 22-11-2026
+Admin kan nu søge en hvilken som helst oprettet bruger frem (på navn eller email) og give rollen direkte, uden at kende mailen på forhånd. Email-invitationen beholdt til folk der endnu ikke har oprettet en konto.
+- **Migration `supabase/migrations/20261122110000_adgange_soeg.sql` (KØRT i Studio 22-11-2026):** ny RPC `admin_alle_brugere(p_soeg text)` - security definer, `er_admin()`-gated i WHERE (ikke-admin → tom liste, samme mønster som `admin_brugere`). Returnerer ALLE profiler + email/display_name/role/sidst_logget/oprettet, filtreret på `email ilike` / `display_name ilike` (tom søgetekst → alle), `order by (role is null), email limit 50`. **Kan ikke data-testes i Studio SQL-editoren** (auth.uid() er null dér → er_admin() false → 0 rækker); testes i app'en som indlogget admin.
+- **`admin_saet_rolle(p_bruger, p_rolle)` genbrugt** (fandtes; null = fjern rolle).
+- **`lib/queries-admin.ts`:** ny type `AlleBruger` (som `AdgangBruger` men `role` nullable). **`app/admin/actions.ts`:** ny `soegBrugere(soeg)` (admin-gated, kalder RPC).
+- **`components/admin/AdgangePanel.tsx`:** nyt "Søg brugere"-afsnit (søgefelt + knap). Hver træffer: navn/mail + nuværende rolle-badge (eller "ingen rolle") + rolle-vælger (Ingen / Moderator / Admin) → kalder `saetRolle`; egen konto = lockout-værn ("kan ikke ændre egen adgang"). Efter rolle-skift genindlæses søgeresultatet. Viser op til 50.
+- `npx tsc --noEmit` + `npm run build` grønt. Deployet via n8n-poller. **Mangler kun: live-verifikation i app'en som admin.**
 
 ### 3) Chat / PB mellem brugere (byg oven på notifikationskernen)
 - **Tabeller:** samtaler + beskeder (+ deltagere); ulæst-markering pr. bruger pr. samtale.

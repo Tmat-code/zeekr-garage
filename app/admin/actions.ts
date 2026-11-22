@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, type Status, type Severity } from '@/lib/config';
+import type { AlleBruger } from '@/lib/queries-admin';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB,
 // men vi stopper tidligt med en laesbar fejl.
@@ -76,6 +77,15 @@ export async function inviterBruger(email: string, rolle: string): Promise<'sat'
   if (error) throw new Error(error.message);
   revalidatePath('/admin/adgange');
   return (data as 'sat' | 'inviteret') ?? 'inviteret';
+}
+
+// Søg blandt ALLE oprettede brugere (email eller visningsnavn). Admin-gated.
+export async function soegBrugere(soeg: string): Promise<AlleBruger[]> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('admin_alle_brugere', { p_soeg: soeg.trim() });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AlleBruger[];
 }
 
 export async function saetRolle(brugerId: string, rolle: string | null): Promise<void> {
