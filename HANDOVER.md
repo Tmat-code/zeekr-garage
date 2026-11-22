@@ -25,6 +25,21 @@
 - [ ] Antal ejere pr. model-forum.
 - [ ] Live-verifikation af rolletildeling i Adgange (Torben kører selv - blev bevidst ikke automatiseret).
 
+**Feedback-board** (stort dagsværk 22-11)
+- [x] ~~Status "afklaret" (afsluttet uden OTA-fix)~~ **BYGGET 22-11** (migration kørt i Studio). Se "## Status "afklaret" + kommentar-badge".
+- [x] ~~Kommentar-badge + "Markér løst" som valg (Løst i OTA / Afklaret) i Værkstedet~~ **BYGGET 22-11**.
+- [x] ~~Status-filter (Aktive/Afsluttet/Alle) + dæmpede afsluttede rækker~~ **BYGGET 22-11**.
+- [x] ~~9 faste kategori-spande + filter på board + krævet dropdown ved oprettelse + kuratering i Værkstedet~~ **BYGGET 22-11** (ingen migration). Se "## Feedback-kategorier".
+- [ ] **Mærk de ~31 eksisterende meldinger op med kategori** (Torben, engangs, i Værkstedet).
+- [ ] Kategori-chip på board-rækkerne (visning, så spanden ses uden at filtrere).
+- [ ] Gruppér rapporten til Zeekr efter kategori-spand (QA-guld).
+- [ ] Ryd op i den tætpakkede moderings-række i Værkstedet (vote/status/alvor/kategori/løst/redigér/slet begynder at klemme).
+
+**Forum - struktur (IA-beslutning 22-11, uddybet i "## Feedback-kategorier")**
+- Beslutning: forummet **struktureres ikke mere nu** - det er tomt for tråde, så det er et indholds-, ikke et strukturproblem. Lad struktur vokse ud af rigtige tråde.
+- Beslutning: når det struktureres, bruges de **9 feedback-spande som emne-tags/filter**, ikke nestede rum pr. model (undgår model×emne tomme-rum-eksplosion). Model forbliver rum/filter; emne er et mærke man vælger ved oprettelse; findbarhed bæres af **søgning**, ikke af perfekt kategorisering (brugeren vælger aldrig helt rigtigt - moderator kuraterer).
+- Den gamle model-først-plan i "## Næste op" er hermed forfinet på struktur-spørgsmålet.
+
 **Billeder**
 - [ ] Redigering af et indlægs billeder (edit er pt. kun tekst).
 - [ ] Oprydning af forældreløse storage-filer ved soft-remove af indlæg.
