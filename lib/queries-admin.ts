@@ -370,3 +370,44 @@ export async function getAktivitet(): Promise<Aktivitet> {
     roligstTime,
   };
 }
+
+// =========================================================================
+// Besked-anmeldelser - moderator-visning (Vaerkstedet)
+// =========================================================================
+// Beriget anmeldelse: raekke fra message_reports + den anmeldte besked (body,
+// afsender) + anmelderens navn. Hentes via RPC admin_besked_anmeldelser, fordi
+// messages-RLS ellers kun lader deltagere laese besked-indholdet (moderatoren
+// er ikke deltager). RPC'en er moderator-gated og laekker kun anmeldte beskeder.
+export type BeskedAnmeldelse = {
+  id: string;
+  messageId: string | null;
+  conversationId: string | null;
+  reason: string | null;
+  handled: boolean;
+  createdAt: string;
+  anmelderNavn: string;
+  beskedBody: string | null;
+  beskedSenderId: string | null;
+  beskedSenderNavn: string | null;
+  beskedCreatedAt: string | null;
+};
+
+export async function getBeskedAnmeldelser(): Promise<BeskedAnmeldelse[]> {
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('admin_besked_anmeldelser');
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as any[]).map((r): BeskedAnmeldelse => ({
+    id: r.report_id,
+    messageId: r.message_id ?? null,
+    conversationId: r.conversation_id ?? null,
+    reason: r.reason ?? null,
+    handled: !!r.handled,
+    createdAt: r.created_at,
+    anmelderNavn: r.reporter_navn ?? 'En ejer',
+    beskedBody: r.besked_body ?? null,
+    beskedSenderId: r.besked_sender_id ?? null,
+    beskedSenderNavn: r.besked_sender_navn ?? null,
+    beskedCreatedAt: r.besked_created_at ?? null,
+  }));
+}

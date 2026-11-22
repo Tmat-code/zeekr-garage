@@ -41,6 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/forum" className="btn-ghost !py-1.5 text-sm">
             💬 Forum
           </Link>
+          <Link href="/admin/beskeder" className="btn-ghost !py-1.5 text-sm">
+            🚩 Anmeldelser
+          </Link>
           <Link href="/admin/rapport" className="btn-ghost !py-1.5 text-sm">
             📮 Rapport
           </Link>

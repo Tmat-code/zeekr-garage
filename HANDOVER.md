@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (multi-model garage)
+**Sidst opdateret:** 2026-11-22 (admin: besked-anmeldelser)
 
 ---
 
@@ -18,7 +18,7 @@
 - [x] ~~**Multi-model garage**~~ **BYGGET + LIVE 22-11-2026** (migration kørt i Studio + verificeret, flettet til main, deployer via n8n). Se eget afsnit "## Multi-model garage" nedenfor.
 
 **Værkstedet/moderering**
-- [ ] `/admin/beskeder`: moderator-visning af besked-anmeldelser (`message_reports` + RLS er klar, siden mangler).
+- [x] ~~`/admin/beskeder`: moderator-visning af besked-anmeldelser~~ **BYGGET 22-11-2026** (kræver 1 ny migration kørt i Studio - se "## Admin: besked-anmeldelser" nedenfor).
 - [ ] Redigerbare forum-regler i UI.
 - [ ] Kategori-editor kan ikke flytte en kategori mellem grupper (kræver SQL i dag).
 - [ ] Tværgående tråd-søgning.
@@ -458,7 +458,24 @@ Privat besked-system oven på notifikations-kernen. (Bygget på gren `trin-3-bes
 - **pb_besked i klokken:** notifikations-kernens `NotifBell` viser pb_besked generisk (tekst + href `/beskeder/<id>`); klik hopper til samtalen. `markLaest` rydder pb_besked-notifikationer for samtalen.
 - **VERIFICERET LIVE 22-11-2026 (via Chrome, Torben + Test konto):** "✉️ Skriv" på forum-indlæg → samtale oprettet + navigeret; send besked (RLS insert) → boble; **realtime begge veje** (svar indsat i Studio dukkede op live uden reload, setAuth-JWT); **pb_besked-klokke** tikkede live da samtalen var lukket, dropdown viste "Test konto sendte dig en besked", klik → samtale + markér læst; **blokér** → composer deaktiveret. Al testdata ryddet op bagefter (convs/parts/msgs/blocks/pb_notifs = 0).
 - **Rettet edge (commit efter):** at anmelde en samtale UDEN beskeder sendte et tomt (ugyldigt) besked-id → `anmeldBesked` sender nu `null` som message_id.
-- **Mangler/senere:** moderator-visning af anmeldelser i Værkstedet (`message_reports` + RLS er klar, men ingen `/admin/beskeder`-side endnu); gruppe-samtaler (modellen holder til det); billeder i beskeder.
+- **Mangler/senere:** gruppe-samtaler (modellen holder til det); billeder i beskeder. (Moderator-visning af anmeldelser er nu bygget - se "## Admin: besked-anmeldelser".)
+
+## Admin: besked-anmeldelser (bygget 22-11-2026)
+Moderator-visning i Værkstedet af anmeldte private beskeder. Lukker backlog-punktet `/admin/beskeder`.
+
+- **⚠️ KRÆVER 1 MIGRATION KØRT I STUDIO (ellers viser siden en fejl):** `supabase/migrations/20261122130000_besked_anmeldelser.sql`. Kør den i Zeekr-instansens SQL-editor (`http://192.168.1.18:8002`, Studio). Idempotent (create-or-replace), så kan køres igen uden skade. Ingen ny tabel - kun én RPC.
+- **Hvorfor en RPC og ikke bare RLS:** beskeder-migrationen gav allerede `message_reports` + RLS (moderator SELECT/UPDATE på anmeldelser, `messages_delete_mod` på beskeder). MEN `messages_select` er `er_deltager(conversation_id)` - en moderator er ikke deltager i en privat samtale og kan derfor IKKE læse selve besked-indholdet via RLS. Så "RLS er klar" var kun halvt rigtigt: moderatoren kunne se anmeldelses-rækken, men ikke hvad der blev anmeldt → ville moderere i blinde.
+- **Privatlivsvalg:** i stedet for en bred `messages_select_mod`-politik (= moderatorer kan læse ALLE private DM'er) eksponerer RPC'en `admin_besked_anmeldelser()` KUN de konkret anmeldte beskeder, beriget med body + afsender-navn + anmelder-navn. Security definer, `er_moderator()`-gated, uhåndterede først. En moderator ser altså kun det, nogen har anmeldt.
+- **Filer:**
+  - Migration (ovenfor).
+  - `lib/queries-admin.ts`: `getBeskedAnmeldelser()` + type `BeskedAnmeldelse` (kalder RPC'en).
+  - `app/admin/beskeder-actions.ts`: `saetAnmeldelseHaandteret(reportId, handled)` (RLS `reports_update_mod`) + `sletAnmeldtBesked(reportId, messageId)` (RLS `messages_delete_mod`; markerer bagefter alle anmeldelser på beskeden håndteret). Begge `kraevModerator()`-gated.
+  - `components/admin/AnmeldelserPanel.tsx`: client. Filter nye/alle, kort pr. anmeldelse (begrundelse + den anmeldte besked), markér håndteret/ny, slet besked (bekræft-trin), "Åbn samtale"-link.
+  - `app/admin/beskeder/page.tsx`: server-side (force-dynamic), henter + viser.
+  - `app/admin/layout.tsx`: "🚩 Anmeldelser"-link i Værkstedet-headeren.
+- **Adfærd:** besked-FK i `message_reports` er `on delete set null`, så når en anmeldt besked slettes, bliver anmeldelsen stående som historik (vist som "Beskeden er slettet"). Anmeldelse uden udpeget besked (hele samtalen anmeldt, `message_id = null`) vises med begrundelse + "Åbn samtale", uden slet-knap.
+- **Verificering:** `npm run build` grøn. Live-test mangler (kræver migration kørt + en rigtig anmeldelse). Test-vej: anmeld en besked som bruger (✉️-flow på `/beskeder/[id]`) → se den i `/admin/beskeder` som moderator.
+- **Mangler/senere:** kontekst omkring en anmeldt besked (pt. kun selve beskeden, ikke de omkringliggende - bevidst, af privatlivshensyn); ulæst-badge på header-linket.
 
 ## Store forum-features ønsket (bruger-feedback 21-11-2026)
 - **Chat mellem brugere + notifikationer** - planlagt til næste session, se "## NÆSTE SESSION - plan" ovenfor.
