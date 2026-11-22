@@ -49,6 +49,8 @@ export type IssueRow = {
   comments: number;
   // Seneste softwareversion nogen har bekraeftet paa (valgfri visning).
   software_version: string | null;
+  // Vedhaeftede billeder (foto-bevis) - offentlige URL'er, i display-raekkefoelge.
+  billeder: string[];
 };
 
 // En kommentar ("Byggemøde") paa en melding.

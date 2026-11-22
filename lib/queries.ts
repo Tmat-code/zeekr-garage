@@ -1,11 +1,13 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
+import { meldBilledeUrl } from '@/lib/billeder';
 import type { IssueRow, Model, Kommentar, VariantMap, MinBil, GarageBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
 const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
        legacy_stemmer,
        issue_models ( models ( id, slug, name, platform ) ),
+       issue_images ( path, display_order ),
        confirmations ( count ),
        comments ( count )`;
 
@@ -18,6 +20,9 @@ function mapIssue(row: any): IssueRow {
   // Vist stemmetal = live konto-bekræftelser + importeret legacy-baseline.
   const confirmations = liveConf + (row.legacy_stemmer ?? 0);
   const comments = Array.isArray(row.comments) ? (row.comments[0]?.count ?? 0) : 0;
+  const billeder = ((row.issue_images ?? []) as any[])
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((im: any) => meldBilledeUrl(im.path));
   return {
     id: row.id,
     type: (row.type ?? 'fejl') as IssueType,
@@ -31,6 +36,7 @@ function mapIssue(row: any): IssueRow {
     confirmations,
     comments,
     software_version: row.software_version ?? null,
+    billeder,
   };
 }
 

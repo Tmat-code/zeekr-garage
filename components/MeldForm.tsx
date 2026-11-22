@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { SEVERITIES, SEVERITY_STYLE, ISSUE_CATEGORIES, type Severity, type IssueType } from '@/lib/config';
+import { MELD_BUCKET, MAKS_ANTAL, meldBilledeUrl } from '@/lib/billeder';
+import BilledeUpload from '@/components/forum/BilledeUpload';
 import type { Model } from '@/lib/types';
 
 export default function MeldForm({
@@ -31,6 +33,7 @@ export default function MeldForm({
   const [phoneOs, setPhoneOs] = useState('');
   const [severity, setSeverity] = useState<Severity>('middel');
   const [valgte, setValgte] = useState<string[]>([]);
+  const [billeder, setBilleder] = useState<string[]>([]);
   const [fejl, setFejl] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -81,6 +84,18 @@ export default function MeldForm({
         .insert(valgte.map((model_id) => ({ issue_id: issue.id, model_id })));
       if (e2) throw e2;
 
+      // Kobl vedhæftede billeder (foto-bevis) til meldingen. Kun paths i egen
+      // mappe (<user_id>/...) - RLS tjekker også ejerskab. Best-effort: en fejl
+      // her må ikke tabe selve meldingen (billederne ryddes evt. senere, P9).
+      const rene = billeder
+        .filter((p) => typeof p === 'string' && p.startsWith(`${user.id}/`))
+        .slice(0, MAKS_ANTAL);
+      if (rene.length > 0) {
+        await sb
+          .from('issue_images')
+          .insert(rene.map((path, i) => ({ issue_id: issue.id, path, display_order: i })));
+      }
+
       router.push('/');
       router.refresh();
     } catch {
@@ -121,6 +136,19 @@ export default function MeldForm({
           placeholder={erOenske ? 'Hvad ønsker du, og hvorfor ville det gøre bilen bedre?' : 'Hvad sker der, hvornår, og hvordan genskaber man det?'}
           className="input"
         />
+      </div>
+
+      <div>
+        <label className="label">
+          Billeder{' '}
+          <span className="font-normal text-grafit-400">(valgfrit)</span>
+        </label>
+        <p className="mb-2 text-xs text-grafit-500">
+          {erOenske
+            ? 'Vedhæft fx en skitse eller et eksempel på funktionen.'
+            : 'Foto-bevis vejer tungt over for Zeekr - skærmbillede af fejlbesked/OTA-skærm, en fysisk defekt eller en log.'}
+        </p>
+        <BilledeUpload bucket={MELD_BUCKET} urlFor={meldBilledeUrl} onChange={setBilleder} disabled={busy} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

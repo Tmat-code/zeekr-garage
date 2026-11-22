@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P2 - oprydning af moderings-rækken + tastatur-tilgængelig ⋯-menu bygget)
+**Sidst opdateret:** 2026-11-22 (P3 - billeder/foto-bevis i feedback-meldinger bygget; kræver migration i Studio)
 
 ---
 
@@ -19,7 +19,7 @@
 ### Næste op (byg i denne rækkefølge)
 > QA-værdi øverst (bygges nu uanset trafik). **Forum-klyngen** (P4 søgning, P5 auto-moderering, P6 ejer-antal) forudsætter rigtig forum-trafik - forummet er pt. tomt for tråde - så de kan bygges proaktivt, men hastes ikke før der kommer liv i forummet.
 - [x] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** BYGGET 22-11 (ingen migration). Se "## Værksted: oprydning af moderings-rækken (P2)".
-- [ ] **P3 - Billeder i feedback-meldinger.** Foto-bevis i fejlmeldinger styrker QA-sagen mod Zeekr markant. Større: storage + upload-flow. (Billed-sporet samlet: P3 → P8 → P9.)
+- [x] **P3 - Billeder i feedback-meldinger.** BYGGET 22-11. **Kræver migration kørt i Zeekr-Studio (port 8002) før det virker live** - se "## Feedback-meldinger: billeder (P3)". (Billed-sporet: P3 ✓ → P8 → P9.)
 - [ ] **P4 - Tværgående tråd-søgning (forum).** IA-strategien hviler bevidst på søgning for findbarhed (ikke perfekt kategorisering). Medium.
 - [ ] **P5 - Auto-moderering (forum): AI-flagning af grov tone/personangreb.** Mål: holde forummet civilt - "et forum Zeekr kan være stolt af". **Fase 1 = flag-only:** AI markerer forum-tråde/svar med mulig grov tone/personangreb og lægger dem i en kø i Værkstedet; moderator bekræfter. **Ingen auto-skjul/slet** (passer på "kø, ikke patrulje" + undgår at gøre brugerne uret). **Kun forum-indhold** - IKKE feedback-meldinger (dem kuraterer Torben selv før rapport, og de 31 er allerede i god tone). Autonomi (auto-skjul-til-review) kan øges senere. Beslægtet med AI-dedup-roadmap. Medium/større (model-kald + kø-UI).
 - [ ] **P6 - Antal ejere pr. model-forum.** Social proof / "her sker der noget". Lille/medium.
@@ -43,6 +43,7 @@
 - [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
 
 ### Gjort 22-11-2026 (så intet glemmes)
+- [x] **P3 - Billeder/foto-bevis i feedback-meldinger** - upload på `/meld`, visning på board-kort (thumbnails + 📷-tal) og melding-detalje (galleri). Migration `20261122190000_meld_billeder.sql` (bucket `meld` + tabel `issue_images`) **skal køres i Zeekr-Studio**. Se "## Feedback-meldinger: billeder (P3)".
 - [x] **P15 - Bruger-sletning af samtaler (skjul-for-mig)** - brugere kan fjerne egne samtaler fra indbakken uden SQL i Studio. Migration `20261122180000_samtale_skjul.sql`. Se "## Beskeder: bruger-sletning af samtaler (P15)".
 - [x] **Direkte besked-compose + in-context-knap** - skriv til en ejer uden oplæg (`/beskeder/ny`, navnesøgning) + "✉️ Skriv privat" på kommentar-forfattere. Besked-indgangen er nu hel. Ingen migration. Se "## Beskeder: direkte compose".
 - [x] **P1 - Zeekr-rapporten grupperet efter kategori-spand** (PDF + CSV). QA-vinklen mod Zeekr. Ingen migration. Se "## Zeekr-rapport: gruppering efter kategori-spand (P1)".
@@ -129,6 +130,7 @@ Platform-feltet lader systemet foreslå relaterede modeller og vise fx "fejl ram
 - `zeekr_reports` (periode, model-scope, udvalgte issues, status)
 
 Forum-indhold (kategorier, tråde, indlæg) får egne custom-tabeller i samme Supabase - se forum-datamodel i "Næste op".
+- `issue_images` (billeder pr. melding: `issue_id` → issues, `path` i `meld`-bucket, `display_order`). Billed-spor = `meld`-bucket (adskilt fra forummets `forum`-bucket). Se "## Feedback-meldinger: billeder (P3)".
 
 ## Moderering
 - **Kø, ikke patrulje:** struktur + Discourse trust levels + flag-kø + AI-dedup af fejlmeldinger (match ny melding mod eksisterende).
@@ -497,6 +499,20 @@ Man kan nu skrive direkte til en anden ejer uden at gå via et forum-indlæg. Mo
 - `npm run build` grønt. Ingen DB-ændring, ingen Studio-kørsel.
 - **In-context-indgang (bygget 22-11):** "✉️ Skriv privat"-knap på kommentar-forfattere (Byggemøde) i `components/Kommentarer.tsx` (ikke egne, kun indlogget) → `startSamtaleMedBruger` → `/beskeder/<id>`. Dermed er besked-indgangen hel: forum-forfattere + kommentar-forfattere + compose-søgning. **Ikke muligt andre steder:** `/garage` er brugerens egen (ingen andre ejere), melding-siden eksponerer ingen forfatter, og event-deltagere (`EventDeltager`) bærer kun navn/note - intet bruger-id at skrive til.
 - **VERIFICERET LIVE 22-11-2026 (Chrome, Torben):** compose virker - søg (`test` → Test konto, ingen bil-badge), compose → samtale åbnede rigtig samtale-id, og **blokeret-ekskludering bekræftet** (blokeret Test konto forsvandt fra søgningen → "Ingen ejere matcher", blokering fjernet igen). Rest: én tom samtale med Test konto (kan ryddes i Studio som sidst). In-context kommentar-knappen kunne IKKE øves live endnu - sitet er under opbygning, og board-kommentarerne er porteret seed-data uden `author_id` (knappen vises korrekt ikke på dem). Den dukker op af sig selv når en registreret bruger (ikke én selv) kommenterer.
+
+## Feedback-meldinger: billeder (P3) (bygget 22-11-2026)
+Foto-bevis i fejlmeldinger. En fejl med et skærmbillede (OTA-fejlbesked, fysisk defekt, log) vejer tungere over for Zeekr end ren tekst - styrker QA-sagen. Første trin i billed-sporet **P3 → P8 (redigér billeder) → P9 (oprydning af forældreløse filer)**.
+
+- **⚠️ KRÆVER 1 MIGRATION KØRT I STUDIO FØR det virker live:** `supabase/migrations/20261122190000_meld_billeder.sql`. Kør i Zeekr-instansens SQL-editor (`http://192.168.1.18:8002`, Studio → SQL). Idempotent. Opretter: storage-bucket `meld` (public read, kun billeder, 5 MB) + 4 storage-policies + tabel `public.issue_images` + 3 RLS-policies. **PostgREST er all-or-nothing:** `issue_images` SKAL findes før koden deployes, ellers fejler ALLE board/melding-queries (`getIssues`/`getIssueDetalje` selecter nu `issue_images`). Kør migrationen FØR/samtidig med at deployen går live.
+- **Arkitektur = kopi af forum-billedmønsteret** (`20261122130000_forum_billeder.sql`), men **egen bucket + egen tabel** (`meld` / `issue_images`), så oprydning (P9) og regler kan holdes adskilt fra forummets `forum`/`forum_post_images`.
+- **Upload (klient, i MeldForm):** browseren uploader direkte til Storage med brugerens JWT til `<user_id>/<uuid>.<ext>` (RLS: egen mappe). Efter `issues`-insert + `issue_models`-insert kobles paths i `issue_images` (filtreret til egen mappe, maks 6). **Best-effort:** fejler billed-koblingen, tabes selve meldingen IKKE (evt. forældreløse filer ryddes i P9).
+- **Genbrugt komponent:** `components/forum/BilledeUpload.tsx` er generaliseret med props `bucket` / `urlFor` / `maksAntal` (forum-default uændret). `/meld` kalder den med `bucket="meld"` + `meldBilledeUrl`.
+- **Visning:** board-kort (`FejlBoard.tsx`) viser 📷-tal + op til 3 thumbnails (klik → melding); melding-detalje (`/melding/[id]`) viser galleri ("Foto-bevis" for fejl, "Billeder" for ønske), klik åbner fuld-billede i ny fane. Begge via `issue.billeder` (offentlige URL'er), hentet i `ISSUE_SELECT`/`mapIssue` (`lib/queries.ts`).
+- **Datalag:** `lib/billeder.ts` har nu `MELD_BUCKET` + `meldBilledeUrl` + fælles `billedeUrl(bucket,path)`. `IssueRow.billeder: string[]` tilføjet. Tilladte typer/størrelse (JPG/PNG/WebP/GIF, 5 MB, 6 stk.) deles med forum.
+- **Stil:** grafit/kobber, ingen ny farve; genbrugte mønstre. Almindelige bindestreger.
+- `npm run build` grønt.
+- **Live-test mangler** (kræver migration kørt). Test-vej: log ind → `/meld` → vælg fejl → udfyld → "Tilføj billede" (1-6 stk.) → meld → se thumbnails på board-kortet og galleri på detaljen. Tjek også at en melding UDEN billeder ser uændret ud.
+- **Åbent/næste i sporet:** P8 = redigér et indlægs billeder (melding-edit findes ikke endnu - kun kommentarer kan rettes); P9 = ryd forældreløse `meld`-filer når en melding slettes (cascade fjerner `issue_images`-rækker, men ikke selve storage-filerne).
 
 ## Beskeder: bruger-sletning af samtaler (P15) (bygget 22-11-2026)
 Brugere kan nu selv fjerne egne samtaler fra indbakken, så oprydning ikke kræver SQL i Studio. **Semantik: skjul-for-mig** (ikke hård sletning).

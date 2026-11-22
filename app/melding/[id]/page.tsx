@@ -83,6 +83,27 @@ export default async function MeldingSide({ params }: { params: { id: string } }
           {issue.type === 'fejl' ? 'Sådan opleves fejlen' : 'Ønsket'}
         </h2>
         <p className="mt-2 whitespace-pre-line text-grafit-800">{issue.description}</p>
+
+        {issue.billeder.length > 0 && (
+          <div className="mt-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-grafit-400">
+              {issue.type === 'fejl' ? 'Foto-bevis' : 'Billeder'}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {issue.billeder.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Billede ${i + 1} til meldingen`}
+                    loading="lazy"
+                    className="max-h-64 rounded-lg border border-grafit-200 object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stem */}

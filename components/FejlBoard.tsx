@@ -246,7 +246,35 @@ export default function FejlBoard({
                       💬 {i.comments} svar
                     </span>
                   )}
+                  {i.billeder.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-grafit-100 px-2 py-0.5 font-semibold text-grafit-600">
+                      📷 {i.billeder.length}
+                    </span>
+                  )}
                 </div>
+                {i.billeder.length > 0 && (
+                  <Link
+                    href={`/melding/${i.id}`}
+                    className="mt-2 flex flex-wrap gap-1.5"
+                    aria-label="Se billeder på meldingen"
+                  >
+                    {i.billeder.slice(0, 3).map((url, n) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={n}
+                        src={url}
+                        alt=""
+                        loading="lazy"
+                        className="h-14 w-14 rounded-lg border border-grafit-200 object-cover"
+                      />
+                    ))}
+                    {i.billeder.length > 3 && (
+                      <span className="flex h-14 w-14 items-center justify-center rounded-lg border border-grafit-200 bg-grafit-50 text-xs font-semibold text-grafit-500">
+                        +{i.billeder.length - 3}
+                      </span>
+                    )}
+                  </Link>
+                )}
               </div>
               <Link
                 href={`/melding/${i.id}`}

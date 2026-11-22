@@ -12,15 +12,23 @@ import {
 
 type Item = { path: string; url: string };
 
-// Billed-upload til forum-indlæg. Uploader direkte til Supabase Storage med
-// brugerens session (RLS: egen mappe <user_id>/...) og giver forælderen de
-// gemte paths via onChange. Visning sker via den offentlige URL.
+// Billed-upload. Uploader direkte til Supabase Storage med brugerens session
+// (RLS: egen mappe <user_id>/...) og giver forælderen de gemte paths via
+// onChange. Visning sker via den offentlige URL.
+// Standard = forum-bucketen; /meld sender bucket='meld' + egen urlFor, så
+// samme komponent dækker begge spor uden at røre forum-opførslen.
 export default function BilledeUpload({
   onChange,
   disabled,
+  bucket = FORUM_BUCKET,
+  urlFor = forumBilledeUrl,
+  maksAntal = MAKS_ANTAL,
 }: {
   onChange: (paths: string[]) => void;
   disabled?: boolean;
+  bucket?: string;
+  urlFor?: (path: string) => string;
+  maksAntal?: number;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [uploader, setUploader] = useState(false);
@@ -41,7 +49,7 @@ export default function BilledeUpload({
       return;
     }
 
-    const plads = MAKS_ANTAL - items.length;
+    const plads = maksAntal - items.length;
     const valgte = Array.from(files).slice(0, Math.max(0, plads));
     const nye: Item[] = [];
     for (const f of valgte) {
@@ -56,13 +64,13 @@ export default function BilledeUpload({
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error } = await sb.storage
-        .from(FORUM_BUCKET)
+        .from(bucket)
         .upload(path, f, { contentType: f.type, upsert: false });
       if (error) {
         setFejl('Upload fejlede: ' + error.message);
         continue;
       }
-      nye.push({ path, url: forumBilledeUrl(path) });
+      nye.push({ path, url: urlFor(path) });
     }
 
     const alle = [...items, ...nye];
@@ -75,7 +83,7 @@ export default function BilledeUpload({
   async function fjern(path: string) {
     // Best-effort: fjern den uploadede fil igen (indlægget er ikke oprettet endnu).
     try {
-      await supabaseBrowser().storage.from(FORUM_BUCKET).remove([path]);
+      await supabaseBrowser().storage.from(bucket).remove([path]);
     } catch {
       /* ignoreres - forældreløs fil kan ryddes senere */
     }
@@ -90,13 +98,13 @@ export default function BilledeUpload({
         <button
           type="button"
           className="btn-ghost !py-1.5 text-sm"
-          disabled={disabled || uploader || items.length >= MAKS_ANTAL}
+          disabled={disabled || uploader || items.length >= maksAntal}
           onClick={() => inputRef.current?.click()}
         >
           📷 {uploader ? 'Uploader…' : 'Tilføj billede'}
         </button>
         <span className="text-xs text-grafit-400">
-          {items.length}/{MAKS_ANTAL} · maks 5 MB
+          {items.length}/{maksAntal} · maks 5 MB
         </span>
         <input
           ref={inputRef}
