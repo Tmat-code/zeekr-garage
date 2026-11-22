@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   STATUSES,
@@ -22,6 +22,94 @@ import {
   gemRedigering,
 } from '@/app/admin/actions';
 
+const LOEST_GROEN = '#4f6f4a';
+const selectKlasse =
+  'rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm text-grafit-900';
+
+// Ét klassificerings-felt: lille label over en dropdown, så de tre
+// (status/alvor/kategori) laeser som én enhed i stedet for tre loese ting.
+function Felt({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-0.5">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-grafit-400">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+// Overloebs-menu (⋯) til de sjaeldnere/destruktive handlinger, så de ikke
+// kaemper om pladsen med den daglige klassificering.
+function HandlingerMenu({
+  disabled,
+  children,
+}: {
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="rounded-lg border border-grafit-200 px-2.5 py-1 text-base leading-none text-grafit-500 hover:border-grafit-300 hover:text-grafit-700"
+        aria-label="Flere handlinger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋯
+      </button>
+      {open && (
+        <>
+          {/* Usynlig bagvaeg lukker menuen ved klik udenfor. */}
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="menu"
+            className="absolute right-0 z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-grafit-200 bg-white py-1 shadow-lg"
+            onClick={() => setOpen(false)}
+          >
+            {children}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MenuPunkt({
+  onClick,
+  danger,
+  children,
+}: {
+  onClick: () => void;
+  danger?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+        danger
+          ? 'text-kobber-700 hover:bg-kobber-50'
+          : 'text-grafit-700 hover:bg-grafit-50'
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 function Raekke({ issue }: { issue: IssueRow }) {
   const [pending, start] = useTransition();
   const [fejl, setFejl] = useState<string | null>(null);
@@ -33,6 +121,8 @@ function Raekke({ issue }: { issue: IssueRow }) {
 
   const type = TYPE_META[issue.type];
   const modelTekst = issue.models.map((m) => m.name).join(', ') || '-';
+  const kanLoeses =
+    issue.status !== 'loest_i_ota' && issue.status !== 'afklaret';
 
   function koer(fn: () => Promise<void>) {
     setFejl(null);
@@ -135,120 +225,66 @@ function Raekke({ issue }: { issue: IssueRow }) {
       </div>
 
       {!redigerer && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {/* Status */}
-          <label className="flex items-center gap-1.5 text-xs text-grafit-500">
-            Status
-            <select
-              className="rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm text-grafit-900"
-              value={issue.status}
-              disabled={pending}
-              onChange={(e) => koer(() => saetStatus(issue.id, e.target.value as Status))}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_STYLE[s].label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-grafit-100 pt-3">
+          {/* Klassificering: de tre dropdowns samlet som én enhed */}
+          <div className="flex flex-wrap items-end gap-2">
+            <Felt label="Status">
+              <select
+                className={selectKlasse}
+                value={issue.status}
+                disabled={pending}
+                onChange={(e) =>
+                  koer(() => saetStatus(issue.id, e.target.value as Status))
+                }
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_STYLE[s].label}
+                  </option>
+                ))}
+              </select>
+            </Felt>
 
-          {/* Alvorlighed */}
-          <label className="flex items-center gap-1.5 text-xs text-grafit-500">
-            Alvor
-            <select
-              className="rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm text-grafit-900"
-              value={issue.severity}
-              disabled={pending}
-              onChange={(e) => koer(() => saetSeverity(issue.id, e.target.value as Severity))}
-            >
-              {SEVERITIES.map((s) => (
-                <option key={s} value={s}>
-                  {SEVERITY_STYLE[s].label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Felt label="Alvor">
+              <select
+                className={selectKlasse}
+                value={issue.severity}
+                disabled={pending}
+                onChange={(e) =>
+                  koer(() => saetSeverity(issue.id, e.target.value as Severity))
+                }
+              >
+                {SEVERITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {SEVERITY_STYLE[s].label}
+                  </option>
+                ))}
+              </select>
+            </Felt>
 
-          {/* Kategori (kuratering) */}
-          <label className="flex items-center gap-1.5 text-xs text-grafit-500">
-            Kategori
-            <select
-              className="rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm text-grafit-900"
-              value={issue.category ?? ''}
-              disabled={pending}
-              onChange={(e) => koer(() => saetKategori(issue.id, e.target.value))}
-            >
-              <option value="">– ingen –</option>
-              {ISSUE_CATEGORIES.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Felt label="Kategori">
+              <select
+                className={selectKlasse}
+                value={issue.category ?? ''}
+                disabled={pending}
+                onChange={(e) => koer(() => saetKategori(issue.id, e.target.value))}
+              >
+                <option value="">– ingen –</option>
+                {ISSUE_CATEGORIES.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </Felt>
+          </div>
 
           <span className="flex-1" />
 
-          {issue.status !== 'loest_i_ota' &&
-            issue.status !== 'afklaret' &&
-            (markerer ? (
-              <span className="flex flex-wrap items-center gap-1">
-                <span className="text-xs text-grafit-500">Løst hvordan?</span>
-                <button
-                  className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
-                  style={{ borderColor: '#4f6f4a', color: '#4f6f4a' }}
-                  disabled={pending}
-                  onClick={() =>
-                    koer(async () => {
-                      await markerLoest(issue.id);
-                      setMarkerer(false);
-                    })
-                  }
-                  title="Zeekr har rettet det i en software-opdatering"
-                >
-                  ✅ Løst i OTA
-                </button>
-                <button
-                  className="rounded-lg border border-grafit-300 px-2.5 py-1 text-sm font-medium text-grafit-700 hover:bg-grafit-50"
-                  disabled={pending}
-                  onClick={() =>
-                    koer(async () => {
-                      await saetStatus(issue.id, 'afklaret');
-                      setMarkerer(false);
-                    })
-                  }
-                  title="Afsluttet uden OTA-fix, fx fejlinformeret bruger eller afklaret i en kommentar"
-                >
-                  💬 Afklaret
-                </button>
-                <button
-                  className="btn-ghost !px-2 !py-1 text-sm"
-                  onClick={() => setMarkerer(false)}
-                >
-                  Fortryd
-                </button>
-              </span>
-            ) : (
-              <button
-                className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
-                style={{ borderColor: '#4f6f4a', color: '#4f6f4a' }}
-                disabled={pending}
-                onClick={() => setMarkerer(true)}
-              >
-                ✅ Markér løst
-              </button>
-            ))}
-
-          <button
-            className="btn-ghost !px-2.5 !py-1 text-sm"
-            onClick={() => setRedigerer(true)}
-          >
-            ✏️ Redigér
-          </button>
-
+          {/* Handlinger: Markér løst synlig, resten i ⋯-menuen */}
           {bekraeftSlet ? (
             <span className="flex items-center gap-1">
+              <span className="mr-1 text-xs text-grafit-500">Slet denne melding?</span>
               <button
                 className="rounded-lg bg-kobber-600 px-2.5 py-1 text-sm font-semibold text-white hover:bg-kobber-700"
                 disabled={pending}
@@ -263,13 +299,62 @@ function Raekke({ issue }: { issue: IssueRow }) {
                 Fortryd
               </button>
             </span>
+          ) : markerer ? (
+            <span className="flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-xs text-grafit-500">Løst hvordan?</span>
+              <button
+                className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
+                style={{ borderColor: LOEST_GROEN, color: LOEST_GROEN }}
+                disabled={pending}
+                onClick={() =>
+                  koer(async () => {
+                    await markerLoest(issue.id);
+                    setMarkerer(false);
+                  })
+                }
+                title="Zeekr har rettet det i en software-opdatering"
+              >
+                ✅ Løst i OTA
+              </button>
+              <button
+                className="rounded-lg border border-grafit-300 px-2.5 py-1 text-sm font-medium text-grafit-700 hover:bg-grafit-50"
+                disabled={pending}
+                onClick={() =>
+                  koer(async () => {
+                    await saetStatus(issue.id, 'afklaret');
+                    setMarkerer(false);
+                  })
+                }
+                title="Afsluttet uden OTA-fix, fx fejlinformeret bruger eller afklaret i en kommentar"
+              >
+                💬 Afklaret
+              </button>
+              <button
+                className="btn-ghost !px-2 !py-1 text-sm"
+                onClick={() => setMarkerer(false)}
+              >
+                Fortryd
+              </button>
+            </span>
           ) : (
-            <button
-              className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
-              onClick={() => setBekraeftSlet(true)}
-            >
-              🗑 Slet
-            </button>
+            <div className="flex items-center gap-2">
+              {kanLoeses && (
+                <button
+                  className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
+                  style={{ borderColor: LOEST_GROEN, color: LOEST_GROEN }}
+                  disabled={pending}
+                  onClick={() => setMarkerer(true)}
+                >
+                  ✅ Markér løst
+                </button>
+              )}
+              <HandlingerMenu disabled={pending}>
+                <MenuPunkt onClick={() => setRedigerer(true)}>✏️ Redigér</MenuPunkt>
+                <MenuPunkt danger onClick={() => setBekraeftSlet(true)}>
+                  🗑 Slet
+                </MenuPunkt>
+              </HandlingerMenu>
+            </div>
           )}
         </div>
       )}

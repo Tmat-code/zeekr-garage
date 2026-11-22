@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P15 - bruger-sletning af samtaler (skjul-for-mig) bygget)
+**Sidst opdateret:** 2026-11-22 (P2 - oprydning af moderings-rækken i Værkstedet bygget)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### Næste op (byg i denne rækkefølge)
 > QA-værdi øverst (bygges nu uanset trafik). **Forum-klyngen** (P4 søgning, P5 auto-moderering, P6 ejer-antal) forudsætter rigtig forum-trafik - forummet er pt. tomt for tråde - så de kan bygges proaktivt, men hastes ikke før der kommer liv i forummet.
-- [ ] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** vote/status/alvor/kategori/løst/redigér/slet klemmer. Gør den daglige kuratering holdbar. Lille/medium, ingen migration. Se `components/admin/ModereringsTabel.tsx`.
+- [x] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** BYGGET 22-11 (ingen migration). Se "## Værksted: oprydning af moderings-rækken (P2)".
 - [ ] **P3 - Billeder i feedback-meldinger.** Foto-bevis i fejlmeldinger styrker QA-sagen mod Zeekr markant. Større: storage + upload-flow. (Billed-sporet samlet: P3 → P8 → P9.)
 - [ ] **P4 - Tværgående tråd-søgning (forum).** IA-strategien hviler bevidst på søgning for findbarhed (ikke perfekt kategorisering). Medium.
 - [ ] **P5 - Auto-moderering (forum): AI-flagning af grov tone/personangreb.** Mål: holde forummet civilt - "et forum Zeekr kan være stolt af". **Fase 1 = flag-only:** AI markerer forum-tråde/svar med mulig grov tone/personangreb og lægger dem i en kø i Værkstedet; moderator bekræfter. **Ingen auto-skjul/slet** (passer på "kø, ikke patrulje" + undgår at gøre brugerne uret). **Kun forum-indhold** - IKKE feedback-meldinger (dem kuraterer Torben selv før rapport, og de 31 er allerede i god tone). Autonomi (auto-skjul-til-review) kan øges senere. Beslægtet med AI-dedup-roadmap. Medium/større (model-kald + kø-UI).
@@ -259,6 +259,13 @@ Formands-/moderator-panel, pendant til bugherrers "Byggeledelse" (brugeren sendt
 - `app/admin/actions.ts`: `gemForsideBesked(message, active)` (`erAdmin`-gated).
 - `components/admin/ForsideBeskedEditor.tsx`: textarea + Tænd/Sluk + Gem, status-pille.
 - `app/page.tsx`: banner øverst på forsiden når aktiv.
+
+**P2 - oprydning af moderings-rækken (bygget 22-11-2026):**
+Rækken i `ModereringsTabel.tsx` proppede vote/status/alvor/kategori/løst/redigér/slet på én wrap-linje. Nu tredelt så daglig kuratering er roligere at læse:
+- **Klassificering samlet:** de tre dropdowns (Status/Alvor/Kategori) er nu én gruppe med lille label OVER hver (uppercase, dæmpet), venstrestillet. Læses som "klassificér denne melding" i stedet for tre løse felter. Kontrol-rækken har fået en tynd top-streg (`border-t`) der adskiller den fra titel/meta.
+- **Handlinger skilt fra:** "✅ Markér løst" forbliver synlig (primær daglig handling, beholder den olivengrønne `#4f6f4a`). Redigér + Slet er flyttet ind i en ⋯-overløbsmenu (ny `HandlingerMenu` + `MenuPunkt` i samme fil; åbner/lukker på klik, lukkes af usynlig bagvæg). Slet-bekræftelsen ("Slet denne melding? → Bekræft slet / Fortryd") og løst-undervalget ("Løst hvordan? → OTA / Afklaret / Fortryd") vises stadig inline, men udløses nu fra menuen hhv. knappen.
+- Ingen adfærdsændring i server actions (`saetStatus`/`saetSeverity`/`saetKategori`/`markerLoest`/`sletMelding`/`gemRedigering` uændrede), ingen migration, ingen datamodel-ændring. Rene display/layout-ændringer.
+- Gentag `selectKlasse`-konstanten + `Felt`-helper reducerer gentagelse. `tsc --noEmit` grøn + fuld `next build` grøn.
 
 **Roadmap (resten af bugherrers panel - ikke bygget endnu):**
 - ~~**Zeekr-rapport** (skærm 2,3,6)~~ **BYGGET 20-11-2026** - porteret fra bugherrer. Se eget afsnit "## Zeekr-rapport (porteret fra bugherrer)" nederst.
