@@ -31,6 +31,7 @@
 - [ ] **P12 - Gruppe-samtaler i beskeder** (datamodellen holder til det).
 - [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
 - [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
+- [ ] **P15 - Bruger-sletning af samtaler.** Lad brugere selv fjerne egne samtaler fra indbakken (rydde op), så det ikke kræver SQL i Studio. **Anbefalet semantik: skjul-for-mig** - `hidden_at`-kolonne på `conversation_participants`, filtreres fra i `getSamtaler`, dukker op igen hvis den anden skriver. Mindst destruktivt (kan ikke udslette den andens historik) vs. hård sletning for begge. Lille + én migration (Studio). Semantik ikke endeligt valgt af Torben endnu. (Torbens tanke 22-11.)
 
 ### Senere / roadmap (ikke planlagt endnu)
 - [ ] Q&A / guides-sektion.
