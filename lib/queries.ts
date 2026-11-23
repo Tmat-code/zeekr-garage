@@ -41,12 +41,27 @@ function mapIssue(row: any): IssueRow {
 }
 
 // --- Modeller ---
+// Returnerer KUN modeller i omloeb. Arkiverede modeller (P18) er ude af alle
+// "vaelg model"-lister (Min garage, signup, /meld, board-filter) - men bevares
+// paa eksisterende biler/bekraeftelser og i rapporten (historik intakt).
 export async function getModels(): Promise<Model[]> {
   const sb = supabaseServer();
-  const { data, error } = await sb
+  let { data, error } = await sb
     .from('models')
     .select('id, slug, name, platform, display_order')
+    .eq('archived', false)
     .order('display_order', { ascending: true });
+
+  // archived-kolonnen findes maaske ikke endnu (foer P18-migrationen er koert i
+  // Studio). Fald tilbage til ufiltreret, saa de offentlige sider ikke braekker
+  // i vinduet mellem deploy og migration (intet er arkiveret foer migrationen
+  // alligevel, da arkiverings-RPC'en ogsaa foerst findes derefter).
+  if (error) {
+    ({ data, error } = await sb
+      .from('models')
+      .select('id, slug, name, platform, display_order')
+      .order('display_order', { ascending: true }));
+  }
 
   if (error || !data || data.length === 0) {
     // Fallback hvis DB ikke kan naas - siden virker stadig.

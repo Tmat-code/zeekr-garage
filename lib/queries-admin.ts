@@ -411,3 +411,39 @@ export async function getBeskedAnmeldelser(): Promise<BeskedAnmeldelse[]> {
     beskedCreatedAt: r.besked_created_at ?? null,
   }));
 }
+
+// =========================================================================
+// Modeller-panel (P18): oversigt over modeller med brugs-tal + arkiv-status.
+// En raekke pr. model (ogsaa arkiverede, saa de kan genaktiveres), via
+// security-definer RPC admin_model_oversigt (er_admin-gated, korrekte tal
+// uanset RLS). Styrer slet (kun tomme) / arkiver (i brug) / genaktiver.
+// =========================================================================
+export type ModelOversigt = {
+  id: string;
+  slug: string;
+  name: string;
+  platform: string;
+  archived: boolean;
+  forumSlug: string | null;
+  antalBiler: number;
+  antalBekraeftelser: number;
+  antalTraade: number;
+};
+
+export async function getModelOversigt(): Promise<ModelOversigt[]> {
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('admin_model_oversigt');
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as any[]).map((r): ModelOversigt => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    platform: r.platform,
+    archived: !!r.archived,
+    forumSlug: r.forum_slug ?? null,
+    antalBiler: Number(r.antal_biler ?? 0),
+    antalBekraeftelser: Number(r.antal_bekraeftelser ?? 0),
+    antalTraade: Number(r.antal_traade ?? 0),
+  }));
+}

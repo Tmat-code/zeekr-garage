@@ -1,11 +1,12 @@
 import { getForumGrupper } from '@/lib/forum';
-import { getAdminForum } from '@/lib/queries-admin';
+import { getAdminForum, getModelOversigt } from '@/lib/queries-admin';
 import { getForumRegler } from '@/lib/forum-regler';
 import { erAdmin } from '@/lib/admin';
 import KategoriStyring from '@/components/admin/KategoriStyring';
 import ForumModerering from '@/components/admin/ForumModerering';
 import ForumReglerEditor from '@/components/admin/ForumReglerEditor';
 import TilfoejModel from '@/components/admin/TilfoejModel';
+import ModellerPanel from '@/components/admin/ModellerPanel';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
@@ -17,6 +18,9 @@ export default async function AdminForumSide() {
     getForumRegler(),
     erAdmin(),
   ]);
+
+  // Model-oversigten (til Modeller-panelet) er admin-only; hent kun når admin.
+  const modeller = kanModel ? await getModelOversigt() : [];
 
   const antalKategorier = grupper.reduce((s, g) => s + g.kategorier.length, 0);
 
@@ -60,6 +64,16 @@ export default async function AdminForumSide() {
             kobles til en bil-model, og det er netop det, der sker her.
           </p>
           <TilfoejModel />
+
+          <div className="mt-6 border-t border-grafit-200 pt-5">
+            <h3 className="mb-1 text-base font-semibold text-grafit-900">Modeller</h3>
+            <p className="mb-4 text-sm text-grafit-500">
+              Alle modeller med deres forbrug. Ryd en fejloprettet model væk (kun mulig, når den er
+              tom), eller arkivér en model, der er i brug - så forsvinder den fra "vælg model"-
+              listerne, mens data og rapport bevares.
+            </p>
+            <ModellerPanel modeller={modeller} />
+          </div>
         </section>
       )}
 

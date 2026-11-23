@@ -107,6 +107,41 @@ export async function opretModel(input: {
   return { slug: (data as string) ?? slug };
 }
 
+// Arkivér / genaktivér en model (P18). Admin-only. Arkiveret = ude af alle
+// "vælg model"-lister (getModels filtrerer archived=false) men data + rapport
+// bevares, og model-foraet låses men forbliver læsbart. Genaktivér = lås op.
+export async function saetModelArkiv(slug: string, arkiv: boolean): Promise<void> {
+  await kraevAdmin();
+  const s = slug.trim();
+  if (!s) throw new Error('Manglende model.');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_saet_model_arkiv', { p_slug: s, p_arkiv: arkiv });
+  if (error) throw new Error(error.message);
+  revalider();
+  revalidatePath('/');
+  revalidatePath('/feedback');
+  revalidatePath('/meld');
+  revalidatePath('/garage');
+}
+
+// Slet en model helt (P18). Admin-only. RPC'en tillader KUN hard delete når
+// modellen er tom (0 tråde, 0 biler, 0 bekræftelser); ellers rejser den en fejl
+// der peger på at arkivere i stedet. Sletter model-foraet + modellen (varianter
+// cascader). Bruges typisk til at rydde en fejloprettet testmodel.
+export async function sletModel(slug: string): Promise<void> {
+  await kraevAdmin();
+  const s = slug.trim();
+  if (!s) throw new Error('Manglende model.');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_slet_model', { p_slug: s });
+  if (error) throw new Error(error.message);
+  revalider();
+  revalidatePath('/');
+  revalidatePath('/feedback');
+  revalidatePath('/meld');
+  revalidatePath('/garage');
+}
+
 // Opret en ny kategori i en (eksisterende eller ny) gruppe.
 export async function opretKategori(input: {
   name: string;
