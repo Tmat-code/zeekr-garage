@@ -18,16 +18,16 @@ export default function LinksVisning({
   // Hvilke modeller optraeder reelt paa et link? Filteret vises kun, naar mindst
   // to modeller er repraesenteret (ellers er der intet at filtrere paa).
   const brugte = new Set<string>();
-  for (const g of grupper) for (const l of g.links) if (l.modelSlug) brugte.add(l.modelSlug);
+  for (const g of grupper) for (const l of g.links) for (const m of l.modeller) brugte.add(m.slug);
   const chipModeller = modeller.filter((m) => brugte.has(m.slug));
   const visFilter = chipModeller.length >= 2;
 
   const [valgt, setValgt] = useState<string | null>(null); // null = Alle
 
-  // Et link vises, hvis intet er valgt, eller det matcher den valgte model,
-  // eller det er utagget ("gaelder alle").
-  const synlig = (modelSlug: string | null) =>
-    valgt === null || modelSlug === valgt || modelSlug === null;
+  // Et link vises, hvis intet er valgt, det er utagget ("gaelder alle"), eller
+  // den valgte model er blandt dets modeller.
+  const synlig = (links: LinkGruppe['links'][number]) =>
+    valgt === null || links.modeller.length === 0 || links.modeller.some((m) => m.slug === valgt);
 
   const chipKlasse = (aktiv: boolean) =>
     aktiv
@@ -54,7 +54,7 @@ export default function LinksVisning({
       )}
 
       {grupper.map((gruppe) => {
-        const links = gruppe.links.filter((l) => synlig(l.modelSlug));
+        const links = gruppe.links.filter(synlig);
         if (links.length === 0) return null;
         return (
           <section key={gruppe.id} className="mt-8">
@@ -71,13 +71,16 @@ export default function LinksVisning({
                   className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-grafit-50"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-grafit-900">{l.navn}</span>
-                      {l.modelNavn && (
-                        <span className="shrink-0 rounded-full bg-kobber-100 px-2 py-0.5 text-xs font-medium text-kobber-800">
-                          {kort(l.modelNavn)}
+                      {l.modeller.map((m) => (
+                        <span
+                          key={m.slug}
+                          className="shrink-0 rounded-full bg-kobber-100 px-2 py-0.5 text-xs font-medium text-kobber-800"
+                        >
+                          {kort(m.name)}
                         </span>
-                      )}
+                      ))}
                     </div>
                     {l.kilde && <div className="text-xs text-grafit-400">{l.kilde}</div>}
                   </div>

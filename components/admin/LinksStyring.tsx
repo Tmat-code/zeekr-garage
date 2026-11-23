@@ -36,9 +36,50 @@ function kort(navn: string): string {
   return navn.replace(/^Zeekr\s+/i, '');
 }
 
-function modelIdFraSlug(slug: string | null, modeller: ModelOpt[]): string {
-  if (!slug) return '';
-  return modeller.find((m) => m.slug === slug)?.id ?? '';
+// Multi-vælger: klik en model til/fra. Ingen valgt = "gælder alle".
+function ModelVaelger({
+  modeller,
+  valgte,
+  setValgte,
+}: {
+  modeller: ModelOpt[];
+  valgte: string[];
+  setValgte: (v: string[]) => void;
+}) {
+  const toggle = (id: string) =>
+    setValgte(valgte.includes(id) ? valgte.filter((x) => x !== id) : [...valgte, id]);
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {modeller.map((m) => {
+          const aktiv = valgte.includes(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => toggle(m.id)}
+              className={
+                aktiv
+                  ? 'rounded-full bg-kobber-600 px-2.5 py-1 text-xs font-medium text-white'
+                  : 'rounded-full border border-grafit-200 bg-white px-2.5 py-1 text-xs text-grafit-600 hover:border-grafit-300'
+              }
+            >
+              {kort(m.name)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-xs text-grafit-400">
+        {valgte.length === 0 ? 'Ingen valgt = gælder alle modeller' : `${valgte.length} valgt`}
+      </p>
+    </div>
+  );
+}
+
+function idFraSlugs(l: LinkPost, modeller: ModelOpt[]): string[] {
+  return l.modeller
+    .map((m) => modeller.find((x) => x.slug === m.slug)?.id)
+    .filter((x): x is string => !!x);
 }
 
 function LinkRaekke({
@@ -60,37 +101,23 @@ function LinkRaekke({
   const [navn, setNavn] = useState(l.navn);
   const [kilde, setKilde] = useState(l.kilde ?? '');
   const [url, setUrl] = useState(l.url);
-  const [modelId, setModelId] = useState(modelIdFraSlug(l.modelSlug, modeller));
+  const [valgte, setValgte] = useState<string[]>(idFraSlugs(l, modeller));
 
   if (redigerer) {
     return (
       <div className={`rounded-xl border border-grafit-200 bg-white p-3 ${pending ? 'opacity-60' : ''}`}>
         <div className="space-y-2">
           <input className="input" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder="Navn" />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
-            <select
-              className="input"
-              value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-              aria-label="Model"
-            >
-              <option value="">Gælder alle modeller</option>
-              {modeller.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
           <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+          <ModelVaelger modeller={modeller} valgte={valgte} setValgte={setValgte} />
           <div className="flex gap-2">
             <button
               className="btn-primary !py-1.5 text-sm"
               disabled={pending || !navn.trim() || !url.trim()}
               onClick={() =>
                 koer(async () => {
-                  await redigerLink(l.id, { navn, kilde, url, modelId: modelId || null });
+                  await redigerLink(l.id, { navn, kilde, url, modelIds: valgte });
                   setRedigerer(false);
                 })
               }
@@ -103,7 +130,7 @@ function LinkRaekke({
                 setNavn(l.navn);
                 setKilde(l.kilde ?? '');
                 setUrl(l.url);
-                setModelId(modelIdFraSlug(l.modelSlug, modeller));
+                setValgte(idFraSlugs(l, modeller));
                 setRedigerer(false);
               }}
             >
@@ -120,13 +147,16 @@ function LinkRaekke({
     <div className={`rounded-xl border border-grafit-200 bg-white p-3 ${pending ? 'opacity-60' : ''}`}>
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="truncate font-medium text-grafit-900">{l.navn}</span>
-            {l.modelNavn && (
-              <span className="shrink-0 rounded-full bg-kobber-100 px-2 py-0.5 text-xs font-medium text-kobber-800">
-                {kort(l.modelNavn)}
+            {l.modeller.map((m) => (
+              <span
+                key={m.slug}
+                className="shrink-0 rounded-full bg-kobber-100 px-2 py-0.5 text-xs font-medium text-kobber-800"
+              >
+                {kort(m.name)}
               </span>
-            )}
+            ))}
           </div>
           <div className="truncate text-xs text-grafit-400">
             {l.kilde ? `${l.kilde} · ` : ''}
@@ -216,7 +246,7 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
   const [navn, setNavn] = useState('');
   const [kilde, setKilde] = useState('');
   const [url, setUrl] = useState('');
-  const [modelId, setModelId] = useState('');
+  const [valgte, setValgte] = useState<string[]>([]);
 
   if (!aaben) {
     return (
@@ -230,18 +260,9 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
     <div className="rounded-xl border border-dashed border-grafit-300 bg-grafit-50 p-4">
       <div className="space-y-2">
         <input className="input" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder="Navn (fx Officiel modelside)" />
-        <div className="grid gap-2 sm:grid-cols-2">
-          <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
-          <select className="input" value={modelId} onChange={(e) => setModelId(e.target.value)} aria-label="Model">
-            <option value="">Gælder alle modeller</option>
-            {modeller.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
         <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+        <ModelVaelger modeller={modeller} valgte={valgte} setValgte={setValgte} />
       </div>
       <div className="mt-2 flex items-center gap-2">
         <button
@@ -249,11 +270,11 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
           disabled={pending || !navn.trim() || !url.trim()}
           onClick={() =>
             koer(async () => {
-              await opretLink({ groupId, navn, kilde, url, modelId: modelId || null });
+              await opretLink({ groupId, navn, kilde, url, modelIds: valgte });
               setNavn('');
               setKilde('');
               setUrl('');
-              setModelId('');
+              setValgte([]);
               setAaben(false);
             })
           }

@@ -172,13 +172,15 @@ export type ForumTraadDetalje = {
 // Nyttige links (P19) - admin-styrede links grupperet efter emne, med et
 // valgfrit model-tag pr. link (modelSlug == null => "gaelder alle").
 // =========================================================================
+export type LinkModel = { slug: string; name: string };
+
 export type LinkPost = {
   id: string;
   navn: string;
   kilde: string | null;
   url: string;
-  modelSlug: string | null; // null => gaelder alle modeller
-  modelNavn: string | null;  // fuldt navn, fx "Zeekr 7GT" (til badge/filter)
+  // 0..n modeller. Tom => "gaelder alle". Flere => et badge pr. model.
+  modeller: LinkModel[];
   displayOrder: number;
 };
 

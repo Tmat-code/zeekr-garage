@@ -52,13 +52,13 @@ export async function flytLinkGruppe(id: string, op: boolean): Promise<void> {
   revalider();
 }
 
-// --- Links ---
+// --- Links --- (modelIds: 0..n modeller; tom = "gælder alle")
 export async function opretLink(input: {
   groupId: string;
   navn: string;
   kilde: string;
   url: string;
-  modelId: string | null;
+  modelIds: string[];
 }): Promise<void> {
   await kraevAdmin();
   if (!input.navn.trim()) throw new Error('Giv linket et navn.');
@@ -69,7 +69,7 @@ export async function opretLink(input: {
     p_navn: input.navn.trim(),
     p_kilde: input.kilde.trim(),
     p_url: input.url.trim(),
-    p_model_id: input.modelId,
+    p_model_ids: input.modelIds,
   });
   if (error) throw new Error(error.message);
   revalider();
@@ -77,7 +77,7 @@ export async function opretLink(input: {
 
 export async function redigerLink(
   id: string,
-  input: { navn: string; kilde: string; url: string; modelId: string | null },
+  input: { navn: string; kilde: string; url: string; modelIds: string[] },
 ): Promise<void> {
   await kraevAdmin();
   if (!input.navn.trim()) throw new Error('Giv linket et navn.');
@@ -88,7 +88,7 @@ export async function redigerLink(
     p_navn: input.navn.trim(),
     p_kilde: input.kilde.trim(),
     p_url: input.url.trim(),
-    p_model_id: input.modelId,
+    p_model_ids: input.modelIds,
   });
   if (error) throw new Error(error.message);
   revalider();
