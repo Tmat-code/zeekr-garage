@@ -38,9 +38,11 @@ export default async function AdminForumSide() {
         </div>
         <p className="mb-4 text-sm text-grafit-500">
           Opret, omdøb, flyt mellem grupper, sortér og lås kategorier - direkte her, uden at gå i
-          databasen. Brug pilene til at omsortere i gruppen, dropdown'en til at flytte til en anden
-          gruppe, og pilene ved gruppe-overskriften til at omsortere grupperne. Model-foraene er
-          fast i Modellerne. En låst kategori kan kun moderatorer starte tråde i.
+          databasen. Brug "+ Ny kategori" under en gruppe til at lægge en ny kategori i netop den
+          gruppe, eller "+ Ny gruppe" nederst til at lave en helt ny spand. Pilene omsorterer i
+          gruppen, dropdown'en flytter til en anden gruppe, og pilene ved gruppe-overskriften
+          omsorterer grupperne. Model-foraene er fast i Modellerne. En låst kategori kan kun
+          moderatorer starte tråde i.
         </p>
         <KategoriStyring grupper={grupper} />
       </section>

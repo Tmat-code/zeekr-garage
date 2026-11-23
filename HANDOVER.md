@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-23 (P7 - kategori-editor kan nu flytte en kategori mellem grupper + omsortere grupperne i UI. **Ingen migration - ren kode** (server-actions via `er_moderator`-RLS). Fjerner den sidste SQL-only pligt for kategori-kuratering. Model-fora er beskyttet (kan ikke flyttes ud af Modellerne, og intet kan flyttes ind). Se "## Værksted: kategori-editor flyt mellem grupper (P7)". Forrige: P4 - tværgående tråd-søgning i forummet (migration kørt + live). Billed-sporet P3 ✓ → P8 ✓ → P9 ✓ AFSLUTTET)
+**Sidst opdateret:** 2026-11-23 (P7 - kategori-editor i UI: flyt kategori mellem grupper + omsortér grupperne + **"+ Ny kategori" pr. gruppe** (erstatter det forvirrende frie gruppe-skrivefelt) + **server-værn** så Modellerne ikke kan få almindelige kategorier. **Ingen migration - ren kode.** Fjerner den sidste SQL-only pligt for kategori-kuratering; model-fora beskyttet (fast i Modellerne). Næste aftalte: **P17 - Tilføj model i Værkstedet** (frem for P5; kræver lille migration). Se "## Værksted: kategori-editor flyt mellem grupper (P7)" + "## Backlog-note: Tilføj model i Værkstedet (P17)". Forrige: P4 - tværgående tråd-søgning (live))
 
 ---
 
@@ -32,6 +32,7 @@
 - [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
 - [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
 - [x] **P15 - Bruger-sletning af samtaler.** BYGGET 22-11 (skjul-for-mig). Se "## Beskeder: bruger-sletning af samtaler (P15)".
+- [ ] **P17 - Tilføj model i Værkstedet (ny model under Modellerne).** Torben-ønske 23-11. Nye Zeekr-modeller (og dermed deres forum-forum) skal kunne oprettes i admin uden SQL - den sidste SQL-only pligt på model-siden. **Aftalt som næste session (frem for P5).** Kræver sandsynligvis en lille migration (models/variants har i dag kun læse-RLS). Se "## Backlog-note: Tilføj model i Værkstedet (P17)".
 - [ ] **P16 - Forum-moderering i Værkstedet viser kun de 25 seneste.** `getAdminForum(25)` (`lib/queries-admin.ts`) henter de 25 nyeste tråde + 25 nyeste indlæg, sorteret nyest først; `app/admin/forum/page.tsx` kalder med 25. Vokser forummet forbi det, falder ældre tråde/indlæg ud af moderings-visningen (de kan STADIG modereres direkte på selve forummet - det er kun Værksteds-overblikket der er afkortet). Fix-muligheder: (a) paginering / "vis flere", (b) søg/filtrér i modererings-listen (flugter med P4-søgestrategien), (c) filtrér til "kræver opmærksomhed" (fx anmeldte/nyeste uden moderering) i stedet for ren nyeste-liste. Haster ikke med nuværende 3 indlæg; løft før forummet får rigtig trafik. Medium. Beslægtet med P4 (søgning) + P5 (flag-kø).
 
 ### Senere / roadmap (ikke planlagt endnu)
@@ -645,14 +646,28 @@ Fjerner den sidste SQL-only pligt for kategori-kuratering: flytning mellem grupp
 - **To nye server-actions i `app/admin/forum-actions.ts`:**
   - `flytKategoriTilGruppe(id, maalGruppe)` - sætter kategoriens `group_label` + `group_order` (arvet fra målgruppen) og lægger den sidst i målgruppen (`display_order` = max+1). **Ét enkelt rækkes-update = atomisk.** Værn: en model-kategori (`model_id != null`) kan ikke flyttes, og ingen kategori kan flyttes IND i en model-gruppe. Målgruppen skal findes i forvejen (nye grupper laves stadig via "Ny kategori").
   - `flytGruppe(label, retning)` - omsorterer hele grupper ved at bytte `group_order` med nabogruppen. `group_order` er denormaliseret på hver række i gruppen, så det er to bulk-updates (én `update ... where group_label=` pr. gruppe). Der er ingen unique-constraint på `group_order`, så et direkte bytte er sikkert; hvert update er atomisk, og et evt. halv-gennemført bytte er selv-helbredende (kør igen).
-  - Eksisterende `flytKategori` (op/ned i gruppen, display_order-swap), `retKategori` (navn/beskrivelse/ikon), `saetKategoriLaast`, `opretKategori`, `sletKategori` er **uændrede**.
+  - `opretKategori` fik et **værn**: en almindelig kategori kan ikke oprettes i model-gruppen (`modelGruppeLabels`-tjek) - ellers kunne man skrive "Modellerne" i gruppe-feltet og lave en tom skal uden model-kobling (det skete faktisk under test: "17 X"). `flytKategori` (op/ned), `retKategori`, `saetKategoriLaast`, `sletKategori` er uændrede.
 - **Model-gruppen identificeres robust** via `model_id != null` (ikke via den bogstavelige label "Modellerne"), så det holder selv hvis gruppen omdøbes.
 - **UI (`components/admin/KategoriStyring.tsx`):**
-  - Hver gruppe-overskrift har nu ↑/↓-pile (`flytGruppe`), deaktiveret på første/sidste gruppe. Ny indre `GruppeBlok`-komponent (egen `useKoer` til gruppe-fejl/pending).
-  - Hver ikke-model-kategori har en "Flyt til gruppe:"-dropdown med de øvrige grupper (model-gruppen udeladt som mål). Model-kategorier viser i stedet en dæmpet note "🚗 Model-forum - fast i Modellerne." i stedet for dropdown'en.
-  - Grafit/kobber hele vejen, ingen grøn/blå. `select` bruger `.input`-klassen.
-- **Scope bevidst holdt til at redigere/flytte eksisterende kategorier.** Opret (findes), slet-hvis-tom (findes). Arkivér-i-UI er ikke med (ikke efterspurgt).
-- `npm run build` **grønt** (`/admin/forum` 4.49 kB). Pushet direkte til main → auto-deploy via n8n. **Ikke verificeret live endnu** (ingen migration/RPC at køre; verificér i Værkstedet når deployet er ovre: flyt en topik-kategori mellem to grupper, omsortér grupperne, bekræft at model-fora ikke kan flyttes).
+  - Hver gruppe-overskrift har ↑/↓-pile (`flytGruppe`), deaktiveret på første/sidste gruppe. Ny indre `GruppeBlok`-komponent (egen `useKoer`).
+  - Hver ikke-model-kategori har en "Flyt til gruppe:"-dropdown med de øvrige grupper (model-gruppen udeladt som mål). Model-kategorier viser i stedet en dæmpet note "🚗 Model-forum - fast i Modellerne".
+  - **Oprettelse pr. gruppe (follow-up efter Torben-feedback 23-11):** den gamle ene "Ny kategori"-boks med et frit gruppe-skrivefelt var forvirrende (teksten blev stående, grupperne forsvandt, og man kunne komme til at lave en ny gruppe i stedet). Nu: en **"+ Ny kategori"-knap under hver gruppe** (låser gruppen fast, intet skrivefelt) + en **"+ Ny gruppe"-knap nederst** til en helt ny spand. `NyKategori` tog en `fastGruppe`-prop. Model-gruppen får ingen "+ Ny kategori" (viser i stedet "Model-fora tilføjes ikke her - de er koblet til en bil-model").
+  - Grafit/kobber hele vejen, ingen grøn/blå.
+- **Scope bevidst holdt til at redigere/flytte/oprette eksisterende grupper.** Slet-hvis-tom (findes). Arkivér-i-UI ikke med.
+- `npm run build` **grønt** (`/admin/forum` 4.64 kB). **Verificeret live af Torben 23-11:** flyt/omsortering + ny gruppe/kategori i UI virker (to pushes: 1) flyt mellem grupper + gruppe-sortering, 2) per-gruppe-oprettelse + server-værn). Ingen migration/RPC at køre.
+- **Oprydning tilbage til Torben:** test-kategorien **"17 X"** (+ evt. test-gruppen "TRÆF IGEN IGEN") blev lavet under test og bør slettes i UI (🗑 - de er tomme). "17 X" ligger i Modellerne som en almindelig kategori (derfor har den flyt-dropdown, i modsætning til de rigtige model-fora) - den kan ikke genskabes efter server-værnet.
+
+## Backlog-note: Tilføj model i Værkstedet (P17) - brief til frisk session
+Mål: en "Tilføj model"-knap i Værkstedet der opretter en ny Zeekr-model + dens forum-forum i ét hug, uden Studio. Baggrund: `/admin/forum`-kategori-editoren (P7) kan nu alt for de tematiske grupper, men Modellerne er med vilje spærret for almindelige kategorier, fordi et model-forum SKAL kobles til en `models`-række (badge, Min Garage-bil, "mig med"-bekræftelser, Zeekr-rapport). Det er den eneste tilbageværende SQL-only pligt på model-siden.
+
+- **Hvad skal oprettes (atomisk):**
+  1. `models`-række: `slug` (unik), `name`, `platform` (fri tekst: SEA-R / PMA2+ / SEA1/SEA2), `display_order` (max+1).
+  2. `forum_categories`-række: `slug` = model-slug, `name`, `description` ("Alt om <navn> - snak, spørgsmål og erfaringer."), `icon` '🚗' (ignoreres i rendering, men holdes), `group_label` = model-gruppens label, `group_order` = model-gruppens order, `display_order` = max+1 i Modellerne, `model_id` = den nye model.
+  3. (Valgfrit i samme flow) `variants`: 0..n varianter (`name`, `display_order`).
+- **Migration nødvendig (giv Torben SQL'en direkte - svar + fil - til Studio port 8002; han har ikke repoet lokalt):** `models` har i dag KUN `models_read_all`, og `variants` ligeså (ingen insert/update-policy). `forum_categories` har allerede moderator-insert. **Anbefalet mønster: én security-definer RPC** (`er_admin()`-gated) der opretter alle rækker i én transaktion (undgår delvist-oprettet model + tre separate RLS-policies). Alternativt admin-insert-policies på models+variants.
+- **Verificér bagefter:** at en model med 0 varianter ikke brækker `ConfirmButton`/`getVarianter()`/garage/rapport (to-trins-flow springer variant-valg over ved <2 varianter). Og at det nye model-forum får model-badge (ikke 💬) og IKKE en flyt-dropdown (dvs. `model_id` sat korrekt).
+- **Gating:** admin (ikke bare moderator), da det er struktur på rygraden.
+- **Senere (ikke i P17):** rediger platform/varianter, slet/arkivér en model (cascade-værn mod model-forum med tråde).
 
 ## Model-badge på forum-ikoner (22-11-2026)
 De generiske røde bil-emoji (🚗) på model-foraene er erstattet af et **typografisk model-badge** - modellens betegnelse (9X, 001, 001S, X, 7X, 7GT) i en lys grafit-100-chip (samme som emoji-kategorierne) med kobber-700-tekst (Archivo, tabular, tight). (Først prøvet grafit-900/kobber-300 = for sort/tungt på hvid liste, rettet til lys variant.) Ligner et trim-/datablad-mærke: differentierer hver model uden farve. Fravalgt: seks forskellige farver pr. model (ville blive "farvelade" og undergrave det rene/premium look - afklaret med Torben). Topiske kategorier (ikke-model) beholder deres emoji.

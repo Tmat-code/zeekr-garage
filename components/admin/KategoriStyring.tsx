@@ -198,18 +198,24 @@ function KategoriRaekke({
   );
 }
 
-function NyKategori({ grupper }: { grupper: ForumGruppe[] }) {
+function NyKategori({ grupper, fastGruppe }: { grupper?: ForumGruppe[]; fastGruppe?: string }) {
+  const erFast = fastGruppe != null;
   const { pending, fejl, koer } = useKoer();
   const [aaben, setAaben] = useState(false);
   const [navn, setNavn] = useState('');
-  const [gruppe, setGruppe] = useState(grupper[0]?.label ?? '');
+  const [gruppe, setGruppe] = useState('');
   const [ikon, setIkon] = useState('💬');
   const [beskrivelse, setBeskrivelse] = useState('');
 
+  const aktivGruppe = erFast ? fastGruppe! : gruppe;
+
   if (!aaben) {
     return (
-      <button className="btn-ghost text-sm" onClick={() => setAaben(true)}>
-        + Ny kategori
+      <button
+        className={erFast ? 'text-sm font-medium text-kobber-700 hover:underline' : 'btn-ghost text-sm'}
+        onClick={() => setAaben(true)}
+      >
+        {erFast ? '+ Ny kategori' : '+ Ny gruppe'}
       </button>
     );
   }
@@ -231,20 +237,26 @@ function NyKategori({ grupper }: { grupper: ForumGruppe[] }) {
           placeholder="Kategoriens navn"
         />
       </div>
-      <div className="mt-2">
-        <input
-          className="input"
-          value={gruppe}
-          onChange={(e) => setGruppe(e.target.value)}
-          placeholder="Gruppe (fx Teknik)"
-          list="forum-grupper"
-        />
-        <datalist id="forum-grupper">
-          {grupper.map((g) => (
-            <option key={g.label} value={g.label} />
-          ))}
-        </datalist>
-      </div>
+      {erFast ? (
+        <p className="mt-2 text-xs text-grafit-500">
+          Lægges i gruppen <span className="font-medium text-grafit-700">{fastGruppe}</span>.
+        </p>
+      ) : (
+        <div className="mt-2">
+          <input
+            className="input"
+            value={gruppe}
+            onChange={(e) => setGruppe(e.target.value)}
+            placeholder="Navn på ny gruppe (fx Teknik)"
+            list="forum-grupper"
+          />
+          <datalist id="forum-grupper">
+            {(grupper ?? []).map((g) => (
+              <option key={g.label} value={g.label} />
+            ))}
+          </datalist>
+        </div>
+      )}
       <textarea
         className="input mt-2 min-h-[60px]"
         value={beskrivelse}
@@ -254,12 +266,18 @@ function NyKategori({ grupper }: { grupper: ForumGruppe[] }) {
       <div className="mt-2 flex items-center gap-2">
         <button
           className="btn-primary !py-1.5 text-sm"
-          disabled={pending || !navn.trim() || !gruppe.trim()}
+          disabled={pending || !navn.trim() || !aktivGruppe.trim()}
           onClick={() =>
             koer(async () => {
-              await opretKategori({ name: navn, groupLabel: gruppe, icon: ikon, description: beskrivelse });
+              await opretKategori({
+                name: navn,
+                groupLabel: aktivGruppe,
+                icon: ikon,
+                description: beskrivelse,
+              });
               setNavn('');
               setBeskrivelse('');
+              if (!erFast) setGruppe('');
               setAaben(false);
             })
           }
@@ -280,11 +298,13 @@ function GruppeBlok({
   flytMaal,
   erForstGruppe,
   erSidstGruppe,
+  erModelGruppe,
 }: {
   g: ForumGruppe;
   flytMaal: string[];
   erForstGruppe: boolean;
   erSidstGruppe: boolean;
+  erModelGruppe: boolean;
 }) {
   const { pending, fejl, koer } = useKoer();
   return (
@@ -322,6 +342,15 @@ function GruppeBlok({
           />
         ))}
       </div>
+      <div className="mt-2">
+        {erModelGruppe ? (
+          <p className="text-xs text-grafit-400">
+            Model-fora tilføjes ikke her - de er koblet til en bil-model.
+          </p>
+        ) : (
+          <NyKategori fastGruppe={g.label} />
+        )}
+      </div>
     </div>
   );
 }
@@ -341,12 +370,15 @@ export default function KategoriStyring({ grupper }: { grupper: ForumGruppe[] })
           g={g}
           erForstGruppe={i === 0}
           erSidstGruppe={i === grupper.length - 1}
+          erModelGruppe={modelGrupper.has(g.label)}
           flytMaal={grupper
             .map((x) => x.label)
             .filter((l) => l !== g.label && !modelGrupper.has(l))}
         />
       ))}
-      <NyKategori grupper={grupper} />
+      <div className="border-t border-grafit-200 pt-4">
+        <NyKategori grupper={grupper} />
+      </div>
     </div>
   );
 }

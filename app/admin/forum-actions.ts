@@ -64,8 +64,14 @@ export async function opretKategori(input: {
   const sb = supabaseServer();
   const { data: alle } = await sb
     .from('forum_categories')
-    .select('slug, group_label, group_order, display_order');
+    .select('slug, group_label, group_order, display_order, model_id');
   const liste = (alle ?? []) as any[];
+
+  // Værn: en almindelig kategori må ikke oprettes i model-gruppen (ville blive
+  // en tom skal uden model-kobling). Model-fora kommer fra models-tabellen.
+  if (modelGruppeLabels(liste).has(gruppe)) {
+    throw new Error('Modellerne er forbeholdt model-fora og kan ikke få almindelige kategorier.');
+  }
 
   // Gruppe-rækkefølge: genbrug hvis gruppen findes, ellers næste ledige.
   const iGruppen = liste.filter((c) => c.group_label === gruppe);
