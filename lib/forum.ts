@@ -188,9 +188,11 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
 
   return ((data ?? []) as any[]).map((r) => {
     const { navn, bil } = mapAuthor(r.author);
-    const billeder = ((r.billeder ?? []) as any[])
-      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-      .map((i) => forumBilledeUrl(i.path));
+    const sorterede = ((r.billeder ?? []) as any[]).sort(
+      (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+    );
+    const billederPaths = sorterede.map((i) => i.path as string);
+    const billeder = billederPaths.map((p) => forumBilledeUrl(p));
     return {
       id: r.id,
       threadId: r.thread_id,
@@ -202,6 +204,7 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
       edited: r.edited ?? false,
       isOpening: r.is_opening ?? false,
       billeder,
+      billederPaths,
     };
   });
 }

@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-22 (P3 - billeder/foto-bevis i feedback-meldinger bygget; kræver migration i Studio)
+**Sidst opdateret:** 2026-11-23 (P8 - redigering af et forum-indlægs billeder bygget; INGEN migration - genbruger forum-bucket + forum_post_images)
 
 ---
 
@@ -24,7 +24,7 @@
 - [ ] **P5 - Auto-moderering (forum): AI-flagning af grov tone/personangreb.** Mål: holde forummet civilt - "et forum Zeekr kan være stolt af". **Fase 1 = flag-only:** AI markerer forum-tråde/svar med mulig grov tone/personangreb og lægger dem i en kø i Værkstedet; moderator bekræfter. **Ingen auto-skjul/slet** (passer på "kø, ikke patrulje" + undgår at gøre brugerne uret). **Kun forum-indhold** - IKKE feedback-meldinger (dem kuraterer Torben selv før rapport, og de 31 er allerede i god tone). Autonomi (auto-skjul-til-review) kan øges senere. Beslægtet med AI-dedup-roadmap. Medium/større (model-kald + kø-UI).
 - [ ] **P6 - Antal ejere pr. model-forum.** Social proof / "her sker der noget". Lille/medium.
 - [ ] **P7 - Kategori-editor: flyt en kategori mellem grupper i UI.** Fjerner en tilbageværende SQL-only pligt. Medium.
-- [ ] **P8 - Redigering af et indlægs billeder** (edit er pt. kun tekst). Følger naturligt efter P3.
+- [x] **P8 - Redigering af et indlægs billeder** (edit var kun tekst). BYGGET 23-11 (ingen migration). Se "## Forum-indlæg: redigering af billeder (P8)". (Billed-sporet: P3 ✓ → P8 ✓ → P9.)
 - [ ] **P9 - Oprydning af forældreløse storage-filer** ved soft-remove af indlæg. Afslutter billed-sporet.
 - [ ] **P10 - Billeder i beskeder.**
 - [ ] **P11 - Opt-in mail (eller daglig samle-mail) pr. forum-svar.** In-app virker; mail er valgt fra indtil videre.
@@ -428,7 +428,7 @@ Brugere kan vedhæfte billeder til forum-indlæg (åbnings-indlæg + svar).
 - **Migration `20261122130000_forum_billeder.sql` (KØRT i Studio 22-11, verificeret: bucket + 4 storage-policies + tabel + 3 policies):** public bucket `forum` (maks 5 MB, kun jpeg/png/webp/gif). Storage-policies på `storage.objects`: public læs; authenticated upload/slet kun i egen mappe (`(storage.foldername(name))[1] = auth.uid()`); moderator slet alt i bucketen. Tabel `forum_post_images` (post_id FK cascade, path, display_order) + RLS (læs alle; insert kun på eget indlæg; slet eget/moderator).
 - **Flow:** browseren uploader direkte til Storage (`supabaseBrowser().storage.from('forum').upload('<user_id>/<uuid>.<ext>')` - RLS kræver egen mappe), får path'en, og server-actionen (`opretTraad`/`svar`) gemmer path i `forum_post_images` (RLS: eget indlæg). Visning via offentlig URL `…/storage/v1/object/public/forum/<path>` (`lib/billeder.ts:forumBilledeUrl`).
 - **Kode:** `lib/billeder.ts` (URL-helper + grænser: 6 billeder, 5 MB). `components/forum/BilledeUpload.tsx` (filvælger → upload → thumbnails m. fjern; henter selv bruger-id). `opretTraad`/`svar` tager nu `billeder: string[]` (validerer path starter med eget user-id). `getIndlaeg` embedder `forum_post_images` → `ForumIndlaeg.billeder` (offentlige URL'er). `NyTraadForm` + `ForumTraad`-composer har billed-upload; `ForumTraad` viser billeder i indlæg (klik = fuld størrelse i ny fane). Svar kan nu være billede-kun.
-- **Mangler/senere:** redigering af et indlægs billeder (edit er pt. kun tekst); oprydning af forældreløse storage-filer ved soft-remove af indlæg (filer bliver liggende, men vises ikke; moderator kan slette manuelt); billeder i beskeder/feedback.
+- **Mangler/senere:** ~~redigering af et indlægs billeder~~ **BYGGET 23-11 (P8, se eget afsnit)**; oprydning af forældreløse storage-filer ved soft-remove af indlæg (filer bliver liggende, men vises ikke; moderator kan slette manuelt) = P9; billeder i beskeder/feedback.
 
 ## Forum-kategorier: bruger-ønsker tilføjet (21-11-2026)
 Første bruger-feedback → 6 nye kategorier (migration `20261121220000_forum_kategorier_2.sql`, kørt i Studio): **Dæk, fælge & undervogn** + **DIY & FAQ** (Teknik), **Bilpleje & detailing** + **Forsikring, service & værksted** (Ejer-lounge), **Træf, køreture & events** (ny gruppe **Fællesskab**), **Køb, salg & bytte** (ny gruppe **Marked**). Forum har nu 21 kategorier / 6 grupper.
@@ -513,7 +513,19 @@ Foto-bevis i fejlmeldinger. En fejl med et skærmbillede (OTA-fejlbesked, fysisk
 - **Stil:** grafit/kobber, ingen ny farve; genbrugte mønstre. Almindelige bindestreger.
 - `npm run build` grønt.
 - **Live-test mangler** (kræver migration kørt). Test-vej: log ind → `/meld` → vælg fejl → udfyld → "Tilføj billede" (1-6 stk.) → meld → se thumbnails på board-kortet og galleri på detaljen. Tjek også at en melding UDEN billeder ser uændret ud.
-- **Åbent/næste i sporet:** P8 = redigér et indlægs billeder (melding-edit findes ikke endnu - kun kommentarer kan rettes); P9 = ryd forældreløse `meld`-filer når en melding slettes (cascade fjerner `issue_images`-rækker, men ikke selve storage-filerne).
+- **Åbent/næste i sporet:** P8 = redigér et indlægs billeder - **BYGGET 23-11 for FORUM-indlæg** (se "## Forum-indlæg: redigering af billeder (P8)"). NB: feedback-meldinger har stadig ingen edit-UI overhovedet (kun kommentarer kan rettes), så billed-redigering af en *melding* afventer at melding-edit bygges. P9 = ryd forældreløse storage-filer når indhold slettes (cascade fjerner `issue_images`/`forum_post_images`-rækker, men ikke selve storage-filerne).
+
+## Forum-indlæg: redigering af billeder (P8) (bygget 23-11-2026)
+Et forum-indlægs redigér-tilstand kunne før kun rette teksten. Nu kan man også tilføje nye billeder og fjerne eksisterende, direkte i samme redigér-boks. Andet trin i billed-sporet **P3 ✓ → P8 ✓ → P9**.
+
+- **INGEN migration.** Genbruger forum-billed-infrastrukturen fuldt ud: `forum`-bucket + `forum_post_images` + deres RLS fra `20261122130000_forum_billeder.sql`. De nødvendige politikker fandtes allerede: `forum_post_images_insert` (indsæt på eget indlæg), `forum_post_images_delete` (slet eget/moderator), og storage-policyerne (upload/slet i egen mappe + moderator-slet). P8 er ren kode.
+- **Arkitektur = samme mønster som opret/svar:** browseren uploader nye filer direkte til Storage (egen mappe, via `BilledeUpload`), server-actionen kobler paths i `forum_post_images`. Fjernelse sker server-side: DB-rækken slettes (RLS) + best-effort sletning af selve storage-filen (forældreløse rester = P9).
+- **Datalag:** `ForumIndlaeg` har nu `billederPaths` (rå storage-paths, parallelt med `billeder`-URL'erne) - `getIndlaeg` (`lib/forum.ts`) fylder begge. Redigér-UI'en bruger paths til at udpege hvilke eksisterende billeder der fjernes.
+- **Server-action `retIndlaeg` (`app/forum/actions.ts`) udvidet** med to valgfrie params: `fjernPaths` (eksisterende paths til fjernelse) + `nyeBilleder` (netop uploadede paths). Ren tekst-redigering er uændret (begge default `[]`). Actionen henter indlæggets nuværende billeder for at (a) validere resulterende antal og (b) give de tilføjede et `display_order`-offset efter de beholdte (ingen kollision). Validering: åbnings-indlæg skal altid have tekst; et svar må være tomt for tekst hvis mindst ét billede er tilbage; maks `MAKS_ANTAL` (6) i alt. `tilfoejBilleder` fik en `offset`-param (default 0 → opret/svar uændret).
+- **UI (`components/forum/ForumTraad.tsx`):** i redigér-tilstand vises eksisterende billeder som thumbnails med et ×-kryds; klik markerer til fjernelse (dæmpes + gråtones, ↺ fortryder) - intet slettes før man trykker **Gem**, så Annullér er sikker. `BilledeUpload` genbruges til nye billeder med `maksAntal` = resterende plads. **Kun forfatteren kan tilføje nye** (RLS: insert kræver eget indlæg); moderator kan stadig **fjerne** eksisterende (RLS dækker eget/moderator). Visning (ikke-redigér) er uændret: `BilledeGalleri`-lightbox.
+- **Note (orphans):** uploader man et nyt billede i editoren og trykker Annullér (eller forlader siden), bliver filen liggende forældreløs i storage - samme best-effort-mønster som svar/opret-composeren. Ryddes i P9.
+- `npx tsc --noEmit` + `npm run build` grønt.
+- **Live-test mangler** (sitet kører på Pixa; ingen DB-ændring at køre). Test-vej: log ind → åbn egen forum-tråd/svar → ✏️ Ret → fjern et eksisterende billede (×) + Tilføj billede → Gem → bekræft at galleriet viser den nye sammensætning og at "redigeret" vises. Tjek også: moderator kan fjerne et fremmed indlægs billede men ser ikke "Tilføj billede"; åbnings-indlæg kan ikke gemmes med tom tekst.
 
 ## Beskeder: bruger-sletning af samtaler (P15) (bygget 22-11-2026)
 Brugere kan nu selv fjerne egne samtaler fra indbakken, så oprydning ikke kræver SQL i Studio. **Semantik: skjul-for-mig** (ikke hård sletning).

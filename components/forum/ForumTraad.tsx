@@ -8,6 +8,7 @@ import type { ForumIndlaeg } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
+import { MAKS_ANTAL, forumBilledeUrl } from '@/lib/billeder';
 import { svar, retIndlaeg, fjernIndlaeg } from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 
@@ -34,12 +35,32 @@ function IndlaegKort({
 }) {
   const [redigerer, setRedigerer] = useState(false);
   const [tekst, setTekst] = useState(p.body);
+  // Billed-redigering: paths markeret til fjernelse + netop uploadede nye paths.
+  const [fjernede, setFjernede] = useState<string[]>([]);
+  const [nyeBilleder, setNyeBilleder] = useState<string[]>([]);
+  const [uploadNulstil, setUploadNulstil] = useState(0);
   const minEgen = !!megId && p.authorId === megId;
   const kanRette = minEgen || erModerator;
   // Åbnings-indlægget fjernes ikke her (brug "Fjern tråd" i moderering).
   const kanFjerne = kanRette && !p.isOpening;
   // Skriv privat til forfatteren (ikke dig selv, kun indlogget).
   const kanSkrive = isLoggedIn && !!p.authorId && !minEgen;
+
+  // Kun forfatteren kan tilføje NYE billeder (RLS: insert kræver eget indlæg).
+  // Moderator kan stadig fjerne eksisterende (RLS: slet eget/moderator).
+  const kanTilfoeje = minEgen;
+  const beholdtePaths = p.billederPaths.filter((path) => !fjernede.includes(path));
+  const restPlads = Math.max(0, MAKS_ANTAL - beholdtePaths.length);
+  const harIndhold = tekst.trim().length > 0 || beholdtePaths.length + nyeBilleder.length > 0;
+  const kanGemme = p.isOpening ? tekst.trim().length > 0 : harIndhold;
+
+  function nulstilRedigering() {
+    setTekst(p.body);
+    setFjernede([]);
+    setNyeBilleder([]);
+    setUploadNulstil((n) => n + 1);
+    setRedigerer(false);
+  }
 
   return (
     <div
@@ -62,27 +83,79 @@ function IndlaegKort({
             className="input min-h-[100px]"
             value={tekst}
             onChange={(e) => setTekst(e.target.value)}
+            placeholder={p.isOpening ? 'Trådens tekst…' : 'Skriv et svar…'}
           />
-          <div className="flex gap-2">
+
+          {/* Eksisterende billeder - klik × for at markere til fjernelse */}
+          {p.billederPaths.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {p.billederPaths.map((path) => {
+                const markeret = fjernede.includes(path);
+                return (
+                  <div key={path} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={forumBilledeUrl(path)}
+                      alt="Vedhæftet billede"
+                      className={`h-16 w-16 rounded-lg border border-grafit-200 object-cover transition ${
+                        markeret ? 'opacity-30 grayscale' : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFjernede((f) =>
+                          markeret ? f.filter((x) => x !== path) : [...f, path],
+                        )
+                      }
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-grafit-900 text-xs leading-none text-white"
+                      aria-label={markeret ? 'Fortryd fjern billede' : 'Fjern billede'}
+                    >
+                      {markeret ? '↺' : '×'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tilføj nye billeder (kun forfatteren; op til resterende plads) */}
+          {kanTilfoeje &&
+            (restPlads > 0 ? (
+              <BilledeUpload
+                key={uploadNulstil}
+                onChange={setNyeBilleder}
+                disabled={pending}
+                maksAntal={restPlads}
+              />
+            ) : (
+              <p className="text-xs text-grafit-400">Maks {MAKS_ANTAL} billeder pr. indlæg.</p>
+            ))}
+
+          <div className="flex items-center gap-2">
             <button
               className="btn-primary !py-1.5 text-sm"
-              disabled={pending || !tekst.trim()}
+              disabled={pending || !kanGemme}
               onClick={() =>
                 koer(async () => {
-                  await retIndlaeg(p.id, kategoriSlug, traadSlug, tekst);
+                  await retIndlaeg(
+                    p.id,
+                    kategoriSlug,
+                    traadSlug,
+                    tekst,
+                    fjernede,
+                    nyeBilleder,
+                  );
+                  setFjernede([]);
+                  setNyeBilleder([]);
+                  setUploadNulstil((n) => n + 1);
                   setRedigerer(false);
                 })
               }
             >
               Gem
             </button>
-            <button
-              className="btn-ghost !py-1.5 text-sm"
-              onClick={() => {
-                setTekst(p.body);
-                setRedigerer(false);
-              }}
-            >
+            <button className="btn-ghost !py-1.5 text-sm" onClick={nulstilRedigering}>
               Annullér
             </button>
           </div>

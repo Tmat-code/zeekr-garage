@@ -3,21 +3,24 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator } from '@/lib/admin';
-import { MAKS_ANTAL } from '@/lib/billeder';
+import { MAKS_ANTAL, FORUM_BUCKET } from '@/lib/billeder';
 
 // Vedhæft uploadede billeder (storage-paths) til et indlæg. Validerer at hvert
 // path ligger i brugerens egen mappe (<user_id>/...). RLS tjekker også ejerskab.
+// offset = start-værdi for display_order (så tilføjede billeder lægger sig EFTER
+// eksisterende ved redigering, i stedet for at kollidere på display_order 0..n).
 async function tilfoejBilleder(
   sb: ReturnType<typeof supabaseServer>,
   postId: string,
   userId: string,
   billeder: string[],
+  offset = 0,
 ): Promise<void> {
   const rene = (billeder ?? [])
     .filter((p) => typeof p === 'string' && p.startsWith(`${userId}/`))
     .slice(0, MAKS_ANTAL);
   if (rene.length === 0) return;
-  const rows = rene.map((path, i) => ({ post_id: postId, path, display_order: i }));
+  const rows = rene.map((path, i) => ({ post_id: postId, path, display_order: offset + i }));
   const { error } = await sb.from('forum_post_images').insert(rows);
   if (error) throw new Error(error.message);
 }
@@ -128,19 +131,76 @@ export async function svar(
   revalider(kategoriSlug, traadSlug);
 }
 
-// Ret et indlæg (RLS: egen eller moderator).
+// Ret et indlæg (RLS: egen eller moderator) - tekst OG billeder.
+// fjernPaths = eksisterende billed-paths der skal fjernes; nyeBilleder = netop
+// uploadede paths der skal tilføjes. Begge er valgfrie, så ren tekst-redigering
+// er uændret.
 export async function retIndlaeg(
   postId: string,
   kategoriSlug: string,
   traadSlug: string,
   body: string,
+  fjernPaths: string[] = [],
+  nyeBilleder: string[] = [],
 ): Promise<void> {
-  const b = body.trim();
-  if (!b) throw new Error('Indlægget må ikke være tomt.');
-  if (b.length > 10000) throw new Error('Indlægget er for langt.');
   const sb = supabaseServer();
-  const { error } = await sb.from('forum_posts').update({ body: b, edited: true }).eq('id', postId);
-  if (error) throw new Error(error.message);
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error('Log ind for at rette.');
+
+  const b = body.trim();
+  if (b.length > 10000) throw new Error('Indlægget er for langt.');
+
+  // Hent indlægget + dets nuværende billeder (til at validere resulterende antal
+  // og til at beregne display_order-offset for de tilføjede).
+  const { data: post } = await sb
+    .from('forum_posts')
+    .select('is_opening, forum_post_images ( path )')
+    .eq('id', postId)
+    .maybeSingle();
+  if (!post) throw new Error('Indlægget findes ikke.');
+
+  const nuvaerende: string[] = ((post as any).forum_post_images ?? []).map((i: any) => i.path);
+  const tilFjernelse = (fjernPaths ?? []).filter((p) => nuvaerende.includes(p));
+  const beholdte = nuvaerende.filter((p) => !tilFjernelse.includes(p));
+
+  // Nye billeder må kun fylde den resterende plads op til MAKS_ANTAL.
+  const plads = Math.max(0, MAKS_ANTAL - beholdte.length);
+  const tilfoejes = (nyeBilleder ?? []).slice(0, plads);
+  const resterende = beholdte.length + tilfoejes.length;
+
+  if ((post as any).is_opening && !b) throw new Error('Åbnings-indlægget skal have tekst.');
+  if (!b && resterende === 0) throw new Error('Skriv noget eller behold mindst ét billede.');
+
+  // 1) Tekst (edited-markering).
+  const { error: ue } = await sb
+    .from('forum_posts')
+    .update({ body: b, edited: true })
+    .eq('id', postId);
+  if (ue) throw new Error(ue.message);
+
+  // 2) Fjern valgte eksisterende billeder: først DB-rækken (RLS: eget/moderator),
+  //    derefter best-effort selve storage-filen (forældreløse filer ryddes i P9).
+  if (tilFjernelse.length > 0) {
+    const { error: de } = await sb
+      .from('forum_post_images')
+      .delete()
+      .eq('post_id', postId)
+      .in('path', tilFjernelse);
+    if (de) throw new Error(de.message);
+    try {
+      await sb.storage.from(FORUM_BUCKET).remove(tilFjernelse);
+    } catch {
+      /* ignoreres - forældreløs fil kan ryddes senere (P9) */
+    }
+  }
+
+  // 3) Tilføj nye billeder EFTER de beholdte (display_order-offset).
+  if (tilfoejes.length > 0) {
+    await tilfoejBilleder(sb, postId, user.id, tilfoejes, beholdte.length);
+  }
+
   revalider(kategoriSlug, traadSlug);
 }
 

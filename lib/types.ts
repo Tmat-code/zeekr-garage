@@ -119,6 +119,7 @@ export type ForumIndlaeg = {
   edited: boolean;
   isOpening: boolean;
   billeder: string[]; // offentlige URL'er til vedhæftede billeder
+  billederPaths: string[]; // rå storage-paths, parallelt ordnet med billeder (til redigering)
 };
 
 // En traad med dens kategori (til detalje-siden).
