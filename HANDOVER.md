@@ -37,6 +37,7 @@
 - [ ] **P16 - Forum-moderering i Værkstedet viser kun de 25 seneste.** `getAdminForum(25)` (`lib/queries-admin.ts`) henter de 25 nyeste tråde + 25 nyeste indlæg, sorteret nyest først; `app/admin/forum/page.tsx` kalder med 25. Vokser forummet forbi det, falder ældre tråde/indlæg ud af moderings-visningen (de kan STADIG modereres direkte på selve forummet - det er kun Værksteds-overblikket der er afkortet). Fix-muligheder: (a) paginering / "vis flere", (b) søg/filtrér i modererings-listen (flugter med P4-søgestrategien), (c) filtrér til "kræver opmærksomhed" (fx anmeldte/nyeste uden moderering) i stedet for ren nyeste-liste. Haster ikke med nuværende 3 indlæg; løft før forummet får rigtig trafik. Medium. Beslægtet med P4 (søgning) + P5 (flag-kø).
 
 ### Senere / roadmap (ikke planlagt endnu)
+- [ ] **Åben/live chat (kun hvis trafik).** PARKERET 23-11 (Torben). Idé: et åbent/live chat-rum hvor folk "mødes". Fravalgt nu fordi synkron chat har et hårdt cold-start-problem (tomt rum uden samtidige brugere), og behovet er allerede dækket: forummet = det åbne/strukturerede, beskeder (P12) = det private, Events = koordinering af at mødes, og den planlagte Facebook-gruppe = det løse/sociale live-lag. Byg IKKE i beskeder (ville bryde privatlivsmodellen - privat bucket, "kun deltagere", blokér). Hvis det løftes en dag: egen "åbne kanaler/rum"-feature med eget design-oplæg, gerne hægtet på et Event så rummet har en grund til at være i gang. Revurdér kun når der er rigtig trafik OG et konkret ønske fra rigtige brugere.
 - [ ] Q&A / guides-sektion.
 - [ ] AI-dedup af fejlmeldinger på `/meld` (match ny melding mod eksisterende - "kø, ikke patrulje").
 - [ ] Ikke-AI-redesign (Torben udskød; grafit+kobber står). Ved palet-skift skal PDF-rapport + `tailwind.config.ts` + komponenter følge med.
@@ -602,6 +603,11 @@ Udvider private beskeder fra 1:1 til N deltagere. Skemaet holdt allerede til det
 **Åbent hjørne (ikke P12, harmløst):** en gruppe hvor alle er gået bliver en forældreløs samtale (RLS skjuler den for alle). Evt. oprydning senere.
 
 **Verificeret:** build grønt + 15+ RLS/adgangs-checks i lokal Postgres 16 (oprettelse + is_group/created_by/3 deltagere; medlem ser gruppe + alle deltagere, udenforstående ser intet; medlem kan sende, udenforstående afvist begge veje; opretter-gating på tilføj/fjern bekræftet begge veje; forlad → 2 deltagere men is_group bevaret; `start_samtale` genbruger ikke en 2-mands-gruppe; P10-billedprivatliv med N deltagere - medlem læser, udenforstående ej, ikke-afsender kan ikke indsætte; `start_gruppe` kræver ≥2 andre + blokering afviser oprettelse; gruppe-notifikation når alle deltagere m. gruppe-tekst).
+
+**Follow-up (UX-polish, 23-11 - ingen migration):** Torben testede live og fangede at gruppe-muligheden var svær at opdage, og at det var besværligt at finde folk man vil inddrage. To greb:
+- Tydeligere tekst: `/beskeder/ny`-undertitel nævner nu gruppen fra start; feltet hedder "Til hvem? (vælg en eller flere)".
+- Trykbare forslag: `senesteKontakter()` (`lib/beskeder.ts`) + action `hentSenesteKontakter` viser "Ejere du har skrevet med" (seneste distinkte 1:1-modparter, ekskl. blokerede) som trykbare rækker i `NyBeskedView`, så man kan samle en gruppe uden at taste navne. Vises når søgefeltet er tomt; navnesøgning til resten.
+- Bevidst fravalgt: "bladr alle ejere"/"alle 7GT-ejere"-liste (støjende + privatlivs-grænsende). Hold forslag til folk man allerede har kontakt med + søgning.
 
 ## Beskeder: billeder (P10) (bygget 23-11-2026)
 Sidste trin i billed-sporet **P3 ✓ -> P8 ✓ -> P9 ✓ -> P10 ✓**. En bruger kan vedhæfte 1..n billeder til en besked i en 1:1-samtale og se dem i tråden. Mobil-kamera virker gratis (den genbrugte `BilledeUpload` har `accept="image/*"`), så en ejer kan tage et foto direkte i samtalen.

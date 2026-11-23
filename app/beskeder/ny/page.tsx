@@ -29,7 +29,7 @@ export default async function NyBeskedSide() {
       </Link>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-grafit-900">Ny besked</h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Skriv direkte til en anden ejer. Find dem på deres visningsnavn.
+        Skriv til en anden ejer - eller vælg flere for at lave en gruppe.
       </p>
       <NyBeskedView />
     </div>

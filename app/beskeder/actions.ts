@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
-import { soegBrugere } from '@/lib/beskeder';
+import { soegBrugere, senesteKontakter } from '@/lib/beskeder';
 import { MAKS_ANTAL } from '@/lib/billeder';
 import type { AndenPart } from '@/lib/types';
 
@@ -20,6 +20,12 @@ async function kraevBruger() {
 export async function soegModtagere(q: string): Promise<AndenPart[]> {
   await kraevBruger();
   return soegBrugere(q);
+}
+
+// Seneste ejere jeg har skrevet med (trykbare forslag i "Ny besked").
+export async function hentSenesteKontakter(): Promise<AndenPart[]> {
+  await kraevBruger();
+  return senesteKontakter();
 }
 
 // Find-eller-opret en 1:1-samtale med en anden bruger. Returnerer samtale-id.

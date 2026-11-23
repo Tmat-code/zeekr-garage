@@ -219,6 +219,46 @@ export async function getUlaesteSamtaler(): Promise<number> {
   return (await getSamtaler()).filter((s) => s.ulaest).length;
 }
 
+// Ejere jeg har skrevet med (seneste distinkte 1:1-modparter) - til "Ny besked"
+// så man kan samle en samtale/gruppe med et tryk uden at taste navne. Kun folk
+// jeg allerede har kontakt med (privatlivs-sikkert), ekskl. blokerede. Grupper
+// tælles ikke med (en gruppe har ingen entydig "modpart").
+export async function senesteKontakter(graense = 8): Promise<AndenPart[]> {
+  const sb = supabaseServer();
+  const meg = await minId();
+  if (!meg) return [];
+
+  const { data: convs } = await sb
+    .from('conversations')
+    .select(CONV_SELECT)
+    .order('last_message_at', { ascending: false })
+    .limit(40);
+  if (!convs?.length) return [];
+
+  const udeluk = new Set<string>([meg]);
+  const { data: blocks } = await sb
+    .from('user_blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${meg},blocked_id.eq.${meg}`);
+  for (const b of (blocks ?? []) as any[]) {
+    udeluk.add(b.blocker_id === meg ? b.blocked_id : b.blocker_id);
+  }
+
+  const set = new Set<string>();
+  const out: AndenPart[] = [];
+  for (const c of convs as any[]) {
+    if (c.is_group) continue; // kun 1:1 har en entydig modpart
+    const anden = (c.deltagere ?? []).find((d: any) => d.user_id !== meg);
+    if (!anden) continue;
+    const p = mapPart(anden);
+    if (udeluk.has(p.id) || set.has(p.id)) continue;
+    set.add(p.id);
+    out.push(p);
+    if (out.length >= graense) break;
+  }
+  return out;
+}
+
 // Søg brugere på visningsnavn (til "Ny besked"-compose og gruppe-tilføj).
 // Profiler er offentligt læsbare (profiles_read_all), så ingen RPC/migration
 // nødvendig. Ekskluderer mig selv og brugere jeg har blokeret eller er

@@ -4,7 +4,12 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AndenPart } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
-import { soegModtagere, startSamtaleMedBruger, startGruppe } from '@/app/beskeder/actions';
+import {
+  soegModtagere,
+  startSamtaleMedBruger,
+  startGruppe,
+  hentSenesteKontakter,
+} from '@/app/beskeder/actions';
 
 // Compose: find en eller flere ejere på navn og start en samtale. Vælg 1 =>
 // 1:1 (uændret), 2+ => gruppe (P12) med valgfrit navn. Direkte mellem brugerne,
@@ -13,6 +18,7 @@ export default function NyBeskedView() {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [resultater, setResultater] = useState<AndenPart[]>([]);
+  const [seneste, setSeneste] = useState<AndenPart[]>([]);
   const [valgte, setValgte] = useState<AndenPart[]>([]);
   const [titel, setTitel] = useState('');
   const [soegt, setSoegt] = useState(false);
@@ -20,6 +26,23 @@ export default function NyBeskedView() {
   const [soeger, setSoeger] = useState(false);
   const [starter, start] = useTransition();
   const seqRef = useRef(0);
+
+  // Hent "ejere du har skrevet med" ved åbning - trykbare forslag så man kan
+  // samle en samtale/gruppe uden at taste navne.
+  useEffect(() => {
+    let aktiv = true;
+    (async () => {
+      try {
+        const r = await hentSenesteKontakter();
+        if (aktiv) setSeneste(r);
+      } catch {
+        /* forslag er valgfrie - ignorér fejl */
+      }
+    })();
+    return () => {
+      aktiv = false;
+    };
+  }, []);
 
   // Debounced søgning: vent til brugeren holder pause, og ignorér forældede svar.
   useEffect(() => {
@@ -81,7 +104,7 @@ export default function NyBeskedView() {
   return (
     <div className="mt-5">
       <label htmlFor="modtager" className="text-sm font-medium text-grafit-700">
-        Til hvem?
+        Til hvem? <span className="font-normal text-grafit-400">(vælg en eller flere)</span>
       </label>
       <input
         id="modtager"
@@ -113,6 +136,40 @@ export default function NyBeskedView() {
               </span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Seneste kontakter: trykbare forslag når man ikke søger */}
+      {term.length < 2 && seneste.length > 0 && (
+        <div className="mt-4">
+          <p className="px-1 text-xs font-medium text-grafit-500">Ejere du har skrevet med</p>
+          <div className="mt-2 space-y-2">
+            {seneste.map((p) => {
+              const valgt = erValgt(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={starter}
+                  onClick={() => skiftValg(p)}
+                  aria-pressed={valgt}
+                  className={`flex w-full items-center gap-2 rounded-xl border px-4 py-3 text-left disabled:opacity-60 ${
+                    valgt
+                      ? 'border-kobber-300 bg-kobber-50'
+                      : 'border-grafit-200 bg-white hover:border-kobber-300'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate font-medium text-grafit-800">
+                    {p.navn || 'Ejer'}
+                  </span>
+                  <GarageBadge bil={p.bil} />
+                  <span className="shrink-0 text-sm text-kobber-700">
+                    {valgt ? '✓ Valgt' : 'Vælg'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
