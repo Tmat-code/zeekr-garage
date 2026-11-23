@@ -686,12 +686,12 @@ Mål: modstykket til P17. Man kan tilføje en model i UI; man skal også kunne f
   - **Arkivér når modellen ER i brug:** bevar alle data + rapporter, men tag modellen ud af omløb. Kræver flag `models.archived boolean not null default false` (lille migration, køres i Studio ÉN gang - selve arkiverings-HANDLINGEN er derefter UI). Admin-RPC `admin_saet_model_arkiv(p_slug, p_arkiv boolean)`.
 - **Hvad "arkiveret" betyder (beslut i sessionen):**
   - Forsvinder fra "vælg model"-lister: `getModeller()` (board-filter), `BilVaelger` (Min garage + signup), `/meld`. Filtrér `archived=false` dér (evt. et `inkluderArkiverede`-flag til admin-visninger). **Gennemgå ALLE steder `models` læses**, så en arkiveret model ikke kan vælges nyt, men stadig vises på eksisterende biler/bekræftelser/rapporter (historik intakt).
-  - Forummet: behold model-foraet læsbart men **låst** (`is_locked`) så der ikke startes nye tråde? Eller skjul/flyt til en "Arkiverede"-visning? **Åben beslutning.**
+  - Forummet: **BESLUTTET 23-11 (Torben):** et arkiveret model-forum **låses** (`is_locked` = ingen nye tråde) men **forbliver læsbart** - skjules IKKE. Så arkivér-handlingen sætter `is_locked=true` på model-foraet (og genaktivér låser op igen, medmindre det var manuelt låst før - overvej at huske tidligere lås-tilstand, ellers simpelt: genaktivér = lås op).
   - Rapporten: arkiverede modeller tæller stadig deres historiske bekræftelser med - rør ikke rapport-RPC'erne.
   - Badge/oversigt: vis evt. arkiverede model-fora dæmpet eller i egen sektion.
-- **UI:** udvid "Tilføj model"-sektionen til et lille **Modeller-panel**: liste over modeller med brugs-tal ("N biler · N bekræftelser · N tråde") + handling pr. model - **Slet** (hvis tom, med bekræft-trin) / **Arkivér** (hvis i brug) / **Genaktivér** (hvis arkiveret). Admin-only, grafit/kobber.
+- **UI:** udvid "Tilføj model"-sektionen til et lille **Modeller-panel**: liste over modeller med brugs-tal ("N biler · N bekræftelser · N tråde") + handling pr. model - **Slet** (hvis tom, med bekræft-trin) / **Arkivér** (hvis i brug) / **Genaktivér** (hvis arkiveret). **BESLUTTET 23-11 (Torben):** arkiverede modeller **vises i dette panel** (så de kan genaktiveres) - fx dæmpet eller i en "Arkiveret"-underdeling. Admin-only, grafit/kobber.
 - **Gating:** admin (som P17).
-- **To åbne beslutninger til Torben ved sessionsstart:** (a) skal et arkiveret model-forum låses (ingen nye tråde) eller helt skjules? (b) hvordan vises arkiverede modeller i Værkstedet, så de kan genaktiveres?
+- **Begge åbne beslutninger afklaret 23-11 (Torben):** (a) arkiveret model-forum = **låst men læsbart**, ikke skjult; (b) arkiverede modeller **vises i Modeller-panelet** så de kan genaktiveres. (Torben forventer sjældent/aldrig at arkivere i praksis, men vil have muligheden.)
 
 ## Backlog-note: Tilføj model i Værkstedet (P17) - brief til frisk session
 > **BYGGET 23-11-2026 - se "## Tilføj model i Værkstedet (P17)" ovenfor.** Noten herunder er det oprindelige oplæg (historik).
