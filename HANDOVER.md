@@ -655,7 +655,7 @@ Fjerner den sidste SQL-only pligt for kategori-kuratering: flytning mellem grupp
   - Grafit/kobber hele vejen, ingen grøn/blå.
 - **Scope bevidst holdt til at redigere/flytte/oprette eksisterende grupper.** Slet-hvis-tom (findes). Arkivér-i-UI ikke med.
 - `npm run build` **grønt** (`/admin/forum` 4.64 kB). **Verificeret live af Torben 23-11:** flyt/omsortering + ny gruppe/kategori i UI virker (to pushes: 1) flyt mellem grupper + gruppe-sortering, 2) per-gruppe-oprettelse + server-værn). Ingen migration/RPC at køre.
-- **Oprydning tilbage til Torben:** test-kategorien **"17 X"** (+ evt. test-gruppen "TRÆF IGEN IGEN") blev lavet under test og bør slettes i UI (🗑 - de er tomme). "17 X" ligger i Modellerne som en almindelig kategori (derfor har den flyt-dropdown, i modsætning til de rigtige model-fora) - den kan ikke genskabes efter server-værnet.
+- **Oprydning:** test-kategorien **"17 X"** (lavet under test, lå som almindelig kategori i Modellerne) er **slettet af Torben 23-11**. Server-værnet forhindrer at den slags genskabes. (Tjek ved lejlighed om test-gruppen "TRÆF IGEN IGEN" også skal væk.)
 
 ## Backlog-note: Tilføj model i Værkstedet (P17) - brief til frisk session
 Mål: en "Tilføj model"-knap i Værkstedet der opretter en ny Zeekr-model + dens forum-forum i ét hug, uden Studio. Baggrund: `/admin/forum`-kategori-editoren (P7) kan nu alt for de tematiske grupper, men Modellerne er med vilje spærret for almindelige kategorier, fordi et model-forum SKAL kobles til en `models`-række (badge, Min Garage-bil, "mig med"-bekræftelser, Zeekr-rapport). Det er den eneste tilbageværende SQL-only pligt på model-siden.
