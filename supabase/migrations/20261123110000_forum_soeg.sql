@@ -56,7 +56,15 @@ create index if not exists forum_posts_tsv_idx
 --    all paa forum-tabellerne), og security definer sikrer ens opfoersel
 --    uanset kalder. search_path pinnet.
 -- =========================================================================
-create or replace function public.forum_soeg(p_soegeord text, p_maks int default 50)
+-- Idempotent: drop evt. tidligere 2-arg-version (fra en koersel foer scope
+-- blev tilfoejet) saa vi ikke ender med to overloads af forum_soeg.
+drop function if exists public.forum_soeg(text, int);
+
+create or replace function public.forum_soeg(
+  p_soegeord text,
+  p_kategori text default null,   -- kategori-slug: scope soegningen til ÉT rum (null = alle fora)
+  p_maks     int  default 50
+)
 returns table (
   thread_id     uuid,
   slug          text,
@@ -87,6 +95,13 @@ as $$
     -- -> matcher intet.
     select websearch_to_tsquery('danish', coalesce(p_soegeord, '')) as ts
   ),
+  -- Valgfrit scope: p_kategori null -> intet filter (alle fora). Kendt slug ->
+  -- kun det rum. Ukendt slug -> tom kat -> 0 raekker (UI'et validerer slug'en
+  -- mod kategori-listen foer kaldet, saa rigtige brugere rammer ikke det).
+  kat as (
+    select id from public.forum_categories
+    where p_kategori is not null and slug = p_kategori
+  ),
   -- Match i traad-titler (vejer x4).
   titel as (
     select t.id as thread_id, ts_rank(t.tsv, q.ts) * 4.0 as rank
@@ -94,6 +109,7 @@ as $$
     cross join q
     where t.is_removed = false
       and t.tsv @@ q.ts
+      and (p_kategori is null or t.category_id in (select id from kat))
   ),
   -- Match i indlaeg (ekskl. fjernede indlaeg OG indlaeg i fjernede traade).
   -- Bedste indlaegs-rank pr. traad.
@@ -105,6 +121,7 @@ as $$
     where p.is_removed = false
       and t.is_removed = false
       and p.tsv @@ q.ts
+      and (p_kategori is null or t.category_id in (select id from kat))
     group by p.thread_id
   ),
   -- Saml til én rank pr. traad.
@@ -160,4 +177,4 @@ as $$
   limit greatest(1, least(coalesce(p_maks, 50), 100));
 $$;
 
-grant execute on function public.forum_soeg(text, int) to anon, authenticated;
+grant execute on function public.forum_soeg(text, text, int) to anon, authenticated;

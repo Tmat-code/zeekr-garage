@@ -1,6 +1,3 @@
-'use client';
-
-import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/tid';
 import { modelBadge } from '@/lib/model-badge';
@@ -95,73 +92,40 @@ function KategoriRaekke({
   );
 }
 
+// Grupperet kategori-oversigt (ren visning). Tråd-/indhold-søgning lever på
+// /forum/soeg (P4); kategori-filter-boksen er fjernet 23-11 (forvekslet med
+// søgefeltet - rum-listen er kort og grupperet i forvejen).
 export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
-  const [q, setQ] = useState('');
-
-  const filtreret = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return grupper;
-    return grupper
-      .map((g) => ({
-        ...g,
-        kategorier: g.kategorier.filter(
-          (k) =>
-            k.name.toLowerCase().includes(s) ||
-            (k.description ?? '').toLowerCase().includes(s),
-        ),
-      }))
-      .filter((g) => g.kategorier.length > 0);
-  }, [q, grupper]);
-
   return (
-    <div>
-      {/* Top-bar: filtrér kategori-listen (navigation mellem rum).
-          Søgning i selve trådene/indlæg lever på /forum/soeg (P4). */}
-      <div className="mb-6">
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Find en kategori…"
-          className="input"
-          aria-label="Find en kategori"
-        />
-      </div>
-
-      {filtreret.length === 0 ? (
-        <p className="py-8 text-center text-grafit-500">Ingen kategorier matcher “{q}”.</p>
-      ) : (
-        <div className="space-y-8">
-          {filtreret.map((g) => (
-            <section key={g.label}>
-              <div className="mb-2 px-1">
-                <h2 className="font-display text-lg font-bold tracking-tight text-grafit-900">
-                  {g.label}
-                </h2>
-                {GRUPPE_TEKST[g.label] && (
-                  <p className="text-sm text-grafit-500">{GRUPPE_TEKST[g.label]}</p>
-                )}
-              </div>
-              <div className="divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
-                {g.kategorier.map((k) => (
-                  <KategoriRaekke
-                    key={k.id}
-                    slug={k.slug}
-                    icon={k.icon}
-                    modelId={k.modelId}
-                    name={k.name}
-                    description={k.description}
-                    traade={k.traade}
-                    visninger={k.visninger}
-                    sidstAktiv={k.sidstAktiv}
-                    isLocked={k.isLocked}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+    <div className="space-y-8">
+      {grupper.map((g) => (
+        <section key={g.label}>
+          <div className="mb-2 px-1">
+            <h2 className="font-display text-lg font-bold tracking-tight text-grafit-900">
+              {g.label}
+            </h2>
+            {GRUPPE_TEKST[g.label] && (
+              <p className="text-sm text-grafit-500">{GRUPPE_TEKST[g.label]}</p>
+            )}
+          </div>
+          <div className="divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
+            {g.kategorier.map((k) => (
+              <KategoriRaekke
+                key={k.id}
+                slug={k.slug}
+                icon={k.icon}
+                modelId={k.modelId}
+                name={k.name}
+                description={k.description}
+                traade={k.traade}
+                visninger={k.visninger}
+                sidstAktiv={k.sidstAktiv}
+                isLocked={k.isLocked}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

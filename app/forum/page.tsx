@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getForumGrupper } from '@/lib/forum';
+import { getForumGrupper, getKategoriListe } from '@/lib/forum';
 import { getCurrentUser } from '@/lib/queries';
 import ForumOversigt from '@/components/forum/ForumOversigt';
 import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
@@ -13,7 +13,11 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function ForumSide() {
-  const [grupper, user] = await Promise.all([getForumGrupper(), getCurrentUser()]);
+  const [grupper, kategorier, user] = await Promise.all([
+    getForumGrupper(),
+    getKategoriListe(),
+    getCurrentUser(),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -54,10 +58,10 @@ export default async function ForumSide() {
         </div>
       </section>
 
-      {/* Tværgående tråd-søgning: finder indhold på tværs af alle rum.
-          (Kategori-filteret længere nede navigerer kun mellem rum.) */}
+      {/* Tværgående tråd-søgning: finder indhold på tværs af alle rum, med
+          valgfrit scope til ét forum. */}
       <div className="mt-6">
-        <TraadSoegeForm stor />
+        <TraadSoegeForm stor kategorier={kategorier} />
       </div>
 
       <div className="mt-8">

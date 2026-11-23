@@ -5,6 +5,7 @@ import { adminKontekst } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
 import { modelBadge } from '@/lib/model-badge';
 import GarageBadge from '@/components/forum/GarageBadge';
+import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,11 @@ export default async function KategoriSide({ params }: { params: { kategori: str
             Log ind for at skrive
           </Link>
         )}
+      </div>
+
+      {/* Søg i dette forum (scopet til rummet; udvid til alle fora på resultatsiden) */}
+      <div className="mt-5">
+        <TraadSoegeForm scopeSlug={kat.slug} scopeNavn={kat.name} />
       </div>
 
       {/* Trådliste */}

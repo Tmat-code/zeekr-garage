@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getForumSoeg } from '@/lib/forum';
+import { getForumSoeg, getKategoriListe } from '@/lib/forum';
 import { relativTid } from '@/lib/tid';
 import { modelBadge } from '@/lib/model-badge';
 import GarageBadge from '@/components/forum/GarageBadge';
@@ -20,10 +20,17 @@ export function generateMetadata({ searchParams }: { searchParams: { q?: string 
 export default async function ForumSoegSide({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: { q?: string; kat?: string };
 }) {
   const q = (searchParams.q ?? '').trim();
-  const resultater = q ? await getForumSoeg(q) : [];
+  const kat = (searchParams.kat ?? '').trim();
+
+  const kategorier = await getKategoriListe();
+  // Validér scope mod kategori-listen -> send kun en kendt slug til RPC'en
+  // (ukendt/manipuleret slug nulstilles til "alle fora").
+  const scope = kat ? kategorier.find((k) => k.slug === kat) ?? null : null;
+  const scopeSlug = scope ? scope.slug : '';
+  const resultater = q ? await getForumSoeg(q, scopeSlug || null) : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -35,11 +42,11 @@ export default async function ForumSoegSide({
         Søg i forummet
       </h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Søger på tværs af alle kategorier og model-fora - i både trådtitler og indlæg.
+        Søger i både trådtitler og indlæg. Vælg et forum i feltet for at afgrænse søgningen.
       </p>
 
       <div className="mt-5">
-        <TraadSoegeForm defaultValue={q} stor />
+        <TraadSoegeForm defaultValue={q} stor kategorier={kategorier} scopeSlug={scopeSlug} />
       </div>
 
       {/* Tilstande: ingen søgning endnu / ingen match / resultater */}
@@ -50,20 +57,37 @@ export default async function ForumSoegSide({
       ) : resultater.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-grafit-300 bg-white px-6 py-12 text-center">
           <p className="text-grafit-600">
-            Ingen tråde matcher <span className="font-semibold">“{q}”</span>.
+            Ingen tråde matcher <span className="font-semibold">“{q}”</span>
+            {scope && <> i <span className="font-semibold">{scope.name}</span></>}.
           </p>
           <p className="mt-2 text-sm text-grafit-400">
-            Prøv et andet eller kortere søgeord - eller{' '}
-            <Link href="/forum" className="font-medium text-kobber-700 hover:underline">
-              gennemse kategorierne
-            </Link>
-            .
+            {scope ? (
+              <>
+                Prøv et andet søgeord - eller{' '}
+                <Link
+                  href={`/forum/soeg?q=${encodeURIComponent(q)}`}
+                  className="font-medium text-kobber-700 hover:underline"
+                >
+                  søg i alle fora
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                Prøv et andet eller kortere søgeord - eller{' '}
+                <Link href="/forum" className="font-medium text-kobber-700 hover:underline">
+                  gennemse kategorierne
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       ) : (
         <>
           <p className="mt-6 text-sm text-grafit-400">
             {resultater.length} {resultater.length === 1 ? 'tråd' : 'tråde'} matcher “{q}”
+            {scope && <> i {scope.name}</>}
           </p>
           <div className="mt-3 divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
             {resultater.map((r) => (

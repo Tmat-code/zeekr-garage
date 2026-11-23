@@ -106,6 +106,17 @@ export async function getKategori(slug: string): Promise<ForumKategori | null> {
   return data ? mapKategori(data) : null;
 }
 
+// --- Flad, ordnet kategori-liste (til scope-dropdown i søgningen) ---
+export async function getKategoriListe(): Promise<ForumKategori[]> {
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('forum_categories')
+    .select(KATEGORI_COLS)
+    .order('group_order', { ascending: true })
+    .order('display_order', { ascending: true });
+  return ((data ?? []) as any[]).map(mapKategori);
+}
+
 // --- Tråde i en kategori (fastgjorte først, derefter seneste aktivitet) ---
 export async function getTraade(categoryId: string): Promise<ForumTraadRow[]> {
   const sb = supabaseServer();
@@ -176,13 +187,18 @@ export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | n
 // Søger på tværs af ALLE kategorier/model-fora, match i trådtitler + indlægs-
 // tekst (åbning + svar). Fjernede tråde/indlæg holdes ude (sker i RPC'en).
 // Returnerer én række pr. tråd, sorteret efter relevans (ts_rank).
-export async function getForumSoeg(q: string, maks = 50): Promise<ForumSoegeResultat[]> {
+export async function getForumSoeg(
+  q: string,
+  kategoriSlug?: string | null,
+  maks = 50,
+): Promise<ForumSoegeResultat[]> {
   const soegeord = (q ?? '').trim();
   if (!soegeord) return [];
 
   const sb = supabaseServer();
   const { data, error } = await sb.rpc('forum_soeg', {
     p_soegeord: soegeord,
+    p_kategori: (kategoriSlug ?? '').trim() || null,
     p_maks: maks,
   });
   if (error || !data) return [];
