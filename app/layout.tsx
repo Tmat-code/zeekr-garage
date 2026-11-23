@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 // Display-font Archivo via @fontsource (self-hosted, ingen Google-request ved build/runtime).
 import '@fontsource/archivo/500.css';
 import '@fontsource/archivo/600.css';
@@ -27,6 +27,11 @@ export const metadata: Metadata = {
     title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
     description: BESKRIVELSE,
   },
+};
+
+// Grafit tema-farve (browser-UI/adresselinje + app-splash). Matcher ikonet.
+export const viewport: Viewport = {
+  themeColor: '#17191d',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

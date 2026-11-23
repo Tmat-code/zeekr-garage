@@ -579,6 +579,9 @@ Sidste trin i billed-sporet **P3 ✓ -> P8 ✓ -> P9 ✓ -> P10 ✓**. En bruger
 
 **Verificeret:** `npm run build` grønt (ingen type/lint-fejl). 13 RLS/privatlivs-checks i lokal Postgres 16 (den rigtige migration kørt verbatim mod storage-stubs): part A+B kan læse; udenforstående C **og moderator M kan IKKE** læse; kun afsender kan indsætte (ikke-afsender-part + udenforstående afvist); kun afsender/moderator kan slette; `besked`-bucket er privat; storage-upload kun i egen mappe; ingen direkte storage-listing (ingen select-policy). Migration idempotent (genkørt rent). Mobil-kamera arvet fra den uændrede `BilledeUpload`. Sandboxen kan ikke nå Pixa, så live-visning + realtime testes af Torben efter migrationen er kørt i Studio.
 
+## App-ikon & favicon (23-11-2026)
+Bookmark/"installér app" viste før browserens grå "Z"-fallback, fordi sitet ikke havde noget ikon defineret. Nu et rigtigt ikon-sæt i grafit+kobber (sitets egen palet, IKKE Zeekr-logo/-farver): to-tone "ZG"-monogram (Z off-white, G kobber) på grafit-gradient. Filer: `app/icon.png` (512), `app/apple-icon.png` (180, iOS/macOS home-screen), `app/favicon.ico` (16/32/48), `public/icon-192.png` + `public/icon-512.png` + `public/icon-maskable-512.png` (manifest/Android), `app/manifest.ts` (navn + grafit `theme_color` #17191d + maskable-ikon), og `viewport.themeColor` i `app/layout.tsx`. Next App Router auto-wirer icon/apple-icon/favicon/manifest. Dockerfile kopierer allerede `public/`. Ingen migration. Genereret med Pillow (DejaVu Sans Bold) - scriptet bor uden for repoet. Bruger ser først det nye ikon efter et frisk bookmark (gamle cacher browseren).
+
 ## Feedback-meldinger: billeder (P3) (bygget 22-11-2026)
 Foto-bevis i fejlmeldinger. En fejl med et skærmbillede (OTA-fejlbesked, fysisk defekt, log) vejer tungere over for Zeekr end ren tekst - styrker QA-sagen. Første trin i billed-sporet **P3 → P8 (redigér billeder) → P9 (oprydning af forældreløse filer)**.
 
