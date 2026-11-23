@@ -7,6 +7,8 @@ import {
   retKategori,
   saetKategoriLaast,
   flytKategori,
+  flytKategoriTilGruppe,
+  flytGruppe,
   sletKategori,
 } from '@/app/admin/forum-actions';
 
@@ -26,7 +28,18 @@ function useKoer() {
   return { pending, fejl, koer, setFejl };
 }
 
-function KategoriRaekke({ k, erForst, erSidst }: { k: ForumKategoriStat; erForst: boolean; erSidst: boolean }) {
+function KategoriRaekke({
+  k,
+  erForst,
+  erSidst,
+  flytMaal,
+}: {
+  k: ForumKategoriStat;
+  erForst: boolean;
+  erSidst: boolean;
+  flytMaal: string[];
+}) {
+  const erModelForum = k.modelId != null;
   const { pending, fejl, koer } = useKoer();
   const [redigerer, setRedigerer] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
@@ -86,6 +99,7 @@ function KategoriRaekke({ k, erForst, erSidst }: { k: ForumKategoriStat; erForst
           </div>
         </div>
       ) : (
+        <div className="space-y-2">
         <div className="flex items-center gap-3">
           <span className="text-lg" aria-hidden="true">{k.icon ?? '💬'}</span>
           <div className="min-w-0 flex-1">
@@ -148,6 +162,35 @@ function KategoriRaekke({ k, erForst, erSidst }: { k: ForumKategoriStat; erForst
               </button>
             )}
           </div>
+        </div>
+        {erModelForum ? (
+          <p className="pl-8 text-xs text-grafit-400">🚗 Model-forum - fast i Modellerne.</p>
+        ) : flytMaal.length > 0 ? (
+          <div className="flex items-center gap-2 pl-8">
+            <label className="text-xs text-grafit-400" htmlFor={`flyt-${k.id}`}>
+              Flyt til gruppe:
+            </label>
+            <select
+              id={`flyt-${k.id}`}
+              className="input !w-auto !py-1 text-sm"
+              value=""
+              disabled={pending}
+              onChange={(e) => {
+                const maal = e.target.value;
+                if (maal) koer(() => flytKategoriTilGruppe(k.id, maal));
+              }}
+            >
+              <option value="" disabled>
+                Vælg gruppe …
+              </option>
+              {flytMaal.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         </div>
       )}
       {fejl && <p className="mt-2 text-xs text-kobber-700">{fejl}</p>}
@@ -232,25 +275,76 @@ function NyKategori({ grupper }: { grupper: ForumGruppe[] }) {
   );
 }
 
+function GruppeBlok({
+  g,
+  flytMaal,
+  erForstGruppe,
+  erSidstGruppe,
+}: {
+  g: ForumGruppe;
+  flytMaal: string[];
+  erForstGruppe: boolean;
+  erSidstGruppe: boolean;
+}) {
+  const { pending, fejl, koer } = useKoer();
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1">
+        <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-grafit-400">
+          {g.label}
+        </h3>
+        <button
+          className="rounded px-1.5 py-1 text-grafit-400 hover:bg-grafit-100 hover:text-grafit-700 disabled:opacity-30"
+          disabled={pending || erForstGruppe}
+          title="Flyt gruppen op"
+          onClick={() => koer(() => flytGruppe(g.label, 'op'))}
+        >
+          ↑
+        </button>
+        <button
+          className="rounded px-1.5 py-1 text-grafit-400 hover:bg-grafit-100 hover:text-grafit-700 disabled:opacity-30"
+          disabled={pending || erSidstGruppe}
+          title="Flyt gruppen ned"
+          onClick={() => koer(() => flytGruppe(g.label, 'ned'))}
+        >
+          ↓
+        </button>
+      </div>
+      {fejl && <p className="mb-2 text-xs text-kobber-700">{fejl}</p>}
+      <div className="space-y-2">
+        {g.kategorier.map((k, i) => (
+          <KategoriRaekke
+            key={k.id}
+            k={k}
+            erForst={i === 0}
+            erSidst={i === g.kategorier.length - 1}
+            flytMaal={flytMaal}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function KategoriStyring({ grupper }: { grupper: ForumGruppe[] }) {
+  // Grupper der rummer model-fora ("Modellerne") - rygraden, holdes adskilt:
+  // man kan ikke flytte en kategori ind i dem.
+  const modelGrupper = new Set(
+    grupper.filter((g) => g.kategorier.some((k) => k.modelId != null)).map((g) => g.label),
+  );
+
   return (
     <div className="space-y-6">
-      {grupper.map((g) => (
-        <div key={g.label}>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-grafit-400">
-            {g.label}
-          </h3>
-          <div className="space-y-2">
-            {g.kategorier.map((k, i) => (
-              <KategoriRaekke
-                key={k.id}
-                k={k}
-                erForst={i === 0}
-                erSidst={i === g.kategorier.length - 1}
-              />
-            ))}
-          </div>
-        </div>
+      {grupper.map((g, i) => (
+        <GruppeBlok
+          key={g.label}
+          g={g}
+          erForstGruppe={i === 0}
+          erSidstGruppe={i === grupper.length - 1}
+          flytMaal={grupper
+            .map((x) => x.label)
+            .filter((l) => l !== g.label && !modelGrupper.has(l))}
+        />
       ))}
       <NyKategori grupper={grupper} />
     </div>

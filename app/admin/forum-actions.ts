@@ -153,6 +153,93 @@ export async function flytKategori(id: string, retning: 'op' | 'ned'): Promise<v
   revalider();
 }
 
+// Hvilke gruppe-labels rummer model-fora? (model_id != null => "Modellerne"-gruppen,
+// uanset hvad den er døbt). Model-foraene er rygraden og holdes i deres gruppe.
+function modelGruppeLabels(liste: any[]): Set<string> {
+  const s = new Set<string>();
+  for (const c of liste) if (c.model_id != null) s.add(c.group_label);
+  return s;
+}
+
+// Flyt en kategori til en ANDEN eksisterende gruppe (ændrer group_label +
+// group_order, og lægger den sidst i målgruppen). Ét rækkes-update => atomisk.
+// Model-fora kan ikke flyttes, og ingen kategori kan flyttes ind i model-gruppen.
+export async function flytKategoriTilGruppe(id: string, maalGruppe: string): Promise<void> {
+  await kraevModerator();
+  const gruppe = maalGruppe.trim();
+  if (!gruppe) throw new Error('Vælg en gruppe.');
+
+  const sb = supabaseServer();
+  const { data: alle } = await sb
+    .from('forum_categories')
+    .select('id, group_label, group_order, display_order, model_id');
+  const liste = (alle ?? []) as any[];
+  const mig = liste.find((c) => c.id === id);
+  if (!mig) throw new Error('Kategorien findes ikke.');
+
+  if (mig.model_id != null) {
+    throw new Error('Model-fora hører til i Modellerne og kan ikke flyttes mellem grupper.');
+  }
+  if (gruppe === mig.group_label) return; // allerede i gruppen
+
+  const modelGrupper = modelGruppeLabels(liste);
+  if (modelGrupper.has(gruppe)) {
+    throw new Error('Modellerne er forbeholdt model-fora.');
+  }
+
+  const iMaal = liste.filter((c) => c.group_label === gruppe);
+  if (iMaal.length === 0) throw new Error('Gruppen findes ikke.');
+
+  const groupOrder = iMaal[0].group_order;
+  const displayOrder = Math.max(0, ...iMaal.map((c) => c.display_order ?? 0)) + 1;
+
+  const { error } = await sb
+    .from('forum_categories')
+    .update({ group_label: gruppe, group_order: groupOrder, display_order: displayOrder })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalider();
+}
+
+// Omsortér hele grupper (bytter group_order med nabogruppen). group_order er
+// denormaliseret på hver række i gruppen => to bulk-updates, én pr. gruppe.
+// Ingen unique-constraint på group_order, så et direkte bytte er sikkert.
+export async function flytGruppe(label: string, retning: 'op' | 'ned'): Promise<void> {
+  await kraevModerator();
+  const sb = supabaseServer();
+  const { data: alle } = await sb.from('forum_categories').select('group_label, group_order');
+  const liste = (alle ?? []) as any[];
+
+  // Distinkte grupper i vist rækkefølge (group_order, så label).
+  const perGruppe = new Map<string, number>();
+  for (const c of liste) {
+    if (!perGruppe.has(c.group_label)) perGruppe.set(c.group_label, c.group_order ?? 0);
+  }
+  const grupper = [...perGruppe.entries()]
+    .map(([l, o]) => ({ label: l, order: o }))
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, 'da'));
+
+  const idx = grupper.findIndex((g) => g.label === label);
+  if (idx < 0) throw new Error('Gruppen findes ikke.');
+  const naboIdx = retning === 'op' ? idx - 1 : idx + 1;
+  if (naboIdx < 0 || naboIdx >= grupper.length) return; // yderpunkt
+
+  const mig = grupper[idx];
+  const nabo = grupper[naboIdx];
+  // Byt group_order på alle rækker i hver af de to grupper.
+  const r1 = await sb
+    .from('forum_categories')
+    .update({ group_order: nabo.order })
+    .eq('group_label', mig.label);
+  if (r1.error) throw new Error(r1.error.message);
+  const r2 = await sb
+    .from('forum_categories')
+    .update({ group_order: mig.order })
+    .eq('group_label', nabo.label);
+  if (r2.error) throw new Error(r2.error.message);
+  revalider();
+}
+
 // Slet en kategori - kun hvis den er tom (cascade ville ellers slette tråde).
 export async function sletKategori(id: string): Promise<void> {
   await kraevModerator();
