@@ -46,7 +46,14 @@ export async function getForumOverblik(): Promise<ForumOverblik> {
   const [kat, traade, indlaeg] = await Promise.all([
     sb.from('forum_categories').select('*', { count: 'exact', head: true }),
     sb.from('forum_threads').select('*', { count: 'exact', head: true }).eq('is_removed', false),
-    sb.from('forum_posts').select('*', { count: 'exact', head: true }).eq('is_removed', false),
+    // Indlaeg: tael kun indlaeg der selv IKKE er fjernet OG hvis traad heller ikke er fjernet.
+    // fjernTraad saetter kun traadens is_removed=true, ikke indlaeggenes - derfor !inner-join + filter paa traaden,
+    // ellers taeller aabnings-indlaeg fra fjernede traade stadig med.
+    sb
+      .from('forum_posts')
+      .select('*, thread:forum_threads!inner(is_removed)', { count: 'exact', head: true })
+      .eq('is_removed', false)
+      .eq('thread.is_removed', false),
   ]);
   return {
     kategorier: kat.count ?? 0,
