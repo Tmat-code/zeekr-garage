@@ -40,6 +40,7 @@
 - [ ] Q&A / guides-sektion.
 - [ ] AI-dedup af fejlmeldinger på `/meld` (match ny melding mod eksisterende - "kø, ikke patrulje").
 - [ ] Ikke-AI-redesign (Torben udskød; grafit+kobber står). Ved palet-skift skal PDF-rapport + `tailwind.config.ts` + komponenter følge med.
+- [ ] **Split HANDOVER: arkivér historiske sektioner.** HANDOVER er ~150 KB/~820 linjer og vokser - ikke et problem nu (bro'en virker), men den tærer på kontekst-budgettet ved hver session-start og bliver tung at skimme. Når det generer: flyt de færdige, historiske per-feature-sektioner ud i `HANDOVER-ARKIV.md` og lad selve HANDOVER være top-note + backlog + aktive beslutninger + de seneste par features. Al historik bevares, bro'en bliver let igen. Egen session (ren oprydning, ingen kode/migration).
 
 ### Parkeret / bevidst manuelt
 - [ ] "Følg denne fejl" uden konto (email) + anonyme kommentarer (navn + captcha). Parkeret.
