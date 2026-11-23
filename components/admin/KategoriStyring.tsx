@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import type { ForumGruppe, ForumKategoriStat } from '@/lib/types';
+import ModelBadge from '@/components/forum/ModelBadge';
 import {
   opretKategori,
   retKategori,
@@ -101,7 +102,11 @@ function KategoriRaekke({
       ) : (
         <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <span className="text-lg" aria-hidden="true">{k.icon ?? '💬'}</span>
+          {erModelForum ? (
+            <ModelBadge slug={k.slug} size="sm" />
+          ) : (
+            <span className="text-lg" aria-hidden="true">{k.icon ?? '💬'}</span>
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate font-medium text-grafit-900">{k.name}</span>

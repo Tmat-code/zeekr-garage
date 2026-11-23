@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { relativTid } from '@/lib/tid';
-import { modelBadge } from '@/lib/model-badge';
+import ModelBadge from '@/components/forum/ModelBadge';
 import type { ForumGruppe } from '@/lib/types';
 
 // Kort undertekst pr. gruppe (Polestar har gruppe-overskrift + undertekst).
@@ -32,19 +32,13 @@ function KategoriRaekke({
   sidstAktiv: string | null;
   isLocked: boolean;
 }) {
-  const badge = modelId ? modelBadge(slug) : null;
   return (
     <Link
       href={`/forum/${slug}`}
       className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-grafit-50"
     >
-      {badge ? (
-        <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-grafit-100 font-display text-[13px] font-semibold tabular-nums tracking-tight text-kobber-700"
-          aria-hidden="true"
-        >
-          {badge}
-        </span>
+      {modelId ? (
+        <ModelBadge slug={slug} size="md" />
       ) : (
         <span
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-grafit-100 text-lg"
