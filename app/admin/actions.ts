@@ -5,6 +5,8 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
 import type { AlleBruger } from '@/lib/queries-admin';
+import { MELD_BUCKET } from '@/lib/billeder';
+import { BILLED_SPOR, findForaeldreloese, fjernFiler } from '@/lib/storage-oprydning';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB,
 // men vi stopper tidligt med en laesbar fejl.
@@ -58,8 +60,25 @@ export async function markerLoest(issueId: string): Promise<void> {
 export async function sletMelding(issueId: string): Promise<void> {
   await kraevModerator();
   const sb = supabaseServer();
+
+  // P9: sletning af en melding er HÅRD (uoprettelig) - cascade fjerner
+  // issue_images-rækkerne, men ikke selve storage-filerne. Hent billed-paths
+  // FØR issue'et slettes, slet så issue'et, og ryd til sidst filerne best-effort.
+  const { data: imgs } = await sb.from('issue_images').select('path').eq('issue_id', issueId);
+  const paths = (imgs ?? [])
+    .map((r: any) => r.path)
+    .filter((p: any): p is string => typeof p === 'string');
+
   const { error } = await sb.from('issues').delete().eq('id', issueId);
   if (error) throw new Error(error.message);
+
+  if (paths.length > 0) {
+    try {
+      await sb.storage.from(MELD_BUCKET).remove(paths);
+    } catch {
+      /* ignoreres - en evt. tilbageblevet fil fanges af storage-sweep'et */
+    }
+  }
   revalider();
 }
 
@@ -148,6 +167,32 @@ export async function fjernBekraeftelserFoer(dato: string): Promise<number> {
   if (error) throw new Error(error.message);
   revalider();
   return (data ?? []).length;
+}
+
+// --- Oprydning: forældreløse billed-filer i storage (P9, kun admin) ---
+// Finder/rydder objekter i 'forum'- og 'meld'-bucketen uden en levende
+// reference i forum_post_images / issue_images (fx compose-uploads der blev
+// fortrudt). Soft-removed forum-indhold beholder sine rækker og røres IKKE.
+// Serveren rescanner selv ved sletning - klienten sender ingen paths.
+export async function taelForaeldreloeseFiler(): Promise<{ forum: number; meld: number }> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const res = await Promise.all(
+    BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel)),
+  );
+  return { forum: res[0].foraeldreloese.length, meld: res[1].foraeldreloese.length };
+}
+
+export async function rydForaeldreloeseFiler(): Promise<{ forum: number; meld: number }> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const res = await Promise.all(
+    BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel)),
+  );
+  const forum = await fjernFiler(sb, BILLED_SPOR[0].bucket, res[0].foraeldreloese);
+  const meld = await fjernFiler(sb, BILLED_SPOR[1].bucket, res[1].foraeldreloese);
+  revalider();
+  return { forum, meld };
 }
 
 // --- Forside-besked (kun admin) ---

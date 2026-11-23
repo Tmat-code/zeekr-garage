@@ -205,6 +205,11 @@ export async function retIndlaeg(
 }
 
 // Fjern et indlæg (soft-remove; RLS: egen eller moderator).
+// P9-beslutning: soft-remove er reversibelt (is_removed kan sættes false igen) og
+// BEHOLDER bevidst forum_post_images-rækkerne + storage-filerne, så et evt.
+// gendannet indlæg ikke får brudte billeder. Vi destruerer altså IKKE filer her.
+// Ægte forældreløse forum-filer (compose-/editor-fortryd) ryddes af admin-sweep'et
+// i Værkstedet (taelForaeldreloeseFiler/rydForaeldreloeseFiler, lib/storage-oprydning.ts).
 export async function fjernIndlaeg(
   postId: string,
   kategoriSlug: string,
@@ -244,6 +249,7 @@ export async function saetLaast(
 }
 
 // Fjern hele tråden (soft-remove). RLS: egen eller moderator.
+// Samme P9-beslutning som fjernIndlaeg: reversibelt, så filerne bevares (sweep rydder orphans).
 export async function fjernTraad(threadId: string, kategoriSlug: string): Promise<void> {
   const sb = supabaseServer();
   const { error } = await sb.from('forum_threads').update({ is_removed: true }).eq('id', threadId);

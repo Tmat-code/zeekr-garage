@@ -4,6 +4,7 @@ import Overblik from '@/components/admin/Overblik';
 import ModereringsTabel from '@/components/admin/ModereringsTabel';
 import ForsideBeskedEditor from '@/components/admin/ForsideBeskedEditor';
 import OprydningPanel from '@/components/admin/OprydningPanel';
+import StorageOprydningPanel from '@/components/admin/StorageOprydningPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,8 @@ export default async function AdminForside() {
       </section>
 
       <OprydningPanel />
+
+      <StorageOprydningPanel />
     </div>
   );
 }
