@@ -122,6 +122,26 @@ export type ForumIndlaeg = {
   billederPaths: string[]; // rå storage-paths, parallelt ordnet med billeder (til redigering)
 };
 
+// Et tvaergaaende soege-resultat (en traad der matcher i titel eller indlaeg).
+export type ForumSoegeResultat = {
+  id: string;
+  slug: string;
+  title: string;
+  kategoriSlug: string;
+  kategoriNavn: string;
+  kategoriIcon: string | null;
+  modelId: string | null;      // != null => model-forum (typografisk badge)
+  forfatter: string | null;
+  bil: string | null;          // garage-badge ("Zeekr 7GT · Long Range RWD")
+  lastPostAt: string;
+  replyCount: number;
+  viewCount: number;
+  isPinned: boolean;
+  isLocked: boolean;
+  rank: number;                // relevans (ts_rank, titel vejer tungest)
+  uddrag: string | null;       // highlightet uddrag; match-markoerer \u0001/\u0002
+};
+
 // En traad med dens kategori (til detalje-siden).
 export type ForumTraadDetalje = {
   id: string;

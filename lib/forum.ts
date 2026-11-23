@@ -7,6 +7,7 @@ import type {
   ForumTraadRow,
   ForumIndlaeg,
   ForumTraadDetalje,
+  ForumSoegeResultat,
 } from '@/lib/types';
 
 // Forfatter + bil (garage-badge) i ét embed. 3-niveau: forum_* -> profiles -> model/variant.
@@ -169,6 +170,46 @@ export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | n
       isLocked: k?.is_locked ?? false,
     },
   };
+}
+
+// --- Tværgående tråd-søgning (P4) ---
+// Søger på tværs af ALLE kategorier/model-fora, match i trådtitler + indlægs-
+// tekst (åbning + svar). Fjernede tråde/indlæg holdes ude (sker i RPC'en).
+// Returnerer én række pr. tråd, sorteret efter relevans (ts_rank).
+export async function getForumSoeg(q: string, maks = 50): Promise<ForumSoegeResultat[]> {
+  const soegeord = (q ?? '').trim();
+  if (!soegeord) return [];
+
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('forum_soeg', {
+    p_soegeord: soegeord,
+    p_maks: maks,
+  });
+  if (error || !data) return [];
+
+  return (data as any[]).map((r) => {
+    const modelNavn = r.bil_model ?? null;
+    const variantNavn = r.bil_variant ?? null;
+    const bil = modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
+    return {
+      id: r.thread_id,
+      slug: r.slug,
+      title: r.title,
+      kategoriSlug: r.kategori_slug,
+      kategoriNavn: r.kategori_navn,
+      kategoriIcon: r.kategori_icon ?? null,
+      modelId: r.model_id ?? null,
+      forfatter: r.forfatter ?? null,
+      bil,
+      lastPostAt: r.last_post_at,
+      replyCount: r.reply_count ?? 0,
+      viewCount: r.view_count ?? 0,
+      isPinned: r.is_pinned ?? false,
+      isLocked: r.is_locked ?? false,
+      rank: Number(r.rank ?? 0),
+      uddrag: r.uddrag ?? null,
+    };
+  });
 }
 
 // --- Indlæg i en tråd (åbning først, derefter kronologisk) ---

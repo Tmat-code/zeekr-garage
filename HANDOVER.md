@@ -3,7 +3,7 @@
 > Uofficielt, uafhængigt community-site for Zeekr-ejere i Danmark/Norden.
 > Dette dokument er projektets sandhedskilde. **Opdateres ved hver ændring.**
 
-**Sidst opdateret:** 2026-11-23 (P9 - oprydning af forældreløse storage-filer bygget; INGEN migration/SQL - ren kode. Billed-sporet P3 ✓ → P8 ✓ → P9 ✓ AFSLUTTET)
+**Sidst opdateret:** 2026-11-23 (P4 - tværgående tråd-søgning i forummet bygget + verificeret lokalt. **KRÆVER at migration `20261123110000_forum_soeg.sql` køres i Zeekr-Studio port 8002 før det virker live** - se "## Forum: tværgående tråd-søgning (P4)". Forrige: P9 - oprydning af forældreløse storage-filer; billed-sporet P3 ✓ → P8 ✓ → P9 ✓ AFSLUTTET)
 
 ---
 
@@ -20,7 +20,7 @@
 > QA-værdi øverst (bygges nu uanset trafik). **Forum-klyngen** (P4 søgning, P5 auto-moderering, P6 ejer-antal) forudsætter rigtig forum-trafik - forummet er pt. tomt for tråde - så de kan bygges proaktivt, men hastes ikke før der kommer liv i forummet.
 - [x] **P2 - Ryd op i den tætpakkede moderings-række i Værkstedet.** BYGGET 22-11 (ingen migration). Se "## Værksted: oprydning af moderings-rækken (P2)".
 - [x] **P3 - Billeder i feedback-meldinger.** BYGGET 22-11. **Kræver migration kørt i Zeekr-Studio (port 8002) før det virker live** - se "## Feedback-meldinger: billeder (P3)". (Billed-sporet: P3 ✓ → P8 → P9.)
-- [ ] **P4 - Tværgående tråd-søgning (forum).** IA-strategien hviler bevidst på søgning for findbarhed (ikke perfekt kategorisering). Medium.
+- [x] **P4 - Tværgående tråd-søgning (forum).** BYGGET 23-11. Postgres full-text search (dansk ordbog) på tværs af alle kategorier/model-fora; match i trådtitler + indlæg (åbning + svar); fjernede tråde/indlæg udeladt; relevans-ranking + highlightet uddrag. **Kræver migration kørt i Studio 8002** (tsvector-kolonner + GIN + `forum_soeg`-RPC). Se "## Forum: tværgående tråd-søgning (P4)".
 - [ ] **P5 - Auto-moderering (forum): AI-flagning af grov tone/personangreb.** Mål: holde forummet civilt - "et forum Zeekr kan være stolt af". **Fase 1 = flag-only:** AI markerer forum-tråde/svar med mulig grov tone/personangreb og lægger dem i en kø i Værkstedet; moderator bekræfter. **Ingen auto-skjul/slet** (passer på "kø, ikke patrulje" + undgår at gøre brugerne uret). **Kun forum-indhold** - IKKE feedback-meldinger (dem kuraterer Torben selv før rapport, og de 31 er allerede i god tone). Autonomi (auto-skjul-til-review) kan øges senere. Beslægtet med AI-dedup-roadmap. Medium/større (model-kald + kø-UI).
 - [ ] **P6 - Antal ejere pr. model-forum.** Social proof / "her sker der noget". Lille/medium.
 - [ ] **P7 - Kategori-editor: flyt en kategori mellem grupper i UI.** Fjerner en tilbageværende SQL-only pligt. Medium.
@@ -420,7 +420,33 @@ Diskussionsforum ud over Feedback-boardet. **Custom** (Next.js + Supabase), ikke
 
 **Verificeret live 21-11:** udlogget (WebFetch) = 4 grupper + 15 kategorier, login-gate korrekt. **Skrive-stien end-to-end verificeret via Chrome som admin (Torben):** opret tråd → korrekt slug + **garage-badge "🚗 Zeekr 7GT · Core RWD" automatisk på indlæg** (hooket virker) + moderering-bar + svar-felt; denorm-tæller + visnings-ping tikkede; "Fjern tråd" virker. Test ryddet op. `npm run build` grønt, deployet via n8n (Coolify grøn). **Første indhold postet 21-11 (via Chrome, som Torben):** fastgjort regel-tråd "Velkommen - sådan er tonen i Garagen" i Community-regler + fastgjort velkomst-tråd "Velkommen i Garagen - sig hej" i Præsentér dig.
 
-**Senere skiver:** tværgående tråd-søgning · følg/notifikationer · ~~Billeder m. upload~~ **BYGGET 22-11 (se "## Billeder i forum-indlæg")** · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
+**Senere skiver:** ~~tværgående tråd-søgning~~ **BYGGET 23-11 (se "## Forum: tværgående tråd-søgning (P4)")** · følg/notifikationer · ~~Billeder m. upload~~ **BYGGET 22-11 (se "## Billeder i forum-indlæg")** · "Opret som feedback"-bro · antal ejere pr. model-forum · modereringskø i Værkstedet.
+
+## Forum: tværgående tråd-søgning (P4) - bygget 23-11-2026
+Søgning på tværs af HELE forummet (alle kategorier + model-fora), så findbarhed bæres af søgning frem for perfekt kategorisering (jf. "Beslutning - forum-struktur"). Forummet er pt. næsten tomt for tråde, så det er bygget proaktivt.
+
+**Beslutninger (truffet i sessionen):**
+- **Omfang:** tværgående (ikke pr. rum). Match i **trådtitler + indlægs-tekst** (åbnings-indlæg + svar - begge er bare posts). Resultatet er **én række pr. tråd** (ikke pr. matchende indlæg); et match i flere indlæg/titel dedup'es til trådens samlede rank.
+- **Fjernet indhold udeladt:** `is_removed`-tråde holdes ude, OG tråde hvor matchet kun ligger i et `is_removed`-indlæg tæller ikke med (begge verificeret lokalt).
+- **Metode = Postgres full-text search med dansk ordbog** (`'danish'` snowball), ikke ILIKE. Giver stemming (fx "kolde" matcher "koldt"; "vinter" matcher "vinteren"), relevans-ranking (`ts_rank`, titel vejer ×4) og highlightet uddrag (`ts_headline`). ILIKE kan intet af det og kan ikke bruge indeks på `%term%`.
+
+**Migration `20261123110000_forum_soeg.sql` - SKAL køres i Zeekr-Studio (port 8002) før det virker live:**
+- `forum_threads.tsv` + `forum_posts.tsv`: **genererede** (`GENERATED ALWAYS … STORED`) tsvector-kolonner på hhv. `title` og `body` med `to_tsvector('danish', …)`. **Ingen trigger** - Postgres holder dem selv ajour (konstant config-literal gør udtrykket immutable → tilladt i genereret kolonne). Vælges frem for trigger-mønsteret for mindre vedligehold.
+- GIN-indeks på hver tsv-kolonne (`forum_threads_tsv_idx`, `forum_posts_tsv_idx`) - verificeret brugt (Bitmap Index Scan).
+- RPC `forum_soeg(p_soegeord text, p_maks int default 50)` (SQL, `stable`, `security definer`, pinnet `search_path`): parser input med `websearch_to_tsquery('danish', …)` (brugervenlig, kaster aldrig fejl; tom/stopord-input → 0 rækker), ranker titel ×4 + bedste indlægs-rank, og returnerer trådrække + kategori/model + forfatter/garage-badge + `ts_headline`-uddrag. `grant execute … to anon, authenticated` (søgning er offentlig som resten).
+- **Uddrag-markører:** `ts_headline` bruger `chr(1)`/`chr(2)` (kontroltegn, aldrig i rigtig tekst) som Start/StopSel; app-laget splitter på dem og wrapper i `<mark>` - ingen rå HTML fra db → ingen injection.
+- **Idempotent** (`add column if not exists` + `create index if not exists` + `create or replace function`).
+- **Verificeret i en lokal engangs-Postgres 16** (sandboxen kan ikke nå Pixa): dansk testdata på tværs af 3 kategorier bekræftede titel-vægtning, dedup til én række pr. tråd, udeladelse af fjernet tråd + fjernet svar, stemming, highlight, GIN-brug og tom-søgning = 0.
+
+**Kode:**
+- `lib/forum.ts:getForumSoeg(q, maks=50)` - kalder RPC'en, mapper rækker (komponerer `bil`-badge som `mapAuthor`). Tom q → `[]` uden db-kald.
+- `lib/types.ts:ForumSoegeResultat`.
+- `app/forum/soeg/page.tsx` - **SSR resultatside** drevet af `?q=` (delbar/bogmærkbar URL, virker uden JS; `robots: noindex`). Trådliste med kategori/model-chip + forfatter/garage-badge + aktivitet + tal + highlightet uddrag. Statisk `soeg` vinder over dynamisk `[kategori]` (samme mønster som `ny`).
+- `components/forum/TraadSoegeForm.tsx` - ren GET-form → `/forum/soeg` (ingen state). Lagt i forum-forsidens intro (`app/forum/page.tsx`) + øverst på resultatsiden til at forfine.
+- `components/forum/Uddrag.tsx` - splitter `chr(1)/chr(2)`-markører → `<mark>` (kobber, ingen grøn/blå).
+- Den eksisterende "Find en kategori…"-boks i `ForumOversigt` er bevidst beholdt: den **navigerer mellem rum** (klient-filter på kategori-listen); den nye søger i **indhold på tværs**. Kommentaren i `ForumOversigt` opdateret så de to ikke forveksles.
+
+**Mangler/senere:** søg kan senere udvides til også at matche feedback-meldinger (bro til `/feedback`), filtrér resultater pr. model, og "ingen match → opret tråd"-genvej. P16 (afkortet moderings-liste i Værkstedet) kan nu genbruge samme FTS-mønster.
 
 ## Billeder i forum-indlæg (bygget 22-11-2026)
 Brugere kan vedhæfte billeder til forum-indlæg (åbnings-indlæg + svar).

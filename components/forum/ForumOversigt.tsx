@@ -115,7 +115,8 @@ export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
 
   return (
     <div>
-      {/* Top-bar: søg i kategorier (tråd-søgning kommer senere) */}
+      {/* Top-bar: filtrér kategori-listen (navigation mellem rum).
+          Søgning i selve trådene/indlæg lever på /forum/soeg (P4). */}
       <div className="mb-6">
         <input
           type="search"

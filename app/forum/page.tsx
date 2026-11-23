@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getForumGrupper } from '@/lib/forum';
 import { getCurrentUser } from '@/lib/queries';
 import ForumOversigt from '@/components/forum/ForumOversigt';
+import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
 
 export const metadata = {
   title: 'Forum',
@@ -52,6 +53,12 @@ export default async function ForumSide() {
           <span className="text-grafit-400">- sådan er tonen i Garagen.</span>
         </div>
       </section>
+
+      {/* Tværgående tråd-søgning: finder indhold på tværs af alle rum.
+          (Kategori-filteret længere nede navigerer kun mellem rum.) */}
+      <div className="mt-6">
+        <TraadSoegeForm stor />
+      </div>
 
       <div className="mt-8">
         <ForumOversigt grupper={grupper} />
