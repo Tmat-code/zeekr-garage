@@ -7,6 +7,7 @@ import { relativTid } from '@/lib/tid';
 import type { ForumIndlaeg } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
 import BilledeUpload from '@/components/forum/BilledeUpload';
+import BilledeGalleri from '@/components/BilledeGalleri';
 import { svar, retIndlaeg, fjernIndlaeg } from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 
@@ -91,18 +92,8 @@ function IndlaegKort({
       )}
 
       {!redigerer && p.billeder.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {p.billeder.map((url, i) => (
-            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt="Billede i indlæg"
-                loading="lazy"
-                className="max-h-64 rounded-lg border border-grafit-200 object-cover"
-              />
-            </a>
-          ))}
+        <div className="mt-2">
+          <BilledeGalleri billeder={p.billeder} alt="Billede i indlæg" />
         </div>
       )}
 
