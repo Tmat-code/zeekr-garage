@@ -32,6 +32,7 @@
 - [ ] **P13 - Events:** .ics-kalendereksport, antal gæster pr. tilmelding, notifikation ved *nyt* event (ikke kun opdateringer).
 - [ ] **P14 - Polish:** fjern ubrugt `ForsideOverblik.tsx` (hurtig); end-to-end-test af selvbetjent mail-skift (kode + Supabase klar).
 - [x] **P15 - Bruger-sletning af samtaler.** BYGGET 22-11 (skjul-for-mig). Se "## Beskeder: bruger-sletning af samtaler (P15)".
+- [ ] **P16 - Forum-moderering i Værkstedet viser kun de 25 seneste.** `getAdminForum(25)` (`lib/queries-admin.ts`) henter de 25 nyeste tråde + 25 nyeste indlæg, sorteret nyest først; `app/admin/forum/page.tsx` kalder med 25. Vokser forummet forbi det, falder ældre tråde/indlæg ud af moderings-visningen (de kan STADIG modereres direkte på selve forummet - det er kun Værksteds-overblikket der er afkortet). Fix-muligheder: (a) paginering / "vis flere", (b) søg/filtrér i modererings-listen (flugter med P4-søgestrategien), (c) filtrér til "kræver opmærksomhed" (fx anmeldte/nyeste uden moderering) i stedet for ren nyeste-liste. Haster ikke med nuværende 3 indlæg; løft før forummet får rigtig trafik. Medium. Beslægtet med P4 (søgning) + P5 (flag-kø).
 
 ### Senere / roadmap (ikke planlagt endnu)
 - [ ] Q&A / guides-sektion.
