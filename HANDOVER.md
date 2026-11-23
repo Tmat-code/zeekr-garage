@@ -76,28 +76,25 @@
 
 ## Moderings-kerne: design-oplæg (P20 + P21) (design 23-11-2026, INGEN kode endnu)
 
-> Design-først-session. P20 (bruger-administration/sanktioner) og P21 (moderings-handling med grund + besked + rapport-kø) deler kernen "moderations-handling på en bruger" - den tegnes ÉN gang her og bygges ÉN gang. Ingen migration/kode kørt i denne session. Byggerækkefølge + nødvendige migrationer står nederst i sektionen. Informerer nav-gentænkningen i P23.
+> Design-først-session. P20 (bruger-administration/sanktioner) og P21 (moderings-handling med grund + besked + rapport-kø) deler kernen "moderations-handling på en bruger" - tegnet ÉN gang her. Byggerækkefølge + migrationer står nederst. Informerer nav-gentænkningen i P23.
 > Udgangspunkt (bekræftet 23-11): dagens moderering er ren tråd-CRUD (fastgør/lås/fjern, soft-remove, reversibel) UDEN grund og UDEN besked til brugeren; Adgange kan kun søge bruger + sætte rolle; der er INGEN rapportér-knap på forum-indhold.
 
 ### 1) Sanktions-model
 **Niveauer (anbefaling):** advarsel < suspendér (tidsbegrænset) < ban (permanent) < anonymisér < slet.
-- **"Ban" betyder: kan stadig logge ind og LÆSE, men kan ikke SKRIVE.** Alt er offentligt læsbart alligevel, og en skrive-spærre giver os en flade til at forklare hvorfor; en login-spærre via Supabase auth ville være tungere og helt stum. Suspendér = samme skrive-spærre, bare tidsbegrænset.
-- **Indhold + historik bevares** altid ved suspendér/ban (soft, reversibel - samme filosofi som forum-soft-remove).
-- **Anonymisér vs. slet:** hard-delete af en profil er destruktiv: `cars` og `confirmations` har `on delete cascade` -> vi mister bekræftelserne (= selve QA-signalet mod Zeekr), mens forum-tråde/-indlæg kun bliver forfatterløse (`author_id on delete set null`). Derfor: **anonymisér** (ryd display_name + evt. PII, behold rækkerne) er den normale "fjern personen"-vej; **hard-delete** forbeholdes åbenlys spam/testkonti, admin-only, med eksplicit cascade-advarsel.
+- **"Ban" betyder: kan stadig logge ind og LÆSE, men kan ikke SKRIVE.** Alt er offentligt læsbart alligevel, og en skrive-spærre giver en flade til at forklare hvorfor; en login-spærre via Supabase auth ville være tungere og helt stum. Suspendér = samme, bare tidsbegrænset. Begge er soft/reversible (indhold + historik bevares) - som forum-soft-remove.
+- **Anonymisér vs. slet:** hard-delete af en profil er destruktiv: `cars` og `confirmations` har `on delete cascade` -> vi mister bekræftelserne (= selve QA-signalet mod Zeekr), mens forum-tråde/-indlæg kun bliver forfatterløse (`author_id on delete set null`). Derfor: **anonymisér** (ryd display_name + evt. PII, behold rækkerne) som normal "fjern personen"-vej; **hard-delete** forbeholdes åbenlys spam/testkonti, admin-only, med cascade-advarsel.
 
 **Datamodel (anbefaling): tabel + denormaliseret felt, ikke enten-eller.**
 - `user_sanctions` (historik, sandhedskilde): id, bruger_id, type (advarsel|suspender|ban|ophaev|anonymiser), grund, fritekst, udloeber_at (null = permanent/ikke-tid), udfoert_af, created_at. Fuld historik + fodrer audit-loggen (punkt 4).
 - `profiles.spaerret_til timestamptz` (denormaliseret håndhævelses-felt): null = ikke spærret; fremtidig tid = suspenderet til da; sentinel ('infinity') = permanent ban. Vedligeholdes KUN af sanktions-RPC'erne. Samme mønster som de denormaliserede `reply_count`/`last_post_at` på tråde.
 - Hjælper `er_bruger_spaerret()` (security definer, stable): for `auth.uid()` -> `spaerret_til is not null and spaerret_til > now()`. O(1), ingen join i skrive-stierne.
 
-**Håndhævelse i skrive-stierne (præcis flade):** tilføj `and not public.er_bruger_spaerret()` til hver BRUGER-insert-policy:
-- `forum_threads_insert_auth`, `forum_posts_insert_auth`, `comments_insert_auth`, `cars_insert_own`, `issues_insert_auth`, `confirmations_insert_own`, `messages_insert`, `event_signups_insert_own`.
-- Moderator-insert-policyerne (`*_insert_mod`) røres ikke (en sanktioneret moderator er en ikke-sag - sanktion fjerner rollen). Læsning røres aldrig.
+**Håndhævelse i skrive-stierne (præcis flade):** tilføj `and not public.er_bruger_spaerret()` til hver BRUGER-insert-policy: `forum_threads_insert_auth`, `forum_posts_insert_auth`, `comments_insert_auth`, `cars_insert_own`, `issues_insert_auth`, `confirmations_insert_own`, `messages_insert`, `event_signups_insert_own`. Moderator-insert-policyerne (`*_insert_mod`) + al læsning røres ikke.
 
 ### 2) Moderings-handling med grund + officiel besked
 - **Hver handling bliver handling-med-grund.** Grund-enum: `dublet` (+ link til original), `tone`, `off-topic`, `spam`, `andet` (fri tekst). Ved fjern tråd/indlæg vælges grund.
-- **Besked til forfatteren via notifikations-kernen, ikke en peer-DM.** `notifications` har bevidst INGEN klient-insert-policy (kun trigger/security-definer skriver). Så en ny security-definer-RPC gør begge dele atomisk: udfører handlingen (sæt is_removed / skriv sanktion) OG indsætter en notifikation til den berørte bruger. Ny type `moderation` (og `advarsel`). Teksten fryses, fx: `Din tråd "X" blev fjernet - grund: dublet`. href -> tråden/reglen.
-- **Officielt udseende:** NotifBell får et eget ikon for `moderation`/`advarsel` (fx 🛡) og en kobber-accent-række, så den læses som en officiel notits, ikke en ligeværdig besked.
+- **Besked til forfatteren via notifikations-kernen.** `notifications` har bevidst INGEN klient-insert-policy (kun trigger/security-definer skriver). En ny security-definer-RPC gør begge dele atomisk: udfører handlingen (sæt is_removed / skriv sanktion) OG indsætter notifikationen til den berørte bruger. Ny type `moderation` (og `advarsel`); teksten fryses, fx: `Din tråd "X" blev fjernet - grund: dublet`; href -> tråden/reglen.
+- **Officielt udseende:** NotifBell får eget ikon for `moderation`/`advarsel` (fx 🛡) + kobber-accent-række, så den ikke forveksles med en ligeværdig besked.
 - **Separat "advar/kontakt bruger"-handling** (uafhængig af en konkret tråd) til dårlig opførsel -> samme RPC, mål = bruger, type `advarsel`. Deles med P20.
 - **Afklaring (min anbefaling):** v1 = ren notifikation (envejs, officiel, grunden bæres i teksten). En kvitterbar/svarbar besked er mere end nødvendigt og risikerer at blive en peer-DM-tråd; ønskes anke/dialog senere, byg et dedikeret anke-flow - ikke genbrug af `messages`.
 
@@ -105,33 +102,31 @@
 - I dag: ingen rapportér-knap på forum. `message_reports` findes for PB - **vi spejler det mønster.**
 - `forum_reports`: id, reporter_id, thread_id (nullable), post_id (nullable), reason, handled, created_at. RLS = som `message_reports`: `insert` hvor reporter_id = auth.uid(); `select` for moderator.
 - **Knap** på tråd + indlæg for almindelige indloggede brugere (ikke på eget indhold; moderatorer handler bare direkte). Grund-vælger (tone/spam/off-topic/andet).
-- **Indgående kø i Værkstedet:** liste over åbne rapporter beriget med det rapporterede indhold via en security-definer-RPC (`admin_forum_rapporter()`, moderator-gated - samme form som `admin_besked_anmeldelser()`, men her er indholdet offentligt, så intet privatlivs-hensyn). Fra køen handler moderatoren (-> handling-med-grund fra punkt 2) og sætter handled.
-- **Fremtidssikring:** byg køen så P5 (AI-flag) senere kan fodre SAMME kø (kilde = `bruger` | `ai`). Rapport-køen = den manuelle søster til P5's flag-kø.
+- **Indgående kø i Værkstedet:** åbne rapporter beriget med det rapporterede indhold via security-definer-RPC (`admin_forum_rapporter()`, moderator-gated - samme form som `admin_besked_anmeldelser()`, men her er indholdet offentligt, så intet privatlivs-hensyn). Fra køen handler moderatoren (-> punkt 2) og sætter handled.
+- **Fremtidssikring:** giv `forum_reports` en `kilde`-kolonne (`bruger` | `ai`), så P5's AI-flag senere lander i SAMME kø.
 
 ### 4) Fælles audit-log
 - ÉN tabel `moderation_log`: id, handling (fjern_traad|fjern_indlaeg|fastgoer|laas|suspender|ban|ophaev|advar|anonymiser|slet|...), maal_type (thread|post|user|...), maal_id, grund, fritekst, snapshot (frosset titel/navn så loggen læses selv hvis målet er væk), udfoert_af, created_at.
-- **Skrives af de samme security-definer-RPC'er** som udfører hver handling -> alt moderering logges centralt, aldrig fra klienten. RLS: moderator/admin læser; ingen klient-insert.
-- **Deles af P20 + P21.** Vises som en "Log"/aktivitets-strøm i Værkstedet (flugter med P23's opsplitning af aktivitets-feedet - moderering er sin egen strøm).
+- Skrives af de samme security-definer-RPC'er som udfører handlingerne (aldrig fra klienten). RLS: moderator/admin læser.
+- **Deles af P20 + P21.** Vises som "Log"/aktivitets-strøm i Værkstedet (flugter med P23's opsplitning - moderering er sin egen strøm).
 
 ### 5) Hvem må hvad (admin vs. moderator)
-- I dag: `er_moderator()` = admin+moderator; `er_admin()` = kun admin.
-- **Moderator:** tråd/indlæg-moderering med grund (fjern/lås/fastgør), håndtér forum-rapporter, advar/kontakt bruger, **suspendér** (tidsbegrænset). Læs audit-log.
-- **Kun admin:** **permanent ban, anonymisér, hard-delete**, rolle-ændringer (allerede admin-only), ophæv ban.
-- **Logik:** reversibelt/dagligt (suspendér, fjern-med-grund, advar) = moderator; destruktivt/irreversibelt (permanent ban, anonymisering, sletning) = admin. Samme snit som P18 (admin-only destruktiv model-sletning).
-- Håndhæves i hver RPC med `er_admin()`/`er_moderator()`-værn (som `admin_saet_rolle`/`admin_slet_model`).
+- I dag: `er_moderator()` = admin+moderator; `er_admin()` = kun admin. Håndhæves i hver RPC med samme værn som `admin_saet_rolle`/`admin_slet_model`.
+- **Moderator (reversibelt/dagligt):** tråd/indlæg-moderering med grund (fjern/lås/fastgør), håndtér forum-rapporter, advar/kontakt bruger, suspendér (tidsbegrænset). Læs audit-log.
+- **Kun admin (irreversibelt/destruktivt):** permanent ban, anonymisér, hard-delete, rolle-ændringer (allerede admin-only), ophæv ban. Samme snit som P18.
 
 ### 6) Pasform i Værkstedet + nav (overlap P16/P23)
-- **Nye flader:** (a) bruger-overblik + sanktioner i **Adgange** (P20 udvider `AdgangePanel`); (b) forum-rapport-kø + handling-med-grund under **Forum**-fanen (P21, overlapper P16's moderings-overblik); (c) **moderation_log** (ny - enten egen lille "Log" eller del af P23's nye Aktivitet-opsplitning).
-- **Net nye top-nav-punkter = 0-1:** rapport-køen hænger på Forum-fanen (den ER forum-indhold -> fold den ind i P16-idéen "filtrér til kræver opmærksomhed"; rapporter = præcis de opmærksomheds-punkter), sanktioner hænger i Adgange, loggen bliver evt. ét punkt. Men P20/P21 **fortykker** de eksisterende faner, så P23's nav-gentænkning (sidebar/overflow) er stadig forudsætningen - derfor bygges P23 FØR P20/P21.
+- **Nye flader:** (a) bruger-overblik + sanktioner i **Adgange** (P20 udvider `AdgangePanel`); (b) forum-rapport-kø + handling-med-grund under **Forum**-fanen (P21, folder ind i P16-idéen "filtrér til kræver opmærksomhed"); (c) **moderation_log** som egen lille "Log" eller del af P23's nye Aktivitet-opsplitning.
+- **Net nye top-nav-punkter = 0-1** (køen + sanktioner hænger på eksisterende faner), men P20/P21 **fortykker** fanerne, så P23's nav-gentænkning (sidebar/overflow) er forudsætningen - derfor bygges P23 FØR P20/P21.
 
 ### Anbefalet byggerækkefølge + nødvendige migrationer
-Rækkefølgen passer med den aftalte prioritering (P23 først), men bemærk at den **delte kerne** (sanktioner + log + notif-RPC + skrive-sti-håndhævelse) ligger UNDER både P20 og P21 - byg DB-kernen ÉN gang, og lad P21 være den første feature oven på den.
+Byg DB-kernen ÉN gang, og lad P21 være den første feature oven på den. Rækkefølgen passer med den aftalte prioritering (P23 først):
 1. **P23** (Værksted-forside + nav + aktivitets-feed) - næste session. Giver nav-plads + det opsplittede aktivitets-feed som loggen lander i. Ingen moderings-migration.
-2. **Delt kerne** (første skive af P21/P20). Migration **M1 `..._moderations_kerne.sql`**: `user_sanctions` + `profiles.spaerret_til` + `er_bruger_spaerret()` + udvid de 8 bruger-insert-policies med `and not er_bruger_spaerret()` + `moderation_log` + RLS.
-3. **P21 byg** (indhold). Migration **M2 `..._forum_rapporter.sql`**: `forum_reports` + RLS + `admin_forum_rapporter()`. Migration **M3 `..._moderations_rpcer.sql`**: security-definer-RPC'er (`mod_fjern_traad`/`mod_fjern_indlaeg`/`mod_advar_bruger` + notif-type `moderation`/`advarsel`; hver = handling + log + notifikation atomisk). + UI: rapportér-knap, kø i Forum-fanen, grund-vælger, NotifBell-ikon.
-4. **P20 byg** (bruger). Migration **M4 `..._bruger_sanktioner.sql`**: sanktions-RPC'er (`mod_suspender_bruger`/`admin_ban_bruger`/`admin_ophaev`/`admin_anonymiser`; hver = opdatér `user_sanctions` + `profiles.spaerret_til` + log + evt. notifikation) + udvid `admin_alle_brugere` med status/paginering. + UI: bruger-overblik + sanktions-handlinger i Adgange.
+2. **Delt kerne.** **M1 `..._moderations_kerne.sql`**: `user_sanctions` + `profiles.spaerret_til` + `er_bruger_spaerret()` + de 8 bruger-insert-policies udvidet med `and not er_bruger_spaerret()` + `moderation_log` + RLS.
+3. **P21 byg** (indhold). **M2 `..._forum_rapporter.sql`**: `forum_reports` + RLS + `admin_forum_rapporter()`. **M3 `..._moderations_rpcer.sql`**: RPC'er `mod_fjern_traad`/`mod_fjern_indlaeg`/`mod_advar_bruger` (hver = handling + log + notifikation atomisk) + notif-type `moderation`/`advarsel`. + UI: rapportér-knap, kø, grund-vælger, NotifBell-ikon.
+4. **P20 byg** (bruger). **M4 `..._bruger_sanktioner.sql`**: RPC'er `mod_suspender_bruger`/`admin_ban_bruger`/`admin_ophaev`/`admin_anonymiser` (hver = `user_sanctions` + `profiles.spaerret_til` + log + evt. notifikation) + `admin_alle_brugere` udvidet med status/paginering. + UI: bruger-overblik + sanktioner i Adgange.
 
-M1-M4 kan slås sammen til færre filer hvis ønsket (fx M1+M3 = al kerne-DB på én gang); holdt adskilt her så P21 og P20 kan shippes i hver sin tynde skive. **Ingen migration køres i denne design-session.** P22 (avatar) hænger senere "fjern avatar"-handlingen på samme log + RPC-mønster.
+M1-M4 kan slås sammen (fx M1+M3) hvis ønsket; holdt adskilt så P21 og P20 shippes i hver sin tynde skive. P22 (avatar) hænger senere "fjern avatar" på samme log + RPC-mønster.
 
 ## Formål & positionering
 - Nyt, uafhængigt, **uofficielt** Zeekr-ejer-community. Afløser/udvider bugherrer.dk (7GT-fejl-boardet folder ind her).
