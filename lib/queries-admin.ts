@@ -63,7 +63,9 @@ export async function getForumOverblik(): Promise<ForumOverblik> {
 }
 
 // =========================================================================
-// Seneste aktivitet - forenet feed: meldinger + bekraeftelser + forum
+// Seneste aktivitet - delt op pr. omraade (P23): feedback-aktivitet (meldinger
+// + bekraeftelser) hoerer under Feedback-fanen, forum-aktivitet (traade +
+// indlaeg) under Forum-fanen. Ikke laengere en blandet strom paa forsiden.
 // =========================================================================
 export type AktivitetPost = {
   kind: 'melding' | 'bekraeftelse' | 'forum_traad' | 'forum_indlaeg';
@@ -73,9 +75,10 @@ export type AktivitetPost = {
   href: string | null;
 };
 
-export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]> {
+// Feedback-strommen: nye meldinger + bekraeftelser (vises paa /admin/feedback).
+export async function getFeedbackAktivitet(graense = 12): Promise<AktivitetPost[]> {
   const sb = supabaseServer();
-  const [nye, bek, traade, indlaeg] = await Promise.all([
+  const [nye, bek] = await Promise.all([
     sb
       .from('issues')
       .select('id, title, type, created_at')
@@ -84,21 +87,6 @@ export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]
     sb
       .from('confirmations')
       .select('created_at, issue_id, issues ( title ), models ( name )')
-      .order('created_at', { ascending: false })
-      .limit(graense),
-    sb
-      .from('forum_threads')
-      .select('title, slug, created_at, kategori:forum_categories ( slug, name )')
-      .eq('is_removed', false)
-      .order('created_at', { ascending: false })
-      .limit(graense),
-    sb
-      .from('forum_posts')
-      .select(
-        'created_at, is_opening, thread:forum_threads ( title, slug, is_removed, kategori:forum_categories ( slug ) )',
-      )
-      .eq('is_removed', false)
-      .eq('is_opening', false)
       .order('created_at', { ascending: false })
       .limit(graense),
   ]);
@@ -124,6 +112,33 @@ export async function getSenesteAktivitet(graense = 12): Promise<AktivitetPost[]
       href: r.issue_id ? `/melding/${r.issue_id}` : null,
     });
   }
+
+  feed.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return feed.slice(0, graense);
+}
+
+// Forum-strommen: nye traade + svar (vises paa /admin/forum).
+export async function getForumAktivitet(graense = 12): Promise<AktivitetPost[]> {
+  const sb = supabaseServer();
+  const [traade, indlaeg] = await Promise.all([
+    sb
+      .from('forum_threads')
+      .select('title, slug, created_at, kategori:forum_categories ( slug, name )')
+      .eq('is_removed', false)
+      .order('created_at', { ascending: false })
+      .limit(graense),
+    sb
+      .from('forum_posts')
+      .select(
+        'created_at, is_opening, thread:forum_threads ( title, slug, is_removed, kategori:forum_categories ( slug ) )',
+      )
+      .eq('is_removed', false)
+      .eq('is_opening', false)
+      .order('created_at', { ascending: false })
+      .limit(graense),
+  ]);
+
+  const feed: AktivitetPost[] = [];
 
   for (const r of (traade.data ?? []) as any[]) {
     const kat = r.kategori;

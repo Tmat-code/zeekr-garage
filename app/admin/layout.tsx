@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { adminKontekst } from '@/lib/admin';
+import AdminNav from '@/components/admin/AdminNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      {/* Titel + konto/site-handlinger (faste, vokser ikke) */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link href="/admin" className="flex items-center gap-2">
             <span className="text-xl font-semibold tracking-tight text-grafit-900">
@@ -38,24 +40,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/admin/forum" className="btn-ghost !py-1.5 text-sm">
-            💬 Forum
-          </Link>
-          <Link href="/admin/links" className="btn-ghost !py-1.5 text-sm">
-            🔗 Links
-          </Link>
-          <Link href="/admin/beskeder" className="btn-ghost !py-1.5 text-sm">
-            🚩 Anmeldelser
-          </Link>
-          <Link href="/admin/rapport" className="btn-ghost !py-1.5 text-sm">
-            📮 Rapport
-          </Link>
-          <Link href="/admin/aktivitet" className="btn-ghost !py-1.5 text-sm">
-            📈 Aktivitet
-          </Link>
-          <Link href="/admin/adgange" className="btn-ghost !py-1.5 text-sm">
-            👥 Adgange
-          </Link>
           <Link href="/" className="btn-ghost !py-1.5 text-sm">
             ← Til forsiden
           </Link>
@@ -65,6 +49,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </button>
           </form>
         </div>
+      </div>
+
+      {/* Fane-navigation - egen raekke, wrapper naar den fyldes */}
+      <div className="mb-6 border-b border-grafit-200 pb-4">
+        <AdminNav />
       </div>
 
       {children}

@@ -1,5 +1,5 @@
 import { getForumGrupper } from '@/lib/forum';
-import { getAdminForum, getModelOversigt } from '@/lib/queries-admin';
+import { getAdminForum, getModelOversigt, getForumAktivitet } from '@/lib/queries-admin';
 import { getForumRegler } from '@/lib/forum-regler';
 import { erAdmin } from '@/lib/admin';
 import KategoriStyring from '@/components/admin/KategoriStyring';
@@ -7,15 +7,17 @@ import ForumModerering from '@/components/admin/ForumModerering';
 import ForumReglerEditor from '@/components/admin/ForumReglerEditor';
 import TilfoejModel from '@/components/admin/TilfoejModel';
 import ModellerPanel from '@/components/admin/ModellerPanel';
+import AktivitetFeed from '@/components/admin/AktivitetFeed';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
-  const [grupper, forum, regler, kanModel] = await Promise.all([
+  const [grupper, forum, regler, aktivitet, kanModel] = await Promise.all([
     getForumGrupper(),
     getAdminForum(25),
     getForumRegler(),
+    getForumAktivitet(12),
     erAdmin(),
   ]);
 
@@ -36,6 +38,12 @@ export default async function AdminForumSide() {
           samme.
         </p>
         <ForumModerering traade={forum.traade} indlaeg={forum.indlaeg} />
+      </section>
+
+      <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
+        <h2 className="mb-1 text-lg font-semibold text-grafit-900">Seneste forum-aktivitet</h2>
+        <p className="mb-4 text-sm text-grafit-500">Nye tråde og svar på forummet.</p>
+        <AktivitetFeed poster={aktivitet} tom="Ingen forum-aktivitet endnu." />
       </section>
 
       <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
