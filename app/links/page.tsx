@@ -46,6 +46,12 @@ const LINK_GRUPPER: LinkGruppe[] = [
         url: 'https://www.viabiler.dk/fleet-info/zeekr-fleet/zeekr-7gt/',
       },
       { navn: 'Biler på markedet', kilde: 'bilbasen.dk', url: 'https://www.bilbasen.dk/brugt/bil/zeekr/7gt' },
+      {
+        navn: 'Privatleasing',
+        kilde: 'autohus.dk',
+        url: 'https://www.autohus.dk/vi-tilbyder/privatleasing/zeekr-privatleasing/',
+      },
+      { navn: 'Nye biler', kilde: 'autohus.dk', url: 'https://www.autohus.dk/nye-biler/zeekr/#nye' },
     ],
   },
   {
