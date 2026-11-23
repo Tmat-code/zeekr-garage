@@ -12,6 +12,7 @@ import { TYPE_META, kategoriLabel } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 import Kommentarer from '@/components/Kommentarer';
+import BilledeGalleri from '@/components/BilledeGalleri';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,19 +90,10 @@ export default async function MeldingSide({ params }: { params: { id: string } }
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-grafit-400">
               {issue.type === 'fejl' ? 'Foto-bevis' : 'Billeder'}
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {issue.billeder.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={`Billede ${i + 1} til meldingen`}
-                    loading="lazy"
-                    className="max-h-64 rounded-lg border border-grafit-200 object-cover"
-                  />
-                </a>
-              ))}
-            </div>
+            <BilledeGalleri
+              billeder={issue.billeder}
+              alt={issue.type === 'fejl' ? 'Foto-bevis' : 'Billede'}
+            />
           </div>
         )}
       </div>
