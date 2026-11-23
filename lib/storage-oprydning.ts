@@ -15,10 +15,13 @@
 // rækker, så dets filer tæller som "refererede" og røres IKKE af sweep'et -
 // bevidst, så et evt. gendannet indlæg ikke får brudte billeder.
 
-import { supabaseServer } from '@/lib/supabase/server';
-import { FORUM_BUCKET, MELD_BUCKET } from '@/lib/billeder';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { FORUM_BUCKET, MELD_BUCKET, BESKED_BUCKET } from '@/lib/billeder';
 
-type SB = ReturnType<typeof supabaseServer>;
+// Bred nok til både den cookie-baserede server-klient (@supabase/ssr) OG
+// service-rolle-klienten (@supabase/supabase-js) - besked-sweep'et kører med
+// service-rollen, fordi 'besked' er en privat bucket uden læse-policy.
+type SB = SupabaseClient<any, any, any>;
 
 // Spar meget nye objekter: en åben compose/editor-upload er en "forældreløs"
 // fil indtil indlægget gemmes. 24 timer er rigeligt til at dække en normal
@@ -142,8 +145,14 @@ export async function fjernFiler(sb: SB, bucket: string, paths: string[]): Promi
   return n;
 }
 
-// De to billed-spor, så actions kan løbe begge i ét kald.
+// De to OFFENTLIGE billed-spor, så actions kan løbe begge i ét kald med den
+// almindelige (cookie-baserede) klient.
 export const BILLED_SPOR: { bucket: string; tabel: string }[] = [
   { bucket: FORUM_BUCKET, tabel: 'forum_post_images' },
   { bucket: MELD_BUCKET, tabel: 'issue_images' },
 ];
+
+// Det PRIVATE besked-spor (P10). Køres separat MED SERVICE-ROLLEN, fordi
+// 'besked'-bucketen ikke har nogen læse-policy (ingen - heller ikke moderator -
+// kan liste den via egen session). Holdt ude af BILLED_SPOR netop derfor.
+export const BESKED_SPOR = { bucket: BESKED_BUCKET, tabel: 'message_images' };

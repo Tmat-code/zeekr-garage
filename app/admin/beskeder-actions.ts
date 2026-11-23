@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
+import { supabaseService } from '@/lib/supabase/service';
 import { erModerator } from '@/lib/admin';
+import { BESKED_BUCKET } from '@/lib/billeder';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB
 // (reports_update_mod, messages_delete_mod), men vi stopper tidligt med en
@@ -39,8 +41,27 @@ export async function sletAnmeldtBesked(
   await kraevModerator();
   const sb = supabaseServer();
 
+  // P10/P9: hård sletning rydder billed-filerne straks (som meld-sletning).
+  // Moderator er ikke deltager og kan ikke LÆSE besked-billeder (RLS), men
+  // må gerne slette dem - hent path'ene via service-rollen (kun metadata, ikke
+  // billed-bytes), slet beskeden (message_images cascader), ryd så filerne.
+  const svc = supabaseService();
+  const { data: imgs } = await svc
+    .from('message_images')
+    .select('path')
+    .eq('message_id', messageId);
+  const paths = (imgs ?? []).map((r: any) => r.path).filter(Boolean);
+
   const { error: sletFejl } = await sb.from('messages').delete().eq('id', messageId);
   if (sletFejl) throw new Error(sletFejl.message);
+
+  if (paths.length) {
+    try {
+      await svc.storage.from(BESKED_BUCKET).remove(paths);
+    } catch {
+      /* best-effort: en forældreløs fil ryddes ellers af admin-sweep'et */
+    }
+  }
 
   // Markér alle anmeldelser paa netop denne besked som haandteret (ikke kun
   // den aktuelle - samme besked kan vaere anmeldt flere gange).

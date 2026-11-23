@@ -6,7 +6,13 @@ import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
 import type { AlleBruger } from '@/lib/queries-admin';
 import { MELD_BUCKET } from '@/lib/billeder';
-import { BILLED_SPOR, findForaeldreloese, fjernFiler } from '@/lib/storage-oprydning';
+import { supabaseService } from '@/lib/supabase/service';
+import {
+  BILLED_SPOR,
+  BESKED_SPOR,
+  findForaeldreloese,
+  fjernFiler,
+} from '@/lib/storage-oprydning';
 
 // Alle handlinger kraever moderator/admin. RLS haandhaever det ogsaa i DB,
 // men vi stopper tidligt med en laesbar fejl.
@@ -169,30 +175,45 @@ export async function fjernBekraeftelserFoer(dato: string): Promise<number> {
   return (data ?? []).length;
 }
 
-// --- Oprydning: forældreløse billed-filer i storage (P9, kun admin) ---
-// Finder/rydder objekter i 'forum'- og 'meld'-bucketen uden en levende
-// reference i forum_post_images / issue_images (fx compose-uploads der blev
-// fortrudt). Soft-removed forum-indhold beholder sine rækker og røres IKKE.
-// Serveren rescanner selv ved sletning - klienten sender ingen paths.
-export async function taelForaeldreloeseFiler(): Promise<{ forum: number; meld: number }> {
+// --- Oprydning: forældreløse billed-filer i storage (P9/P10, kun admin) ---
+// Finder/rydder objekter i 'forum'-, 'meld'- og 'besked'-bucketen uden en
+// levende reference i forum_post_images / issue_images / message_images (fx
+// compose-uploads der blev fortrudt). Soft-removed forum-indhold + skjulte
+// samtaler beholder deres rækker og røres IKKE. Serveren rescanner selv ved
+// sletning - klienten sender ingen paths.
+//
+// De to offentlige spor (forum/meld) køres med den almindelige klient; det
+// private besked-spor køres med SERVICE-ROLLEN (bucketen har ingen læse-policy).
+type OprydTal = { forum: number; meld: number; besked: number };
+
+export async function taelForaeldreloeseFiler(): Promise<OprydTal> {
   if (!(await erAdmin())) throw new Error('Kun admin.');
   const sb = supabaseServer();
-  const res = await Promise.all(
-    BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel)),
-  );
-  return { forum: res[0].foraeldreloese.length, meld: res[1].foraeldreloese.length };
+  const svc = supabaseService();
+  const [res, beskedRes] = await Promise.all([
+    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel))),
+    findForaeldreloese(svc, BESKED_SPOR.bucket, BESKED_SPOR.tabel),
+  ]);
+  return {
+    forum: res[0].foraeldreloese.length,
+    meld: res[1].foraeldreloese.length,
+    besked: beskedRes.foraeldreloese.length,
+  };
 }
 
-export async function rydForaeldreloeseFiler(): Promise<{ forum: number; meld: number }> {
+export async function rydForaeldreloeseFiler(): Promise<OprydTal> {
   if (!(await erAdmin())) throw new Error('Kun admin.');
   const sb = supabaseServer();
-  const res = await Promise.all(
-    BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel)),
-  );
+  const svc = supabaseService();
+  const [res, beskedRes] = await Promise.all([
+    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel))),
+    findForaeldreloese(svc, BESKED_SPOR.bucket, BESKED_SPOR.tabel),
+  ]);
   const forum = await fjernFiler(sb, BILLED_SPOR[0].bucket, res[0].foraeldreloese);
   const meld = await fjernFiler(sb, BILLED_SPOR[1].bucket, res[1].foraeldreloese);
+  const besked = await fjernFiler(svc, BESKED_SPOR.bucket, beskedRes.foraeldreloese);
   revalider();
-  return { forum, meld };
+  return { forum, meld, besked };
 }
 
 // --- Forside-besked (kun admin) ---

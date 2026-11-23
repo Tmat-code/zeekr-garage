@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { soegBrugere } from '@/lib/beskeder';
+import { MAKS_ANTAL } from '@/lib/billeder';
 import type { AndenPart } from '@/lib/types';
 
 async function kraevBruger() {
@@ -32,24 +33,48 @@ export async function startSamtaleMedBruger(otherId: string): Promise<string> {
 }
 
 // Send en besked i en samtale. RLS håndhæver deltager + ikke-blokeret.
-export async function sendBesked(convId: string, body: string): Promise<void> {
+// billeder = storage-paths uploadet til 'besked'-bucketen (P10). En besked må
+// være kun-billede (tom tekst) så længe der er mindst ét billede - passer til
+// mobil-kamera-flowet (snap og send). Returnerer den nye beskeds id (klienten
+// bruger det til optimistisk visning + dedup mod realtime-ekkoet).
+export async function sendBesked(
+  convId: string,
+  body: string,
+  billeder: string[] = [],
+): Promise<string> {
   const { sb, user } = await kraevBruger();
   const b = body.trim();
-  if (!b) throw new Error('Skriv en besked.');
+  // Kun egne uploads (<user_id>/...), maks MAKS_ANTAL. RLS tjekker også ejerskab.
+  const rene = (billeder ?? [])
+    .filter((p) => typeof p === 'string' && p.startsWith(`${user.id}/`))
+    .slice(0, MAKS_ANTAL);
+  if (!b && rene.length === 0) throw new Error('Skriv en besked eller vedhæft et billede.');
   if (b.length > 5000) throw new Error('Beskeden er for lang.');
-  const { error } = await sb
+
+  const { data: msg, error } = await sb
     .from('messages')
-    .insert({ conversation_id: convId, sender_id: user.id, body: b });
-  if (error) {
+    .insert({ conversation_id: convId, sender_id: user.id, body: b })
+    .select('id')
+    .single();
+  if (error || !msg) {
     // RLS-afvisning (fx blokeret) giver en teknisk fejl - gør den læsbar.
     throw new Error(
-      /row-level security|violates|permission/i.test(error.message)
+      /row-level security|violates|permission/i.test(error?.message ?? '')
         ? 'Beskeden kunne ikke sendes (måske er I blokeret).'
-        : error.message,
+        : (error?.message ?? 'Kunne ikke sende beskeden.'),
     );
   }
+
+  // Vedhæft billed-rækker (RLS message_images_insert: kun egen besked).
+  if (rene.length > 0) {
+    const rows = rene.map((path, i) => ({ message_id: msg.id, path, display_order: i }));
+    const { error: ie } = await sb.from('message_images').insert(rows);
+    if (ie) throw new Error(ie.message);
+  }
+
   revalidatePath(`/beskeder/${convId}`);
   revalidatePath('/beskeder');
+  return msg.id as string;
 }
 
 // Markér samtalen som læst: opdatér last_read_at + ryd pb_besked-notifikationer.

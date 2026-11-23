@@ -1,4 +1,5 @@
 import { supabaseServer } from '@/lib/supabase/server';
+import { beskedBilledeUrl } from '@/lib/billeder';
 import type { SamtaleRow, SamtaleDetalje, AndenPart, Besked } from '@/lib/types';
 
 // Embed af en deltagers profil + bil (garage-badge), samme FK-hints som forum.
@@ -67,7 +68,8 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
     rows.push({
       id: c.id,
       andenPart: mapPart(anden),
-      sidsteBesked: sidste?.body ?? null,
+      // Kun-billede-beskeder har tom body -> vis en billed-markoer i stedet.
+      sidsteBesked: sidste ? (sidste.body?.trim() ? sidste.body : '📷 Billede') : null,
       sidsteTidspunkt: c.last_message_at,
       // Ulæst hvis der er kommet noget efter jeg sidst læste, og det ikke var mig selv.
       ulaest: sidstMsg > minLaest && sidste?.sender_id !== meg,
@@ -109,11 +111,29 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
       .maybeSingle(),
   ]);
 
+  // Vedhaeftede billeder pr. besked (P10). RLS (message_images_read) giver kun
+  // raekker tilbage i samtaler jeg er deltager i - samme ramme som beskederne.
+  const msgIds = (rawMsgs ?? []).map((m: any) => m.id);
+  const billedMap = new Map<string, string[]>();
+  if (msgIds.length) {
+    const { data: imgs } = await sb
+      .from('message_images')
+      .select('message_id, path, display_order')
+      .in('message_id', msgIds)
+      .order('display_order', { ascending: true });
+    for (const i of (imgs ?? []) as any[]) {
+      const arr = billedMap.get(i.message_id) ?? [];
+      arr.push(beskedBilledeUrl(i.path));
+      billedMap.set(i.message_id, arr);
+    }
+  }
+
   const beskeder: Besked[] = (rawMsgs ?? []).map((m: any) => ({
     id: m.id,
     body: m.body,
     senderId: m.sender_id ?? null,
     createdAt: m.created_at,
+    billeder: billedMap.get(m.id) ?? [],
   }));
 
   return { id: (c as any).id, andenPart, beskeder, jegHarBlokeret: !!blok };

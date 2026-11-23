@@ -221,6 +221,8 @@ export type Besked = {
   body: string;
   senderId: string | null;
   createdAt: string;
+  // Vedhaeftede billeder (P10) - private serve-rute-URL'er, i display-raekkefoelge.
+  billeder: string[];
 };
 
 // En samtale med dens beskeder (detalje-siden).

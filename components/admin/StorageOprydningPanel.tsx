@@ -7,8 +7,10 @@ function ord(n: number): string {
   return n === 1 ? 'fil' : 'filer';
 }
 
+type OprydTal = { forum: number; meld: number; besked: number };
+
 export default function StorageOprydningPanel() {
-  const [antal, setAntal] = useState<{ forum: number; meld: number } | null>(null);
+  const [antal, setAntal] = useState<OprydTal | null>(null);
   const [resultat, setResultat] = useState<string | null>(null);
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -31,8 +33,10 @@ export default function StorageOprydningPanel() {
     start(async () => {
       try {
         const r = await rydForaeldreloeseFiler();
-        const i = r.forum + r.meld;
-        setResultat(`Fjernede ${i} ${ord(i)} (forum: ${r.forum}, meld: ${r.meld}).`);
+        const i = r.forum + r.meld + r.besked;
+        setResultat(
+          `Fjernede ${i} ${ord(i)} (forum: ${r.forum}, meld: ${r.meld}, besked: ${r.besked}).`,
+        );
         setAntal(null);
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke rydde.');
@@ -40,7 +44,7 @@ export default function StorageOprydningPanel() {
     });
   }
 
-  const ialt = antal ? antal.forum + antal.meld : 0;
+  const ialt = antal ? antal.forum + antal.meld + antal.besked : 0;
 
   return (
     <section className="rounded-2xl border-2 border-kobber-200 bg-white p-5 sm:p-6">
@@ -50,7 +54,7 @@ export default function StorageOprydningPanel() {
       </div>
       <p className="mb-3 text-sm text-grafit-500">
         Billed-filer uden reference - typisk uploads der blev fortrudt i skrive-/redigér-boksen,
-        eller rester fra slettede meldinger. Dækker både forum- og meld-billeder. Filer yngre end
+        eller rester fra slettede meldinger. Dækker forum-, meld- og besked-billeder. Filer yngre end
         et døgn spares (en upload kan stadig være på vej). Viser antal først; sletning{' '}
         <strong>kan ikke fortrydes</strong>.
       </p>
@@ -63,7 +67,7 @@ export default function StorageOprydningPanel() {
         {antal !== null && (
           <>
             <span className="text-sm text-grafit-600">
-              {ialt} {ord(ialt)} (forum: {antal.forum}, meld: {antal.meld}).
+              {ialt} {ord(ialt)} (forum: {antal.forum}, meld: {antal.meld}, besked: {antal.besked}).
             </span>
             {ialt > 0 && (
               <button

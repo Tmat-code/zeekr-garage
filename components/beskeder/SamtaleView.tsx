@@ -6,6 +6,9 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/tid';
 import type { AndenPart, Besked } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
+import BilledeUpload from '@/components/forum/BilledeUpload';
+import BilledeGalleri from '@/components/BilledeGalleri';
+import { BESKED_BUCKET, beskedBilledeUrl } from '@/lib/billeder';
 import {
   sendBesked,
   markLaest,
@@ -24,7 +27,15 @@ type Props = {
 };
 
 function mapRow(r: any): Besked {
-  return { id: r.id, body: r.body, senderId: r.sender_id ?? null, createdAt: r.created_at };
+  // Realtime-payloaden baerer ikke billeder (de indsaettes i en separat raekke
+  // lige efter beskeden) - de hentes bagefter i hentOgSaetBilleder.
+  return {
+    id: r.id,
+    body: r.body,
+    senderId: r.sender_id ?? null,
+    createdAt: r.created_at,
+    billeder: [],
+  };
 }
 
 export default function SamtaleView({
@@ -36,12 +47,35 @@ export default function SamtaleView({
 }: Props) {
   const [beskeder, setBeskeder] = useState<Besked[]>(initialBeskeder);
   const [ny, setNy] = useState('');
+  const [nyeBilleder, setNyeBilleder] = useState<string[]>([]);
+  const [uploadKey, setUploadKey] = useState(0); // remount => ryd upload-preview
   const [blokeret, setBlokeret] = useState(initialBlokeret);
   const [fejl, setFejl] = useState<string | null>(null);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [pending, start] = useTransition();
   const bundRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Hent en beskeds billeder (RLS: kun deltagere) og saet dem paa beskeden.
+  // Billed-raekkerne indsaettes lige EFTER selve beskeden, saa realtime-ekkoet
+  // kan naa frem foer de er committet - derfor ét retry hvis foerste kald er tomt.
+  // Patcher kun ved fund, saa en ren tekst-besked ikke faar sine (evt. optimistiske) billeder nulstillet.
+  async function hentOgSaetBilleder(id: string) {
+    const sb = supabaseBrowser();
+    for (let forsoeg = 0; forsoeg < 2; forsoeg++) {
+      const { data } = await sb
+        .from('message_images')
+        .select('path, display_order')
+        .eq('message_id', id)
+        .order('display_order', { ascending: true });
+      if (data && data.length) {
+        const urls = (data as any[]).map((r) => beskedBilledeUrl(r.path));
+        setBeskeder((prev) => prev.map((x) => (x.id === id ? { ...x, billeder: urls } : x)));
+        return;
+      }
+      if (forsoeg === 0) await new Promise((r) => setTimeout(r, 600));
+    }
+  }
 
   // Markér læst ved åbning.
   useEffect(() => {
@@ -75,6 +109,9 @@ export default function SamtaleView({
               prev.some((x) => x.id === m.id) ? prev : [...prev, m],
             );
             if (m.senderId !== megId) void markLaest(convId);
+            // Hent evt. vedhæftede billeder (egne beskeder har dem allerede
+            // optimistisk, men hentning er idempotent og patcher kun ved fund).
+            void hentOgSaetBilleder(m.id);
           },
         )
         .subscribe();
@@ -92,12 +129,31 @@ export default function SamtaleView({
 
   function send() {
     const b = ny.trim();
-    if (!b) return;
+    const paths = nyeBilleder;
+    if (!b && paths.length === 0) return;
     setFejl(null);
     start(async () => {
       try {
-        await sendBesked(convId, b);
+        const id = await sendBesked(convId, b, paths);
+        // Optimistisk: vis straks (med egne billeder). Realtime-ekkoet dedupes
+        // på id, så beskeden ikke dubleres.
+        setBeskeder((prev) =>
+          prev.some((x) => x.id === id)
+            ? prev
+            : [
+                ...prev,
+                {
+                  id,
+                  body: b,
+                  senderId: megId,
+                  createdAt: new Date().toISOString(),
+                  billeder: paths.map(beskedBilledeUrl),
+                },
+              ],
+        );
         setNy('');
+        setNyeBilleder([]);
+        setUploadKey((k) => k + 1); // ryd upload-preview (uden at slette de nu-koblede filer)
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke sende.');
       }
@@ -209,18 +265,26 @@ export default function SamtaleView({
         ) : (
           beskeder.map((m) => {
             const min = m.senderId === megId;
+            const harTekst = !!m.body?.trim();
             return (
               <div key={m.id} className={`flex ${min ? 'justify-end' : 'justify-start'}`}>
-                <div className="max-w-[80%]">
-                  <div
-                    className={`whitespace-pre-line rounded-2xl px-3.5 py-2 text-sm ${
-                      min
-                        ? 'rounded-br-sm bg-kobber-500 text-white'
-                        : 'rounded-bl-sm bg-grafit-100 text-grafit-800'
-                    }`}
-                  >
-                    {m.body}
-                  </div>
+                <div className="max-w-[80%] space-y-1">
+                  {harTekst && (
+                    <div
+                      className={`whitespace-pre-line rounded-2xl px-3.5 py-2 text-sm ${
+                        min
+                          ? 'rounded-br-sm bg-kobber-500 text-white'
+                          : 'rounded-bl-sm bg-grafit-100 text-grafit-800'
+                      }`}
+                    >
+                      {m.body}
+                    </div>
+                  )}
+                  {m.billeder.length > 0 && (
+                    <div className={min ? 'flex justify-end' : 'flex justify-start'}>
+                      <BilledeGalleri billeder={m.billeder} alt="Besked-billede" />
+                    </div>
+                  )}
                   <div
                     className={`mt-0.5 text-[11px] text-grafit-400 ${min ? 'text-right' : 'text-left'}`}
                   >
@@ -253,8 +317,21 @@ export default function SamtaleView({
               }
             }}
           />
+          {/* Billed-vedhæftning (P10). Privat bucket + privat URL-vej (ikke
+              forum/meld's offentlige urlFor). accept="image/*" => mobil-kamera. */}
+          <BilledeUpload
+            key={uploadKey}
+            bucket={BESKED_BUCKET}
+            urlFor={beskedBilledeUrl}
+            onChange={setNyeBilleder}
+            disabled={pending}
+          />
           <div className="flex items-center gap-3">
-            <button className="btn-primary !py-2 text-sm" disabled={pending || !ny.trim()} onClick={send}>
+            <button
+              className="btn-primary !py-2 text-sm"
+              disabled={pending || (!ny.trim() && nyeBilleder.length === 0)}
+              onClick={send}
+            >
               Send
             </button>
             <span className="text-xs text-grafit-400">⌘/Ctrl + Enter sender</span>
