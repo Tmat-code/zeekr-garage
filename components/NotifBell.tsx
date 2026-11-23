@@ -10,6 +10,23 @@ import type { Notifikation } from '@/lib/types';
 // opdaterer live uden refresh. SSR giver start-tallet (ingen tom-blink).
 type Props = { userId: string; initialUnread: number };
 
+// Lille type-ikon foran teksten, saa en notifikation er genkendelig paa ét blik.
+// Ukendte typer falder tilbage til en neutral prik (ingen "tom" raekke).
+function ikonFor(type: string): string {
+  switch (type) {
+    case 'nyt_event':
+      return '📅';
+    case 'forum_svar':
+      return '💬';
+    case 'pb_besked':
+      return '✉️';
+    case 'mention':
+      return '@';
+    default:
+      return '🔔';
+  }
+}
+
 function mapRow(r: any): Notifikation {
   return {
     id: r.id,
@@ -220,6 +237,9 @@ export default function NotifBell({ userId, initialUnread }: Props) {
                         }`}
                         aria-hidden="true"
                       />
+                      <span className="mt-0.5 shrink-0 text-base leading-none" aria-hidden="true">
+                        {ikonFor(n.type)}
+                      </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm leading-snug text-grafit-800">{n.tekst}</span>
                         <span className="mt-0.5 block text-xs text-grafit-400">

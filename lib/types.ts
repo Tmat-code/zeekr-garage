@@ -273,7 +273,7 @@ export type SamtaleDetalje = {
 // =========================================================================
 export type Notifikation = {
   id: string;
-  type: string;        // forum_svar | pb_besked | ...
+  type: string;        // forum_svar | pb_besked | nyt_event | mention | ...
   tekst: string;       // denormaliseret visningstekst
   href: string;        // hvor klik foerer hen
   erLaest: boolean;

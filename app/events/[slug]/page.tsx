@@ -38,6 +38,18 @@ export default async function EventDetaljeSide({ params }: { params: { slug: str
         {event.opretter && <p className="text-sm text-grafit-400">Oprettet af {event.opretter}</p>}
       </div>
 
+      {/* Føj til kalender (.ics) - kun når eventet har en dato */}
+      {event.startsAt && (
+        <div className="mt-3">
+          <a
+            href={`/events/${event.slug}/ics`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-grafit-200 bg-white px-3 py-1.5 text-sm font-medium text-grafit-700 hover:border-kobber-300 hover:text-kobber-700"
+          >
+            📅 Føj til kalender
+          </a>
+        </div>
+      )}
+
       {event.description && (
         <div className="mt-5 rounded-2xl border border-grafit-200 bg-white p-5">
           <p className="whitespace-pre-line text-grafit-800">{event.description}</p>
