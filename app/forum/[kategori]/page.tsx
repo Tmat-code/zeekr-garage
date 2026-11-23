@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getKategori, getTraade } from '@/lib/forum';
+import { getKategori, getTraade, getModelEjerTal } from '@/lib/forum';
+import type { ModelEjerTal } from '@/lib/types';
 import { adminKontekst } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
 import ModelBadge from '@/components/forum/ModelBadge';
@@ -18,7 +19,13 @@ export default async function KategoriSide({ params }: { params: { kategori: str
   const kat = await getKategori(params.kategori);
   if (!kat) notFound();
 
-  const [traade, ctx] = await Promise.all([getTraade(kat.id), adminKontekst()]);
+  const [traade, ctx, ejerTal] = await Promise.all([
+    getTraade(kat.id),
+    adminKontekst(),
+    kat.modelId ? getModelEjerTal() : Promise.resolve({} as Record<string, ModelEjerTal>),
+  ]);
+  // Ejer-graf (P6) - kun model-fora. Social proof selv med 0 traade.
+  const et = kat.modelId ? ejerTal[kat.modelId] : undefined;
   const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
   const isLoggedIn = !!ctx.user;
   const kanOprette = isLoggedIn && (!kat.isLocked || erModerator);
@@ -63,6 +70,28 @@ export default async function KategoriSide({ params }: { params: { kategori: str
           </Link>
         )}
       </div>
+
+      {/* Ejer-graf (P6): social proof fra Min garage - vises kun på model-fora
+          og kun når der faktisk er ejere/biler/bekræftelser bag modellen. */}
+      {et && (et.ejere > 0 || et.biler > 0 || et.bekraeftelser > 0) && (
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          {et.ejere > 0 && (
+            <span className="chip bg-kobber-100 text-kobber-800">
+              {et.ejere} {et.ejere === 1 ? 'ejer' : 'ejere'} i Garagen
+            </span>
+          )}
+          {et.biler > 0 && (
+            <span className="chip bg-grafit-100 text-grafit-700">
+              {et.biler} {et.biler === 1 ? 'bil' : 'biler'}
+            </span>
+          )}
+          {et.bekraeftelser > 0 && (
+            <span className="chip bg-grafit-100 text-grafit-700">
+              {et.bekraeftelser} {et.bekraeftelser === 1 ? 'bekræftelse' : 'bekræftelser'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Søg i dette forum (scopet til rummet; udvid til alle fora på resultatsiden) */}
       <div className="mt-5">

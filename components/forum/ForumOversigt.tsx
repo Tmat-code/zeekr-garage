@@ -21,6 +21,7 @@ function KategoriRaekke({
   visninger,
   sidstAktiv,
   isLocked,
+  ejere,
 }: {
   slug: string;
   icon: string | null;
@@ -31,7 +32,12 @@ function KategoriRaekke({
   visninger: number;
   sidstAktiv: string | null;
   isLocked: boolean;
+  ejere: number;
 }) {
+  // Social proof paa model-fora: "N ejere" fra Min garage. Vises paa alle
+  // skaerme (ogsaa mobil, hvor tal-kolonnerne er skjult), saa model-foraene
+  // foeles levende selv uden traade. Skjult naar 0 ejere eller ikke-model.
+  const visEjere = !!modelId && ejere > 0;
   return (
     <Link
       href={`/forum/${slug}`}
@@ -59,6 +65,13 @@ function KategoriRaekke({
         </div>
         {description && (
           <p className="mt-0.5 line-clamp-1 text-sm text-grafit-500">{description}</p>
+        )}
+        {visEjere && (
+          <div className="mt-1.5">
+            <span className="chip bg-kobber-100 text-kobber-800">
+              {ejere} {ejere === 1 ? 'ejer' : 'ejere'}
+            </span>
+          </div>
         )}
       </div>
 
@@ -115,6 +128,7 @@ export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
                 visninger={k.visninger}
                 sidstAktiv={k.sidstAktiv}
                 isLocked={k.isLocked}
+                ejere={k.ejere}
               />
             ))}
           </div>

@@ -81,12 +81,25 @@ export type ForumKategori = {
   isLocked: boolean;
 };
 
+// Ejer-graf pr. model (P6 social proof). Kommer fra Min garage (cars), ikke
+// fra forum-traade, saa model-foraene er substantierede selv med 0 traade.
+export type ModelEjerTal = {
+  ejere: number;         // antal distinkte ejere (owner_id i cars) med modellen
+  biler: number;         // antal biler (cars-raekker) med modellen
+  bekraeftelser: number; // antal "mig med"-bekraeftelser paa modellen
+};
+
 // Kategori + optalte tal (til oversigts-raekken, a la Polestar).
 export type ForumKategoriStat = ForumKategori & {
   traade: number;       // antal traade
   indlaeg: number;      // antal indlaeg i alt (aabninger + svar)
   visninger: number;    // sum af visninger
   sidstAktiv: string | null; // seneste aktivitet (ISO) eller null
+  // Ejer-graf (P6). Kun model-fora (modelId != null) har reelle tal; paa
+  // tvaergaaende kategorier er de 0 og vises ikke.
+  ejere: number;
+  biler: number;
+  bekraeftelser: number;
 };
 
 // En gruppe af kategorier (gruppe-overskrift + raekker).

@@ -8,6 +8,7 @@ import type {
   ForumIndlaeg,
   ForumTraadDetalje,
   ForumSoegeResultat,
+  ModelEjerTal,
 } from '@/lib/types';
 
 // Forfatter + bil (garage-badge) i ét embed. 3-niveau: forum_* -> profiles -> model/variant.
@@ -48,10 +49,57 @@ function mapKategori(r: any): ForumKategori {
 const KATEGORI_COLS =
   'id, slug, name, description, icon, group_label, group_order, display_order, model_id, is_locked';
 
+// --- Ejer-graf pr. model (P6) ---
+// Social proof paa model-foraene: "N ejere" kommer fra Min garage (cars), ikke
+// fra forum-traade, saa foraene er substantierede selv med 0 traade. cars +
+// confirmations er read-all; vi henter de raa model-koblinger og aggregerer
+// server-side (ingen owner_id naar browseren). Ingen migration noedvendig -
+// virker paa de nuvaerende data med det samme. Vokser garagen sig stor, er en
+// aggregat-view/RPC den naturlige naeste optimering (SQL'en ligger i HANDOVER).
+// Returnerer model_id -> {ejere, biler, bekraeftelser}; kun modeller med data
+// optraeder i map'et.
+export async function getModelEjerTal(): Promise<Record<string, ModelEjerTal>> {
+  const sb = supabaseServer();
+  const [{ data: biler }, { data: bekr }] = await Promise.all([
+    sb.from('cars').select('owner_id, model_id'),
+    sb.from('confirmations').select('model_id'),
+  ]);
+
+  const ejereSet = new Map<string, Set<string>>(); // model_id -> distinkte owner_id
+  const bilerAntal = new Map<string, number>();
+  for (const c of (biler ?? []) as any[]) {
+    const mid = c.model_id as string | null;
+    if (!mid) continue;
+    bilerAntal.set(mid, (bilerAntal.get(mid) ?? 0) + 1);
+    if (c.owner_id) {
+      let s = ejereSet.get(mid);
+      if (!s) ejereSet.set(mid, (s = new Set<string>()));
+      s.add(c.owner_id as string);
+    }
+  }
+
+  const bekrAntal = new Map<string, number>();
+  for (const r of (bekr ?? []) as any[]) {
+    const mid = r.model_id as string | null;
+    if (!mid) continue;
+    bekrAntal.set(mid, (bekrAntal.get(mid) ?? 0) + 1);
+  }
+
+  const out: Record<string, ModelEjerTal> = {};
+  for (const mid of new Set<string>([...bilerAntal.keys(), ...bekrAntal.keys()])) {
+    out[mid] = {
+      ejere: ejereSet.get(mid)?.size ?? 0,
+      biler: bilerAntal.get(mid) ?? 0,
+      bekraeftelser: bekrAntal.get(mid) ?? 0,
+    };
+  }
+  return out;
+}
+
 // --- Forummets forside: kategorier grupperet + optalte tal ---
 export async function getForumGrupper(): Promise<ForumGruppe[]> {
   const sb = supabaseServer();
-  const [{ data: kats }, { data: stats }] = await Promise.all([
+  const [{ data: kats }, { data: stats }, ejerTal] = await Promise.all([
     sb
       .from('forum_categories')
       .select(KATEGORI_COLS)
@@ -61,6 +109,7 @@ export async function getForumGrupper(): Promise<ForumGruppe[]> {
       .from('forum_threads')
       .select('category_id, reply_count, view_count, last_post_at')
       .eq('is_removed', false),
+    getModelEjerTal(),
   ]);
 
   // Saml stats pr. kategori.
@@ -83,12 +132,16 @@ export async function getForumGrupper(): Promise<ForumGruppe[]> {
   for (const r of (kats ?? []) as any[]) {
     const k = mapKategori(r);
     const s = perKat.get(k.id) ?? { traade: 0, svar: 0, visninger: 0, sidst: null };
+    const et = k.modelId ? ejerTal[k.modelId] : undefined;
     const stat: ForumKategoriStat = {
       ...k,
       traade: s.traade,
       indlaeg: s.traade + s.svar, // hver tråd har ét åbnings-indlæg
       visninger: s.visninger,
       sidstAktiv: s.sidst,
+      ejere: et?.ejere ?? 0,
+      biler: et?.biler ?? 0,
+      bekraeftelser: et?.bekraeftelser ?? 0,
     };
     if (!idx.has(k.groupLabel)) {
       idx.set(k.groupLabel, grupper.length);
