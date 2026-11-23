@@ -32,6 +32,52 @@ export async function startSamtaleMedBruger(otherId: string): Promise<string> {
   return data as string;
 }
 
+// Opret en gruppe-samtale (P12). others = de øvrige deltagere (mindst 2);
+// jeg selv tilføjes af RPC'en. titel er valgfri (afledes ellers af navne).
+export async function startGruppe(others: string[], titel: string): Promise<string> {
+  const { sb } = await kraevBruger();
+  const { data, error } = await sb.rpc('start_gruppe', {
+    p_others: others,
+    p_title: titel.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Kunne ikke oprette gruppen.');
+  revalidatePath('/beskeder');
+  return data as string;
+}
+
+// Tilføj en deltager til en gruppe (kun opretteren; RPC'en gater).
+export async function tilfoejDeltager(convId: string, userId: string): Promise<void> {
+  const { sb } = await kraevBruger();
+  const { error } = await sb.rpc('gruppe_tilfoej_deltager', { p_conv: convId, p_user: userId });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/beskeder/${convId}`);
+}
+
+// Fjern en deltager fra en gruppe (kun opretteren; ikke sig selv).
+export async function fjernDeltager(convId: string, userId: string): Promise<void> {
+  const { sb } = await kraevBruger();
+  const { error } = await sb.rpc('gruppe_fjern_deltager', { p_conv: convId, p_user: userId });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/beskeder/${convId}`);
+}
+
+// Forlad en gruppe (enhver deltager fjerner sig selv).
+export async function forladGruppe(convId: string): Promise<void> {
+  const { sb } = await kraevBruger();
+  const { error } = await sb.rpc('gruppe_forlad', { p_conv: convId });
+  if (error) throw new Error(error.message);
+  revalidatePath('/beskeder');
+}
+
+// Omdøb en gruppe (kun opretteren; tom titel => afledes af navne i UI).
+export async function omdoebGruppe(convId: string, titel: string): Promise<void> {
+  const { sb } = await kraevBruger();
+  const { error } = await sb.rpc('gruppe_omdoeb', { p_conv: convId, p_title: titel.trim() || null });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/beskeder/${convId}`);
+}
+
 // Send en besked i en samtale. RLS håndhæver deltager + ikke-blokeret.
 // billeder = storage-paths uploadet til 'besked'-bucketen (P10). En besked må
 // være kun-billede (tom tekst) så længe der er mindst ét billede - passer til

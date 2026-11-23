@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { beskedBilledeUrl } from '@/lib/billeder';
-import type { SamtaleRow, SamtaleDetalje, AndenPart, Besked } from '@/lib/types';
+import type { SamtaleRow, SamtaleDetalje, AndenPart, Deltager, Besked } from '@/lib/types';
 
 // Embed af en deltagers profil + bil (garage-badge), samme FK-hints som forum.
 const PART_SELECT = `user_id, last_read_at, hidden_at,
@@ -10,12 +10,30 @@ const PART_SELECT = `user_id, last_read_at, hidden_at,
     variant:variants!profiles_car_variant_id_fkey ( name )
   )`;
 
-function mapPart(p: any): AndenPart {
-  const pr = p?.profil;
+// conversations-select med gruppe-felterne (P12).
+const CONV_SELECT = `id, last_message_at, is_group, title, created_by,
+  deltagere:conversation_participants ( ${PART_SELECT} )`;
+
+function partBil(pr: any): string | null {
   const modelNavn = pr?.bil?.name ?? null;
   const variantNavn = pr?.variant?.name ?? null;
-  const bil = modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
-  return { id: p.user_id, navn: pr?.display_name ?? null, bil };
+  return modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
+}
+
+function mapPart(p: any): AndenPart {
+  const pr = p?.profil;
+  return { id: p.user_id, navn: pr?.display_name ?? null, bil: partBil(pr) };
+}
+
+// Afled en visnings-label for en gruppe: eksplicit navn vinder, ellers
+// deltagernes navne ("Anna, Bo, Carl" / "Anna, Bo +2").
+function gruppeLabel(titel: string | null | undefined, navne: (string | null)[]): string {
+  const t = (titel ?? '').trim();
+  if (t) return t;
+  const n = navne.map((x) => (x ?? '').trim()).filter(Boolean);
+  if (n.length === 0) return 'Gruppe';
+  if (n.length <= 3) return n.join(', ');
+  return `${n.slice(0, 2).join(', ')} +${n.length - 2}`;
 }
 
 async function minId(): Promise<string | null> {
@@ -26,7 +44,7 @@ async function minId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-// Indbakke: mine samtaler, nyeste øverst, med anden part + seneste besked + ulæst.
+// Indbakke: mine samtaler, nyeste øverst, med modpart/gruppe-label + seneste besked + ulæst.
 export async function getSamtaler(): Promise<SamtaleRow[]> {
   const sb = supabaseServer();
   const meg = await minId();
@@ -35,7 +53,7 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
   // RLS: kun samtaler jeg er deltager i kommer tilbage.
   const { data: convs } = await sb
     .from('conversations')
-    .select(`id, last_message_at, deltagere:conversation_participants ( ${PART_SELECT} )`)
+    .select(CONV_SELECT)
     .order('last_message_at', { ascending: false });
   if (!convs?.length) return [];
 
@@ -55,7 +73,7 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
   for (const c of convs as any[]) {
     const deltagere = (c.deltagere ?? []) as any[];
     const mig = deltagere.find((d) => d.user_id === meg);
-    const anden = deltagere.find((d) => d.user_id !== meg) ?? mig;
+    const andre = deltagere.filter((d) => d.user_id !== meg);
     const sidste = sidsteMap.get(c.id);
     const minLaest = mig?.last_read_at ? new Date(mig.last_read_at).getTime() : 0;
     const sidstMsg = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
@@ -65,9 +83,19 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
     const skjultTid = mig?.hidden_at ? new Date(mig.hidden_at).getTime() : 0;
     if (skjultTid && sidstMsg <= skjultTid) continue;
 
+    const erGruppe = !!c.is_group;
+    // 1:1: modparten (fallback mig selv hvis alene). Gruppe: ingen enkelt modpart.
+    const anden = erGruppe ? null : mapPart(andre[0] ?? mig);
+    const titel = erGruppe
+      ? gruppeLabel(c.title, andre.map((d) => d.profil?.display_name ?? null))
+      : (anden?.navn ?? 'Ejer');
+
     rows.push({
       id: c.id,
-      andenPart: mapPart(anden),
+      erGruppe,
+      andenPart: anden,
+      titel,
+      antalDeltagere: deltagere.length,
       // Kun-billede-beskeder har tom body -> vis en billed-markoer i stedet.
       sidsteBesked: sidste ? (sidste.body?.trim() ? sidste.body : '📷 Billede') : null,
       sidsteTidspunkt: c.last_message_at,
@@ -78,7 +106,7 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
   return rows;
 }
 
-// En samtale med alle beskeder (ældste først) + hvem den anden part er + blok-status.
+// En samtale med alle beskeder (ældste først), deltagere, og 1:1-blok-status.
 export async function getSamtale(convId: string): Promise<SamtaleDetalje | null> {
   const sb = supabaseServer();
   const meg = await minId();
@@ -87,29 +115,61 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
   // RLS: er man ikke deltager, kommer der ingen række tilbage.
   const { data: c } = await sb
     .from('conversations')
-    .select(`id, deltagere:conversation_participants ( ${PART_SELECT} )`)
+    .select(CONV_SELECT)
     .eq('id', convId)
     .maybeSingle();
   if (!c) return null;
 
-  const deltagere = ((c as any).deltagere ?? []) as any[];
-  const anden = deltagere.find((d) => d.user_id !== meg);
-  if (!anden) return null;
-  const andenPart = mapPart(anden);
+  const erGruppe = !!(c as any).is_group;
+  const alleRaw = (((c as any).deltagere ?? []) as any[]);
+  const deltagere: Deltager[] = alleRaw.map(mapPart);
+  const andreRaw = alleRaw.filter((d) => d.user_id !== meg);
 
-  const [{ data: rawMsgs }, { data: blok }] = await Promise.all([
-    sb
-      .from('messages')
-      .select('id, body, sender_id, created_at')
-      .eq('conversation_id', convId)
-      .order('created_at', { ascending: true }),
-    sb
+  // 1:1: modparten skal findes (ellers en forældet/tom samtale -> notfound).
+  // Gruppe: kan stå uden "modpart" (jeg kan være alene tilbage) - stadig gyldig.
+  let andenPart: AndenPart | null = null;
+  let jegHarBlokeret = false;
+  if (!erGruppe) {
+    const anden = andreRaw[0];
+    if (!anden) return null;
+    andenPart = mapPart(anden);
+    const { data: blok } = await sb
       .from('user_blocks')
       .select('blocked_id')
       .eq('blocker_id', meg)
       .eq('blocked_id', andenPart.id)
-      .maybeSingle(),
-  ]);
+      .maybeSingle();
+    jegHarBlokeret = !!blok;
+  }
+
+  const { data: rawMsgs } = await sb
+    .from('messages')
+    .select('id, body, sender_id, created_at')
+    .eq('conversation_id', convId)
+    .order('created_at', { ascending: true });
+
+  // Afsender-navn pr. besked (gruppe-visning). Byg et navne-map over ALLE
+  // afsendere - inkl. folk der er forladt gruppen (de er ikke i deltager-listen,
+  // men deres tidligere beskeder skal stadig vise et navn). Profiler er
+  // offentligt læsbare, så ét opslag på de distinkte sender_id'er.
+  const navnMap = new Map<string, string | null>();
+  for (const d of deltagere) navnMap.set(d.id, d.navn);
+  if (erGruppe) {
+    const mangler = [
+      ...new Set(
+        (rawMsgs ?? [])
+          .map((m: any) => m.sender_id)
+          .filter((id: string | null): id is string => !!id && !navnMap.has(id)),
+      ),
+    ];
+    if (mangler.length) {
+      const { data: profs } = await sb
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', mangler);
+      for (const p of (profs ?? []) as any[]) navnMap.set(p.id, p.display_name ?? null);
+    }
+  }
 
   // Vedhaeftede billeder pr. besked (P10). RLS (message_images_read) giver kun
   // raekker tilbage i samtaler jeg er deltager i - samme ramme som beskederne.
@@ -132,11 +192,26 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
     id: m.id,
     body: m.body,
     senderId: m.sender_id ?? null,
+    senderNavn: m.sender_id ? (navnMap.get(m.sender_id) ?? null) : null,
     createdAt: m.created_at,
     billeder: billedMap.get(m.id) ?? [],
   }));
 
-  return { id: (c as any).id, andenPart, beskeder, jegHarBlokeret: !!blok };
+  const titel = erGruppe
+    ? gruppeLabel((c as any).title, andreRaw.map((d) => d.profil?.display_name ?? null))
+    : (andenPart?.navn ?? 'Ejer');
+
+  return {
+    id: (c as any).id,
+    erGruppe,
+    titel,
+    eksplicitTitel: ((c as any).title ?? null) || null,
+    erOpretter: (c as any).created_by === meg,
+    andenPart,
+    deltagere,
+    beskeder,
+    jegHarBlokeret,
+  };
 }
 
 // Antal samtaler med ulæst (til evt. nav-badge; billig nok).
@@ -144,11 +219,10 @@ export async function getUlaesteSamtaler(): Promise<number> {
   return (await getSamtaler()).filter((s) => s.ulaest).length;
 }
 
-// Søg brugere på visningsnavn (til "Ny besked"-compose - direkte mellem
-// brugere uden at gå via et oplæg). Profiler er offentligt læsbare
-// (profiles_read_all), så ingen RPC/migration nødvendig. Ekskluderer mig selv
-// og brugere jeg har blokeret eller er blokeret af (begge veje), så en
-// blokeret bruger ikke dukker op som ny modtager.
+// Søg brugere på visningsnavn (til "Ny besked"-compose og gruppe-tilføj).
+// Profiler er offentligt læsbare (profiles_read_all), så ingen RPC/migration
+// nødvendig. Ekskluderer mig selv og brugere jeg har blokeret eller er
+// blokeret af (begge veje), så en blokeret bruger ikke dukker op som modtager.
 export async function soegBrugere(q: string): Promise<AndenPart[]> {
   const sb = supabaseServer();
   const meg = await minId();
@@ -183,10 +257,5 @@ export async function soegBrugere(q: string): Promise<AndenPart[]> {
   return ((data ?? []) as any[])
     .filter((p) => !udeluk.has(p.id))
     .slice(0, 10)
-    .map((p): AndenPart => {
-      const modelNavn = p.bil?.name ?? null;
-      const variantNavn = p.variant?.name ?? null;
-      const bil = modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
-      return { id: p.id, navn: p.display_name ?? null, bil };
-    });
+    .map((p): AndenPart => ({ id: p.id, navn: p.display_name ?? null, bil: partBil(p) }));
 }

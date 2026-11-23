@@ -226,13 +226,19 @@ export type MinTilmelding = { tilmeldt: boolean; note: string | null };
 // =========================================================================
 // Private beskeder (PB / chat)
 // =========================================================================
-// Den anden part i en 1:1-samtale.
+// En part i en samtale (1:1-modpart eller gruppe-deltager).
 export type AndenPart = { id: string; navn: string | null; bil: string | null };
+// Alias: en deltager i en gruppe (samme form - id/navn/bil).
+export type Deltager = AndenPart;
 
-// En samtale i indbakke-listen.
+// En samtale i indbakke-listen. For grupper er andenPart null (brug titel +
+// antalDeltagere); for 1:1 er andenPart modparten og titel dennes navn.
 export type SamtaleRow = {
   id: string;
-  andenPart: AndenPart;
+  erGruppe: boolean;
+  andenPart: AndenPart | null;
+  titel: string;            // altid sat: gruppens navn/afledte label, ellers modpartens navn
+  antalDeltagere: number;   // kun relevant for grupper (>=3)
   sidsteBesked: string | null;
   sidsteTidspunkt: string;
   ulaest: boolean;
@@ -243,6 +249,7 @@ export type Besked = {
   id: string;
   body: string;
   senderId: string | null;
+  senderNavn: string | null; // til gruppe-visning: afsender-navn pr. besked
   createdAt: string;
   // Vedhaeftede billeder (P10) - private serve-rute-URL'er, i display-raekkefoelge.
   billeder: string[];
@@ -251,9 +258,14 @@ export type Besked = {
 // En samtale med dens beskeder (detalje-siden).
 export type SamtaleDetalje = {
   id: string;
-  andenPart: AndenPart;
+  erGruppe: boolean;
+  titel: string;                 // afledt label eller eksplicit navn (altid sat)
+  eksplicitTitel: string | null; // kun hvis opretteren har sat et navn (til omdoeb-feltet)
+  erOpretter: boolean;           // maa jeg administrere gruppen?
+  andenPart: AndenPart | null;   // kun 1:1
+  deltagere: Deltager[];         // alle deltagere inkl. mig (gruppe-header + medlemsliste)
   beskeder: Besked[];
-  jegHarBlokeret: boolean;
+  jegHarBlokeret: boolean;       // kun 1:1
 };
 
 // =========================================================================

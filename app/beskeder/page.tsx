@@ -71,9 +71,16 @@ export default async function BeskederSide() {
                     <span
                       className={`truncate ${s.ulaest ? 'font-semibold text-grafit-900' : 'font-medium text-grafit-800'}`}
                     >
-                      {s.andenPart.navn || 'Ejer'}
+                      {s.erGruppe ? s.titel : s.andenPart?.navn || 'Ejer'}
                     </span>
-                    <GarageBadge bil={s.andenPart.bil} />
+                    {s.erGruppe ? (
+                      <span className="chip shrink-0 bg-grafit-100 text-grafit-600">
+                        <span aria-hidden="true">👥</span>
+                        <span>{s.antalDeltagere}</span>
+                      </span>
+                    ) : (
+                      <GarageBadge bil={s.andenPart?.bil ?? null} />
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-grafit-500">
                     {s.sidsteBesked ?? 'Ingen beskeder endnu'}

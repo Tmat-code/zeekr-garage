@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const s = await getSamtale(params.id);
-  return { title: s ? `Besked med ${s.andenPart.navn ?? 'ejer'}` : 'Besked' };
+  if (!s) return { title: 'Besked' };
+  return { title: s.erGruppe ? s.titel : `Besked med ${s.andenPart?.navn ?? 'ejer'}` };
 }
 
 export default async function SamtaleSide({ params }: { params: { id: string } }) {
@@ -38,6 +39,11 @@ export default async function SamtaleSide({ params }: { params: { id: string } }
       <SamtaleView
         convId={samtale.id}
         megId={user.id}
+        erGruppe={samtale.erGruppe}
+        titel={samtale.titel}
+        erOpretter={samtale.erOpretter}
+        eksplicitTitel={samtale.eksplicitTitel}
+        deltagere={samtale.deltagere}
         andenPart={samtale.andenPart}
         initialBeskeder={samtale.beskeder}
         initialBlokeret={samtale.jegHarBlokeret}

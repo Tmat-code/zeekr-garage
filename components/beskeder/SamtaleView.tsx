@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/tid';
-import type { AndenPart, Besked } from '@/lib/types';
+import type { AndenPart, Besked, Deltager } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
+import GruppePanel from '@/components/beskeder/GruppePanel';
 import { BESKED_BUCKET, beskedBilledeUrl } from '@/lib/billeder';
 import {
   sendBesked,
@@ -16,31 +17,30 @@ import {
   fjernBlok,
   anmeldBesked,
   sletSamtale,
+  forladGruppe,
 } from '@/app/beskeder/actions';
 
 type Props = {
   convId: string;
   megId: string;
-  andenPart: AndenPart;
+  erGruppe: boolean;
+  titel: string;
+  erOpretter: boolean;
+  eksplicitTitel: string | null;
+  deltagere: Deltager[];
+  andenPart: AndenPart | null; // kun 1:1
   initialBeskeder: Besked[];
   initialBlokeret: boolean;
 };
 
-function mapRow(r: any): Besked {
-  // Realtime-payloaden baerer ikke billeder (de indsaettes i en separat raekke
-  // lige efter beskeden) - de hentes bagefter i hentOgSaetBilleder.
-  return {
-    id: r.id,
-    body: r.body,
-    senderId: r.sender_id ?? null,
-    createdAt: r.created_at,
-    billeder: [],
-  };
-}
-
 export default function SamtaleView({
   convId,
   megId,
+  erGruppe,
+  titel,
+  erOpretter,
+  eksplicitTitel,
+  deltagere,
   andenPart,
   initialBeskeder,
   initialBlokeret,
@@ -52,14 +52,32 @@ export default function SamtaleView({
   const [blokeret, setBlokeret] = useState(initialBlokeret);
   const [fejl, setFejl] = useState<string | null>(null);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
+  const [bekraeftForlad, setBekraeftForlad] = useState(false);
+  const [visPanel, setVisPanel] = useState(false);
   const [pending, start] = useTransition();
   const bundRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Navne-opslag til afsender-visning i grupper (fra deltager-listen; realtime-
+  // beskeder slår op heri, ukendte afsendere falder tilbage til "Ejer").
+  const navnMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const d of deltagere) m.set(d.id, d.navn);
+    return m;
+  }, [deltagere]);
+
+  function mapRow(r: any): Besked {
+    return {
+      id: r.id,
+      body: r.body,
+      senderId: r.sender_id ?? null,
+      senderNavn: r.sender_id ? (navnMap.get(r.sender_id) ?? null) : null,
+      createdAt: r.created_at,
+      billeder: [], // billeder hentes separat (hentOgSaetBilleder)
+    };
+  }
+
   // Hent en beskeds billeder (RLS: kun deltagere) og saet dem paa beskeden.
-  // Billed-raekkerne indsaettes lige EFTER selve beskeden, saa realtime-ekkoet
-  // kan naa frem foer de er committet - derfor ét retry hvis foerste kald er tomt.
-  // Patcher kun ved fund, saa en ren tekst-besked ikke faar sine (evt. optimistiske) billeder nulstillet.
   async function hentOgSaetBilleder(id: string) {
     const sb = supabaseBrowser();
     for (let forsoeg = 0; forsoeg < 2; forsoeg++) {
@@ -105,12 +123,8 @@ export default function SamtaleView({
           },
           (payload) => {
             const m = mapRow(payload.new);
-            setBeskeder((prev) =>
-              prev.some((x) => x.id === m.id) ? prev : [...prev, m],
-            );
+            setBeskeder((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
             if (m.senderId !== megId) void markLaest(convId);
-            // Hent evt. vedhæftede billeder (egne beskeder har dem allerede
-            // optimistisk, men hentning er idempotent og patcher kun ved fund).
             void hentOgSaetBilleder(m.id);
           },
         )
@@ -120,6 +134,7 @@ export default function SamtaleView({
       aktiv = false;
       if (kanal) sb.removeChannel(kanal);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convId, megId]);
 
   // Rul til nyeste.
@@ -135,8 +150,6 @@ export default function SamtaleView({
     start(async () => {
       try {
         const id = await sendBesked(convId, b, paths);
-        // Optimistisk: vis straks (med egne billeder). Realtime-ekkoet dedupes
-        // på id, så beskeden ikke dubleres.
         setBeskeder((prev) =>
           prev.some((x) => x.id === id)
             ? prev
@@ -146,6 +159,7 @@ export default function SamtaleView({
                   id,
                   body: b,
                   senderId: megId,
+                  senderNavn: navnMap.get(megId) ?? null,
                   createdAt: new Date().toISOString(),
                   billeder: paths.map(beskedBilledeUrl),
                 },
@@ -153,7 +167,7 @@ export default function SamtaleView({
         );
         setNy('');
         setNyeBilleder([]);
-        setUploadKey((k) => k + 1); // ryd upload-preview (uden at slette de nu-koblede filer)
+        setUploadKey((k) => k + 1);
       } catch (e: any) {
         setFejl(e?.message ?? 'Kunne ikke sende.');
       }
@@ -161,6 +175,7 @@ export default function SamtaleView({
   }
 
   function skiftBlok() {
+    if (!andenPart) return;
     setFejl(null);
     start(async () => {
       try {
@@ -191,6 +206,20 @@ export default function SamtaleView({
     });
   }
 
+  function forlad() {
+    setFejl(null);
+    start(async () => {
+      try {
+        await forladGruppe(convId);
+        router.push('/beskeder');
+        router.refresh();
+      } catch (e: any) {
+        setFejl(e?.message ?? 'Kunne ikke forlade gruppen.');
+        setBekraeftForlad(false);
+      }
+    });
+  }
+
   function anmeld() {
     const grund = window.prompt('Hvorfor anmelder du denne samtale? (valgfrit)') ?? '';
     const sidste = beskeder[beskeder.length - 1];
@@ -208,9 +237,21 @@ export default function SamtaleView({
     <div className="mt-3">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grafit-200 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold text-grafit-900">{andenPart.navn || 'Ejer'}</span>
-          <GarageBadge bil={andenPart.bil} />
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-lg font-semibold text-grafit-900">{titel || 'Ejer'}</span>
+          {erGruppe ? (
+            <button
+              type="button"
+              onClick={() => setVisPanel((v) => !v)}
+              className="chip bg-grafit-100 text-grafit-600 hover:bg-grafit-200"
+              aria-expanded={visPanel}
+            >
+              <span aria-hidden="true">👥</span>
+              <span>{deltagere.length} deltagere</span>
+            </button>
+          ) : (
+            <GarageBadge bil={andenPart?.bil ?? null} />
+          )}
         </div>
         <div className="flex items-center gap-3 text-sm">
           <button
@@ -220,41 +261,85 @@ export default function SamtaleView({
           >
             Anmeld
           </button>
-          <button
-            className="text-grafit-500 hover:text-kobber-700"
-            disabled={pending}
-            onClick={skiftBlok}
-          >
-            {blokeret ? 'Fjern blokering' : 'Blokér'}
-          </button>
-          {bekraeftSlet ? (
-            <span className="flex items-center gap-2">
+
+          {/* 1:1: blokér. Gruppe: forlad. */}
+          {erGruppe ? (
+            bekraeftForlad ? (
+              <span className="flex items-center gap-2">
+                <button
+                  className="font-medium text-kobber-700 hover:text-kobber-800"
+                  disabled={pending}
+                  onClick={forlad}
+                >
+                  Forlad gruppe?
+                </button>
+                <button
+                  className="text-grafit-400 hover:text-grafit-600"
+                  disabled={pending}
+                  onClick={() => setBekraeftForlad(false)}
+                >
+                  Fortryd
+                </button>
+              </span>
+            ) : (
               <button
-                className="font-medium text-kobber-700 hover:text-kobber-800"
+                className="text-grafit-500 hover:text-kobber-700"
                 disabled={pending}
-                onClick={slet}
+                onClick={() => setBekraeftForlad(true)}
               >
-                Slet samtale?
+                Forlad
               </button>
-              <button
-                className="text-grafit-400 hover:text-grafit-600"
-                disabled={pending}
-                onClick={() => setBekraeftSlet(false)}
-              >
-                Fortryd
-              </button>
-            </span>
+            )
           ) : (
-            <button
-              className="text-grafit-500 hover:text-kobber-700"
-              disabled={pending}
-              onClick={() => setBekraeftSlet(true)}
-            >
-              Slet
-            </button>
+            <>
+              <button
+                className="text-grafit-500 hover:text-kobber-700"
+                disabled={pending}
+                onClick={skiftBlok}
+              >
+                {blokeret ? 'Fjern blokering' : 'Blokér'}
+              </button>
+              {bekraeftSlet ? (
+                <span className="flex items-center gap-2">
+                  <button
+                    className="font-medium text-kobber-700 hover:text-kobber-800"
+                    disabled={pending}
+                    onClick={slet}
+                  >
+                    Slet samtale?
+                  </button>
+                  <button
+                    className="text-grafit-400 hover:text-grafit-600"
+                    disabled={pending}
+                    onClick={() => setBekraeftSlet(false)}
+                  >
+                    Fortryd
+                  </button>
+                </span>
+              ) : (
+                <button
+                  className="text-grafit-500 hover:text-kobber-700"
+                  disabled={pending}
+                  onClick={() => setBekraeftSlet(true)}
+                >
+                  Slet
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Gruppe-medlemspanel (foldes ud fra "N deltagere") */}
+      {erGruppe && visPanel && (
+        <GruppePanel
+          convId={convId}
+          megId={megId}
+          erOpretter={erOpretter}
+          eksplicitTitel={eksplicitTitel}
+          deltagere={deltagere}
+        />
+      )}
 
       {/* Beskeder */}
       <div className="min-h-[240px] space-y-2 py-4">
@@ -263,12 +348,21 @@ export default function SamtaleView({
             Ingen beskeder endnu. Skriv den første.
           </p>
         ) : (
-          beskeder.map((m) => {
+          beskeder.map((m, i) => {
             const min = m.senderId === megId;
             const harTekst = !!m.body?.trim();
+            // I grupper: vis afsender-navn over andres beskeder, kun når
+            // afsenderen skifter fra forrige besked (mindre støj).
+            const visNavn =
+              erGruppe && !min && m.senderId !== (beskeder[i - 1]?.senderId ?? null);
             return (
               <div key={m.id} className={`flex ${min ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[80%] space-y-1">
+                  {visNavn && (
+                    <div className="pl-1 text-[11px] font-medium text-grafit-500">
+                      {m.senderNavn || 'Ejer'}
+                    </div>
+                  )}
                   {harTekst && (
                     <div
                       className={`whitespace-pre-line rounded-2xl px-3.5 py-2 text-sm ${
@@ -317,8 +411,6 @@ export default function SamtaleView({
               }
             }}
           />
-          {/* Billed-vedhæftning (P10). Privat bucket + privat URL-vej (ikke
-              forum/meld's offentlige urlFor). accept="image/*" => mobil-kamera. */}
           <BilledeUpload
             key={uploadKey}
             bucket={BESKED_BUCKET}
