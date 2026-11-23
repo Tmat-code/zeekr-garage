@@ -1,18 +1,21 @@
 import { getForumGrupper } from '@/lib/forum';
 import { getAdminForum } from '@/lib/queries-admin';
 import { getForumRegler } from '@/lib/forum-regler';
+import { erAdmin } from '@/lib/admin';
 import KategoriStyring from '@/components/admin/KategoriStyring';
 import ForumModerering from '@/components/admin/ForumModerering';
 import ForumReglerEditor from '@/components/admin/ForumReglerEditor';
+import TilfoejModel from '@/components/admin/TilfoejModel';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
-  const [grupper, forum, regler] = await Promise.all([
+  const [grupper, forum, regler, kanModel] = await Promise.all([
     getForumGrupper(),
     getAdminForum(25),
     getForumRegler(),
+    erAdmin(),
   ]);
 
   const antalKategorier = grupper.reduce((s, g) => s + g.kategorier.length, 0);
@@ -46,6 +49,19 @@ export default async function AdminForumSide() {
         </p>
         <KategoriStyring grupper={grupper} />
       </section>
+
+      {kanModel && (
+        <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
+          <h2 className="mb-1 text-lg font-semibold text-grafit-900">Tilføj model</h2>
+          <p className="mb-4 text-sm text-grafit-500">
+            Opret en ny Zeekr-model, så den straks kan vælges i Min garage, bruges til "mig med"-
+            bekræftelser og tælles med i Zeekr-rapporten. Modellen får automatisk sit eget forum
+            under Modellerne. Model-fora kan ikke oprettes som almindelige kategorier - de skal
+            kobles til en bil-model, og det er netop det, der sker her.
+          </p>
+          <TilfoejModel />
+        </section>
+      )}
 
       <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
         <div className="mb-1 flex items-baseline justify-between gap-2">

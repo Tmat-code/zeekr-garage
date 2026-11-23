@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
-import { erModerator } from '@/lib/admin';
+import { erModerator, erAdmin } from '@/lib/admin';
 
 function slugify(s: string): string {
   const base = s
@@ -46,6 +46,65 @@ export async function gemForumRegler(content: string): Promise<void> {
 
 async function kraevModerator() {
   if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+}
+
+async function kraevAdmin() {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+}
+
+// Model-slug: samme form som lineup'en (alle slugs er "zeekr-..."), så
+// model-badge'en (fjerner "zeekr-" + initialer) og URL-mønsteret holder.
+function slugModel(navn: string): string {
+  let s = slugify(navn);
+  if (!s.startsWith('zeekr-') && s !== 'zeekr') s = `zeekr-${s}`;
+  return s.replace(/^-+|-+$/g, '').slice(0, 48);
+}
+
+// Opret en ny Zeekr-model + dens model-forum (+ 0..n varianter) i ét hug.
+// Admin-only (struktur på rygraden). Al oprettelse sker atomisk i RPC'en
+// admin_opret_model (security definer, er_admin()-gated) - models/variants
+// beholder deres rene læse-RLS. Model-foraet får model_id (=> model-badge,
+// ikke 💬, og ingen flyt-dropdown i kategori-editoren).
+export async function opretModel(input: {
+  name: string;
+  platform: string;
+  varianter?: string[];
+}): Promise<{ slug: string }> {
+  await kraevAdmin();
+  const navn = input.name.trim();
+  const platform = input.platform.trim();
+  if (!navn) throw new Error('Giv modellen et navn.');
+  if (!platform) throw new Error('Vælg eller skriv en platform.');
+  const slug = slugModel(navn);
+
+  // Trim, fjern tomme + dubletter (case-insensitivt), bevar rækkefølge.
+  const varianter: string[] = [];
+  const set = new Set<string>();
+  for (const v of input.varianter ?? []) {
+    const n = v.trim();
+    if (!n) continue;
+    const key = n.toLowerCase();
+    if (set.has(key)) continue;
+    set.add(key);
+    varianter.push(n);
+  }
+
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('admin_opret_model', {
+    p_name: navn,
+    p_platform: platform,
+    p_slug: slug,
+    p_varianter: varianter,
+  });
+  if (error) throw new Error(error.message);
+
+  // Model-listen driver board-filter, meld, garage og forum-oversigten.
+  revalider();
+  revalidatePath('/');
+  revalidatePath('/feedback');
+  revalidatePath('/meld');
+  revalidatePath('/garage');
+  return { slug: (data as string) ?? slug };
 }
 
 // Opret en ny kategori i en (eksisterende eller ny) gruppe.
