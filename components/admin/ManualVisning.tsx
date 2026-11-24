@@ -17,11 +17,13 @@ function Kort({
   ikon,
   titel,
   kunAdmin,
+  kunSuperadmin,
   children,
 }: {
   ikon: string;
   titel: string;
   kunAdmin?: boolean;
+  kunSuperadmin?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -31,6 +33,7 @@ function Kort({
           {ikon}
         </span>
         <h3 className="text-lg font-semibold text-grafit-900">{titel}</h3>
+        {kunSuperadmin && <span className="chip bg-grafit-900 text-white">kun dig (superadmin)</span>}
         {kunAdmin && <span className="chip bg-kobber-100 text-kobber-800">kun admin</span>}
       </div>
       <div className="space-y-3 text-sm leading-relaxed text-grafit-700">{children}</div>
@@ -91,7 +94,7 @@ function Situation({ naar, children }: { naar: string; children: ReactNode }) {
 
 // --- Selve manualen. admin=false er moderator-visningen. ---
 
-function ManualIndhold({ admin }: { admin: boolean }) {
+function ManualIndhold({ admin, superadmin }: { admin: boolean; superadmin: boolean }) {
   return (
     <div className="space-y-5">
       {/* Hvad er Zeekr Garage */}
@@ -137,9 +140,10 @@ function ManualIndhold({ admin }: { admin: boolean }) {
               <span className="font-medium text-grafit-900">Moderator</span> klarer det daglige:
               rapporter, tråde og indlæg, anmeldte beskeder, feedback-meldinger og advarsler/
               suspensioner.{' '}
-              <span className="font-medium text-grafit-900">Admin</span> (dig) kan alt det samme
-              plus strukturen bagved: links, OTA, modeller, roller/invitationer, den officielle
-              Zeekr-rapport, oprydning og forside-beskeden - derfor ser du alt herunder.
+              <span className="font-medium text-grafit-900">Admin</span> kan alt det samme
+              plus strukturen bagved: links, OTA, modeller, den officielle Zeekr-rapport,
+              oprydning og forside-beskeden - derfor ser du alt herunder. Hvem der er moderator
+              eller admin styres af superadmin.
             </p>
           </>
         ) : (
@@ -155,12 +159,22 @@ function ManualIndhold({ admin }: { admin: boolean }) {
             </p>
           </>
         )}
+        {superadmin && (
+          <p>
+            Som <span className="font-medium text-grafit-900">superadmin</span> (dig alene) styrer du
+            desuden hvem der er moderator eller admin (rolle-styringen i Adgange er kun din), og du
+            har <span className="font-medium text-grafit-900">Audit</span>-fanen: et fuldt spor over
+            hvad stab har ændret, med mulighed for at fortryde en sikker delmængde.
+          </p>
+        )}
         <Liste>
           <Punkt navn="Navigation">
             Fane-rækken øverst følger fladerne:{' '}
-            {admin
-              ? 'Overblik, Feedback, Forum, Links, OTA, Anmeldelser, Rapport, Aktivitet, Adgange'
-              : 'Overblik, Feedback, Forum, Anmeldelser, Rapport, Aktivitet, Adgange'}
+            {superadmin
+              ? 'Overblik, Feedback, Forum, Links, OTA, Anmeldelser, Rapport, Aktivitet, Adgange, Audit'
+              : admin
+                ? 'Overblik, Feedback, Forum, Links, OTA, Anmeldelser, Rapport, Aktivitet, Adgange'
+                : 'Overblik, Feedback, Forum, Anmeldelser, Rapport, Aktivitet, Adgange'}
             . Forum-fanen får et lille kobber-tal, når der er åbne rapporter.
           </Punkt>
           <Punkt navn="Grundregel">
@@ -211,9 +225,6 @@ function ManualIndhold({ admin }: { admin: boolean }) {
                 Rapport-fanen → vælg udsnit (antal, indhold, sprog) → Forhåndsvis først → 📮 Dan
                 Zeekr-rapport (markerer udsnittet som sendt).
               </Situation>
-              <Situation naar="En ny moderator eller admin skal have adgang">
-                Adgange → Giv adgang (email + rolle), eller Søg brugere → sæt rollen direkte.
-              </Situation>
               <Situation naar="Der er kommet en ny OTA/software-opdatering">
                 OTA-fanen → vælg model(ler), version + dato, og indsæt changeloggen (én linje bliver
                 ét punkt).
@@ -227,6 +238,18 @@ function ManualIndhold({ admin }: { admin: boolean }) {
               <Situation naar="En bruger skal fjernes helt">
                 Adgange → 👤 Anonymisér (rydder persondata, men beholder biler og bekræftelser - det
                 er QA-signalet). Der er bevidst ingen hard-delete.
+              </Situation>
+            </>
+          )}
+          {superadmin && (
+            <>
+              <Situation naar="En ny moderator eller admin skal have adgang">
+                Adgange → Giv adgang (email + rolle), eller Søg brugere → sæt rollen direkte. Kun du
+                som superadmin kan det.
+              </Situation>
+              <Situation naar="Du vil se hvad en moderator eller admin har ændret - eller fortryde det">
+                Audit → Pr. person → vælg personen → se deres spor. Felt-ændringer kan rulles tilbage
+                med ↩ Fortryd (så længe rækken er urørt siden).
               </Situation>
             </>
           )}
@@ -512,7 +535,8 @@ function ManualIndhold({ admin }: { admin: boolean }) {
         <p>
           Overblik over alle oprettede brugere. Søg på navn eller email, filtrér på rolle og status
           (aktiv, suspenderet, bannet), og sortér. Hver handling giver brugeren en officiel besked
-          med grunden og lander i loggen. Du kan ikke sanktionere din egen konto eller en admin.
+          med grunden og lander i loggen. Du kan ikke sanktionere din egen konto, en admin eller
+          superadmin.
         </p>
         <Afsnit titel="Handlinger pr. bruger" />
         <Liste>
@@ -535,29 +559,69 @@ function ManualIndhold({ admin }: { admin: boolean }) {
             </>
           ) : null}
         </Liste>
-        {admin && (
+        {superadmin ? (
           <>
-            <Afsnit titel="Roller og invitationer" />
+            <Afsnit titel="Roller og invitationer (kun dig som superadmin)" />
             <Liste>
-              <AdminPunkt navn="Giv adgang">
+              <Punkt navn="Giv adgang">
                 Inviter på email: har personen allerede en konto, får de rollen (moderator eller
                 admin) med det samme; ellers tildeles den automatisk, når de opretter en konto med
                 den email.
-              </AdminPunkt>
-              <AdminPunkt navn="Søg brugere">
+              </Punkt>
+              <Punkt navn="Søg brugere">
                 Find en hvilken som helst oprettet bruger på navn/email og sæt rollen direkte fra
                 dropdown&apos;en.
-              </AdminPunkt>
-              <AdminPunkt navn="Personer med adgang">
-                Skift rolle eller tryk <em>Fjern adgang</em>. Din egen adgang kan du ikke ændre.
-              </AdminPunkt>
-              <AdminPunkt navn="Afventende invitationer">
+              </Punkt>
+              <Punkt navn="Personer med adgang">
+                Skift rolle eller tryk <em>Fjern adgang</em>. Din egen adgang kan du ikke ændre, og
+                superadmin-rollen kan ikke tildeles herfra (den er din alene, sat i databasen).
+              </Punkt>
+              <Punkt navn="Afventende invitationer">
                 Invitationer der venter på, at personen opretter en konto - kan fjernes igen.
-              </AdminPunkt>
+              </Punkt>
             </Liste>
           </>
-        )}
+        ) : admin ? (
+          <>
+            <Afsnit titel="Roller og invitationer" />
+            <p className="text-grafit-500">
+              At give eller fjerne moderator-/admin-rettigheder er forbeholdt superadmin. Du
+              administrerer brugere (advar/suspendér/ban/ophæv/anonymisér), men ikke roller.
+            </p>
+          </>
+        ) : null}
       </Kort>
+
+      {/* Audit - superadmin */}
+      {superadmin && (
+        <Kort ikon="🕵️" titel="Audit - spor og fortryd" kunSuperadmin>
+          <p>
+            Et fuldt spor over hvad stab (moderatorer og admins) har ændret på sitet - kun du som
+            superadmin kan se denne side. Hver ændring en stab-person laver i en flade logges
+            automatisk (hvad, hvornår, før → efter). Almindelige brugeres aktivitet logges ikke.
+          </p>
+          <Afsnit titel="Sådan bruger du den" />
+          <Liste>
+            <Punkt navn="👤 Pr. person">
+              Vælg en person i listen til venstre og se deres fulde spor. Hver linje viser, hvad der
+              blev ændret, med før → efter.
+            </Punkt>
+            <Punkt navn="🕒 Seneste">
+              En samlet strøm på tværs af alle - nyeste øverst - hvis du hellere vil se alt i
+              tidsrækkefølge.
+            </Punkt>
+            <Punkt navn="↩ Fortryd">
+              Ruller en ændring tilbage til det, der stod før. Virker kun på felt-ændringer (ikke på
+              oprettelse, sletning, anonymisering eller sanktioner), og kun hvis rækken er urørt
+              siden - ellers siger den til, så du retter manuelt. En fortrydelse logges selv.
+            </Punkt>
+          </Liste>
+          <p className="text-grafit-500">
+            Tanken er oversyn, ikke overvågning: loggen findes, så et brud med en udefrakommende
+            admin kan ses og rettes - ikke for at kigge moderatorer over skulderen i det daglige.
+          </p>
+        </Kort>
+      )}
 
       {/* Modeller - admin */}
       {admin && (
@@ -588,9 +652,18 @@ function ManualIndhold({ admin }: { admin: boolean }) {
   );
 }
 
-export default function ManualVisning({ erAdmin }: { erAdmin: boolean }) {
-  // Admin lander på admin-manualen; ét klik til moderator-manualen (onboarding).
+export default function ManualVisning({
+  erAdmin,
+  erSuperadmin = false,
+}: {
+  erAdmin: boolean;
+  erSuperadmin?: boolean;
+}) {
+  // Admin/superadmin lander på admin-manualen; ét klik til moderator-manualen
+  // (onboarding). Superadmin-laget (Audit + rolle-styring) følger admin-visningen,
+  // så et skift til moderator-manualen viser præcis det, en moderator ser.
   const [visAdmin, setVisAdmin] = useState(erAdmin);
+  const visSuperadmin = erSuperadmin && visAdmin;
 
   return (
     <div className="space-y-5">
@@ -637,7 +710,7 @@ export default function ManualVisning({ erAdmin }: { erAdmin: boolean }) {
         </div>
       )}
 
-      <ManualIndhold admin={visAdmin} />
+      <ManualIndhold admin={visAdmin} superadmin={visSuperadmin} />
     </div>
   );
 }
