@@ -234,6 +234,10 @@ function ManualIndhold({ admin }: { admin: boolean }) {
             tråd&quot; i tråd-kolonnen.
           </Punkt>
         </Liste>
+        <p className="text-grafit-500">
+          Forum-fanen har også &quot;Seneste forum-aktivitet&quot; (nye tråde og svar) - et rent
+          overblik, ingen handlinger.
+        </p>
       </Kort>
 
       <Kort ikon="🗂️" titel="Forum - kategorier">
@@ -354,6 +358,10 @@ function ManualIndhold({ admin }: { admin: boolean }) {
           </Punkt>
           <Punkt navn="Forhåndsvis PDF / CSV">
             Henter rapporten uden at ændre noget. Den må du gerne bruge frit.
+          </Punkt>
+          <Punkt navn="🔍 Test oversættelse">
+            Tjekker at oversættelsen til engelsk/svensk virker (LibreTranslate). Er den ikke
+            konfigureret, er rapporterne kun på dansk.
           </Punkt>
         </Liste>
         {admin ? (
