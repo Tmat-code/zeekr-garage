@@ -6,6 +6,7 @@ type Genvej = {
   titel: string;
   tekst: string;
   fremhaev?: boolean;
+  kunAdmin?: boolean;
 };
 
 // Genveje til Vaerkstedets flader. Feedback er den mest brugte -> fremhaevet
@@ -18,15 +19,16 @@ const GENVEJE: Genvej[] = [
   { href: '/admin/rapport', ikon: '📮', titel: 'Rapport', tekst: 'Saml Zeekr-rapport (PDF/CSV)' },
   { href: '/admin/aktivitet', ikon: '📈', titel: 'Aktivitet', tekst: 'Mønstre over tid' },
   { href: '/admin/adgange', ikon: '👥', titel: 'Adgange', tekst: 'Brugere og roller' },
-  { href: '/admin/links', ikon: '🔗', titel: 'Links', tekst: 'Nyttige links på /links' },
+  { href: '/admin/links', ikon: '🔗', titel: 'Links', tekst: 'Nyttige links på /links', kunAdmin: true },
 ];
 
-export default function Genveje() {
+export default function Genveje({ erAdmin = false }: { erAdmin?: boolean }) {
+  const genveje = erAdmin ? GENVEJE : GENVEJE.filter((g) => !g.kunAdmin);
   return (
     <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
       <h2 className="mb-4 text-lg font-semibold text-grafit-900">Genveje</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {GENVEJE.map((g) => (
+        {genveje.map((g) => (
           <Link
             key={g.href}
             href={g.href}

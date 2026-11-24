@@ -3,17 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type Fane = { href: string; ikon: string; label: string };
+type Fane = { href: string; ikon: string; label: string; kunAdmin?: boolean };
 
 // Vaerkstedets faner som en egen raekke. Ikon + kort label, og raekken
-// wrapper (flex-wrap), saa den aldrig "sprenger" - nye flader (P20/P21's
-// rapport-ko, en Log-flade) slottes bare ind og wrapper til naeste linje.
+// wrapper (flex-wrap), saa den aldrig "sprenger" - nye flader slottes bare
+// ind og wrapper til naeste linje. kunAdmin-faner skjules helt for
+// moderatorer (de skal ikke se, at der findes et admin-lag).
 const FANER: Fane[] = [
   { href: '/admin', ikon: '📊', label: 'Overblik' },
   { href: '/admin/feedback', ikon: '🗒️', label: 'Feedback' },
   { href: '/admin/forum', ikon: '💬', label: 'Forum' },
-  { href: '/admin/links', ikon: '🔗', label: 'Links' },
-  { href: '/admin/ota', ikon: '📦', label: 'OTA' },
+  { href: '/admin/links', ikon: '🔗', label: 'Links', kunAdmin: true },
+  { href: '/admin/ota', ikon: '📦', label: 'OTA', kunAdmin: true },
   { href: '/admin/beskeder', ikon: '🚩', label: 'Anmeldelser' },
   { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },
@@ -27,12 +28,19 @@ function erAktiv(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export default function AdminNav({ aabneRapporter = 0 }: { aabneRapporter?: number }) {
+export default function AdminNav({
+  aabneRapporter = 0,
+  erAdmin = false,
+}: {
+  aabneRapporter?: number;
+  erAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const faner = erAdmin ? FANER : FANER.filter((f) => !f.kunAdmin);
 
   return (
     <nav className="flex flex-wrap gap-1.5">
-      {FANER.map((f) => {
+      {faner.map((f) => {
         const aktiv = erAktiv(pathname, f.href);
         // Åbne forum-rapporter -> kobber-badge på Forum-fanen.
         const badge = f.href === '/admin/forum' && aabneRapporter > 0 ? aabneRapporter : 0;

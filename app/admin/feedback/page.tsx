@@ -1,5 +1,6 @@
 import { getIssues } from '@/lib/queries';
 import { getFeedbackAktivitet } from '@/lib/queries-admin';
+import { erAdmin } from '@/lib/admin';
 import ModereringsTabel from '@/components/admin/ModereringsTabel';
 import OprydningPanel from '@/components/admin/OprydningPanel';
 import StorageOprydningPanel from '@/components/admin/StorageOprydningPanel';
@@ -9,7 +10,11 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Feedback - Værkstedet' };
 
 export default async function AdminFeedbackSide() {
-  const [issues, aktivitet] = await Promise.all([getIssues(), getFeedbackAktivitet(12)]);
+  const [issues, aktivitet, kanAdmin] = await Promise.all([
+    getIssues(),
+    getFeedbackAktivitet(12),
+    erAdmin(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -27,9 +32,10 @@ export default async function AdminFeedbackSide() {
         <AktivitetFeed poster={aktivitet} tom="Ingen feedback-aktivitet endnu." />
       </section>
 
-      <OprydningPanel />
+      {/* Oprydnings-værktøjerne er admin-kun - skjult for moderatorer. */}
+      {kanAdmin && <OprydningPanel />}
 
-      <StorageOprydningPanel />
+      {kanAdmin && <StorageOprydningPanel />}
     </div>
   );
 }

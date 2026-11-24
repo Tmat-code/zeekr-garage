@@ -125,28 +125,43 @@ function ManualIndhold({ admin }: { admin: boolean }) {
 
       {/* Sådan hænger det sammen */}
       <Kort ikon="🧭" titel="Sådan hænger Værkstedet sammen">
-        <p>
-          Værkstedet er bagscenen til Zeekr Garage - her modererer vi forummet og feedback-
-          meldingerne, kuraterer links og OTA-historik, samler rapporten til Zeekr og holder styr
-          på brugerne.
-        </p>
-        <p>
-          Der er to roller.{' '}
-          <span className="font-medium text-grafit-900">Moderator</span> klarer det daglige:
-          rapporter, tråde og indlæg, anmeldte beskeder, feedback-meldinger og advarsler/
-          suspensioner.{' '}
-          <span className="font-medium text-grafit-900">Admin</span> kan alt det samme plus
-          strukturen bagved: links, OTA, modeller, roller/invitationer, den officielle Zeekr-
-          rapport, oprydning og forside-beskeden.
-          {admin
-            ? ' Du er admin, så du ser alt herunder.'
-            : ' De admin-kun-flader er skjult eller låst for dig - de står ikke i denne manual.'}
-        </p>
+        {admin ? (
+          <>
+            <p>
+              Værkstedet er bagscenen til Zeekr Garage - her modererer vi forummet og feedback-
+              meldingerne, kuraterer links og OTA-historik, samler rapporten til Zeekr og holder
+              styr på brugerne.
+            </p>
+            <p>
+              Der er to roller.{' '}
+              <span className="font-medium text-grafit-900">Moderator</span> klarer det daglige:
+              rapporter, tråde og indlæg, anmeldte beskeder, feedback-meldinger og advarsler/
+              suspensioner.{' '}
+              <span className="font-medium text-grafit-900">Admin</span> (dig) kan alt det samme
+              plus strukturen bagved: links, OTA, modeller, roller/invitationer, den officielle
+              Zeekr-rapport, oprydning og forside-beskeden - derfor ser du alt herunder.
+            </p>
+          </>
+        ) : (
+          <>
+            <p>
+              Værkstedet er bagscenen til Zeekr Garage - her holder vi forummet og feedback-
+              meldingerne civile og brugbare, så den feedback, ejerne giver, bliver til en stærk
+              rapport til Zeekr.
+            </p>
+            <p>
+              Som moderator håndterer du det daglige: forum-rapporter, tråde og indlæg, anmeldte
+              beskeder, feedback-meldinger og advarsler/suspensioner. Denne manual dækker det hele.
+            </p>
+          </>
+        )}
         <Liste>
           <Punkt navn="Navigation">
-            Fane-rækken øverst følger fladerne: Overblik, Feedback, Forum, Links, OTA, Anmeldelser,
-            Rapport, Aktivitet, Adgange. Forum-fanen får et lille kobber-tal, når der er åbne
-            rapporter.
+            Fane-rækken øverst følger fladerne:{' '}
+            {admin
+              ? 'Overblik, Feedback, Forum, Links, OTA, Anmeldelser, Rapport, Aktivitet, Adgange'
+              : 'Overblik, Feedback, Forum, Anmeldelser, Rapport, Aktivitet, Adgange'}
+            . Forum-fanen får et lille kobber-tal, når der er åbne rapporter.
           </Punkt>
           <Punkt navn="Grundregel">
             Hver handling, der rammer en bruger - fjern med grund, advarsel, suspension - sender
@@ -216,12 +231,6 @@ function ManualIndhold({ admin }: { admin: boolean }) {
             </>
           )}
         </SituationListe>
-        {!admin && (
-          <p className="text-grafit-500">
-            Resten - sende rapporten til Zeekr, give adgang, OTA, links, modeller og fjerne en
-            bruger helt - klarer admin. Se &quot;Det her kræver admin&quot; nederst.
-          </p>
-        )}
       </Kort>
 
       {/* Overblik */}
@@ -486,12 +495,7 @@ function ManualIndhold({ admin }: { admin: boolean }) {
               </AdminPunkt>
             </Liste>
           </>
-        ) : (
-          <p className="text-grafit-500">
-            Selve den officielle &quot;Dan Zeekr-rapport&quot; (der markerer udsnittet som sendt) er
-            forbeholdt admin.
-          </p>
-        )}
+        ) : null}
       </Kort>
 
       {/* Aktivitet */}
@@ -529,11 +533,7 @@ function ManualIndhold({ admin }: { admin: boolean }) {
                 Kan ikke fortrydes.
               </AdminPunkt>
             </>
-          ) : (
-            <Punkt navn="Ban, ophæv og anonymisér">
-              Forbeholdt admin - du ser dem ikke på rækken.
-            </Punkt>
-          )}
+          ) : null}
         </Liste>
         {admin && (
           <>
@@ -584,23 +584,6 @@ function ManualIndhold({ admin }: { admin: boolean }) {
         </Kort>
       )}
 
-      {/* Moderator: hvad kræver admin */}
-      {!admin && (
-        <Kort ikon="🔒" titel="Det her kræver admin">
-          <p>
-            Følgende flader og handlinger er forbeholdt admin. Du kan støde på dem, men de er
-            skjult eller låst for dig - sig til formanden (admin), hvis der er brug for noget:
-          </p>
-          <Liste>
-            <Punkt>Links og OTA-historik</Punkt>
-            <Punkt>Oprettelse, arkivering og sletning af modeller</Punkt>
-            <Punkt>Roller og invitationer (give/fjerne adgang)</Punkt>
-            <Punkt>Ban, ophæv spærring og anonymisér af brugere</Punkt>
-            <Punkt>Den officielle Zeekr-rapport (markér som sendt)</Punkt>
-            <Punkt>Oprydning (stemmer og forældreløse filer) og forside-beskeden</Punkt>
-          </Liste>
-        </Kort>
-      )}
     </div>
   );
 }

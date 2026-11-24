@@ -56,7 +56,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Fane-navigation - egen raekke, wrapper naar den fyldes */}
       <div className="mb-6 border-b border-grafit-200 pb-4">
-        <AdminNav aabneRapporter={aabneRapporter} />
+        <AdminNav aabneRapporter={aabneRapporter} erAdmin={rolle === 'admin'} />
       </div>
 
       {children}
