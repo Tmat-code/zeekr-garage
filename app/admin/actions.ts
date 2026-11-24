@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
-import type { AlleBruger } from '@/lib/queries-admin';
+import type { AlleBruger, BrugerFiltre, BrugerSide } from '@/lib/queries-admin';
+import { getBrugerOverblik } from '@/lib/queries-admin';
+import { MOD_GRUND_VALUES } from '@/lib/moderering';
 import { MELD_BUCKET } from '@/lib/billeder';
 import { supabaseService } from '@/lib/supabase/service';
 import {
@@ -140,6 +142,81 @@ export async function fjernInvitation(email: string): Promise<void> {
   if (!(await erAdmin())) throw new Error('Kun admin.');
   const sb = supabaseServer();
   const { error } = await sb.rpc('admin_fjern_invitation', { p_email: email.toLowerCase() });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+}
+
+// --- Bruger-administration / sanktioner (P20) ---
+// Oversigten er moderator-laesbar (find en bruger at handle paa); handlingerne
+// er rolle-gatede: moderator maa advare + suspendere, admin maa banne, ophaeve
+// og anonymisere. RPC'erne (M4) haandhaever gatingen i DB; vi stopper tidligt
+// her med en laesbar fejl. Hver RPC er atomisk (sanktion + log + evt. notif).
+
+export async function hentBrugere(f: BrugerFiltre): Promise<BrugerSide> {
+  if (!(await erModerator())) throw new Error('Du har ikke adgang.');
+  return getBrugerOverblik(f);
+}
+
+function tjekGrund(grund: string) {
+  if (!MOD_GRUND_VALUES.includes(grund)) throw new Error('Ugyldig grund.');
+}
+
+export async function suspenderBruger(
+  userId: string,
+  dage: number,
+  grund: string,
+  fritekst?: string,
+): Promise<void> {
+  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+  tjekGrund(grund);
+  if (!Number.isInteger(dage) || dage < 1 || dage > 3650) {
+    throw new Error('Antal dage skal være mellem 1 og 3650.');
+  }
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('mod_suspender_bruger', {
+    p_user_id: userId,
+    p_dage: dage,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+}
+
+export async function banBruger(userId: string, grund: string, fritekst?: string): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  tjekGrund(grund);
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_ban_bruger', {
+    p_user_id: userId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+}
+
+export async function ophaevBruger(userId: string): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_ophaev', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/adgange');
+}
+
+export async function anonymiserBruger(
+  userId: string,
+  grund: string,
+  fritekst?: string,
+): Promise<void> {
+  if (!(await erAdmin())) throw new Error('Kun admin.');
+  tjekGrund(grund);
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('admin_anonymiser', {
+    p_user_id: userId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+  });
   if (error) throw new Error(error.message);
   revalidatePath('/admin/adgange');
 }

@@ -1,12 +1,20 @@
 import Link from 'next/link';
 import { adminKontekst } from '@/lib/admin';
-import { getAdgange } from '@/lib/queries-admin';
+import { getAdgange, getBrugerOverblik } from '@/lib/queries-admin';
 import AdgangePanel from '@/components/admin/AdgangePanel';
+import BrugerAdministration from '@/components/admin/BrugerAdministration';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdgangeSide() {
-  const [{ user }, data] = await Promise.all([adminKontekst(), getAdgange()]);
+  const { user, rolle } = await adminKontekst();
+  const erAdmin = rolle === 'admin';
+
+  // Bruger-overblik er moderator-læsbart; rolle-styring + invitationer er admin-only.
+  const [overblik, adgange] = await Promise.all([
+    getBrugerOverblik({ limit: 25 }),
+    erAdmin ? getAdgange() : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -17,11 +25,15 @@ export default async function AdgangeSide() {
         </Link>
       </div>
 
-      <AdgangePanel
-        brugere={data.brugere}
-        invitationer={data.invitationer}
-        megId={user?.id ?? ''}
-      />
+      <BrugerAdministration initial={overblik} megId={user?.id ?? ''} erAdmin={erAdmin} />
+
+      {erAdmin && adgange && (
+        <AdgangePanel
+          brugere={adgange.brugere}
+          invitationer={adgange.invitationer}
+          megId={user?.id ?? ''}
+        />
+      )}
     </div>
   );
 }

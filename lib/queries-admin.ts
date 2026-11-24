@@ -409,6 +409,61 @@ export async function getAdgange(): Promise<{
   };
 }
 
+// =========================================================================
+// Bruger-administration (P20) - overblik + status, drevet af admin_alle_brugere
+// (moderator-laesbar). Status udledes af spaerret_til i RPC'en.
+// =========================================================================
+export type BrugerStatus = 'aktiv' | 'suspenderet' | 'bannet';
+
+export type BrugerOverblik = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  rolle: string | null;
+  sidstLogget: string | null;
+  oprettet: string;
+  spaerretTil: string | null;
+  status: BrugerStatus;
+};
+
+export type BrugerFiltre = {
+  soeg?: string;
+  rolle?: string | null; // 'admin' | 'moderator' | 'ingen' | null (= alle)
+  status?: string | null; // 'aktiv' | 'suspenderet' | 'bannet' | null (= alle)
+  sort?: string; // 'nyeste' | 'aktiv' (sidst logget) | 'navn'
+  limit?: number;
+  offset?: number;
+};
+
+export type BrugerSide = { brugere: BrugerOverblik[]; total: number };
+
+export async function getBrugerOverblik(f: BrugerFiltre = {}): Promise<BrugerSide> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('admin_alle_brugere', {
+    p_soeg: (f.soeg ?? '').trim(),
+    p_rolle: f.rolle ?? null,
+    p_status: f.status ?? null,
+    p_sort: f.sort ?? 'nyeste',
+    p_limit: f.limit ?? 25,
+    p_offset: f.offset ?? 0,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    brugere: rows.map((r) => ({
+      id: r.id,
+      email: r.email,
+      displayName: r.display_name ?? null,
+      rolle: r.role ?? null,
+      sidstLogget: r.sidst_logget ?? null,
+      oprettet: r.oprettet,
+      spaerretTil: r.spaerret_til ?? null,
+      status: (r.status ?? 'aktiv') as BrugerStatus,
+    })),
+    // count(*) over () staar paa hver raekke; 0 naar filtreringen er tom.
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
+}
+
 export async function getAktivitet(): Promise<Aktivitet> {
   const sb = supabaseServer();
   const [iss, con] = await Promise.all([
