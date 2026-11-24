@@ -169,7 +169,12 @@ export async function getForumAktivitet(graense = 12): Promise<AktivitetPost[]> 
 }
 
 // =========================================================================
-// Forum-moderering - seneste traade + indlaeg til /admin/forum
+// Forum-moderering (P16) - paginerede lister til /admin/forum, drevet af de
+// moderator-laesbare RPC'er admin_forum_mod_traade / _indlaeg (M5). Samme
+// afkortnings-vej som admin_alle_brugere (P20): fritekst-soeg + "kraever
+// opmaerksomhed"-filter + limit/offset ("vis flere") + total ("viser X af Y").
+// har_rapport/forfatter_spaerret returneres raat, saa UI kan saette et maerke
+// paa raekken selv i "Alle"-visningen.
 // =========================================================================
 export type AdminForumTraad = {
   id: string;
@@ -183,6 +188,8 @@ export type AdminForumTraad = {
   viewCount: number;
   isPinned: boolean;
   isLocked: boolean;
+  harRapport: boolean;
+  forfatterSpaerret: boolean;
 };
 
 export type AdminForumIndlaeg = {
@@ -194,64 +201,73 @@ export type AdminForumIndlaeg = {
   traadTitel: string;
   traadSlug: string;
   kategoriSlug: string;
+  harRapport: boolean;
+  forfatterSpaerret: boolean;
 };
 
-export async function getAdminForum(graense = 25): Promise<{
-  traade: AdminForumTraad[];
-  indlaeg: AdminForumIndlaeg[];
-}> {
+export type ForumModFiltre = {
+  soeg?: string;
+  kunOpm?: boolean; // true = kun "kraever opmaerksomhed" (rapport eller spaerret forfatter)
+  limit?: number;
+  offset?: number;
+};
+
+export type ForumModTraadSide = { traade: AdminForumTraad[]; total: number };
+export type ForumModIndlaegSide = { indlaeg: AdminForumIndlaeg[]; total: number };
+
+export async function getForumModTraade(f: ForumModFiltre = {}): Promise<ForumModTraadSide> {
   const sb = supabaseServer();
-  const [t, p] = await Promise.all([
-    sb
-      .from('forum_threads')
-      .select(
-        `id, slug, title, last_post_at, reply_count, view_count, is_pinned, is_locked,
-         forfatter:profiles!forum_threads_author_id_fkey ( display_name ),
-         kategori:forum_categories ( slug, name )`,
-      )
-      .eq('is_removed', false)
-      .order('last_post_at', { ascending: false })
-      .limit(graense),
-    sb
-      .from('forum_posts')
-      .select(
-        `id, body, created_at, is_opening,
-         forfatter:profiles!forum_posts_author_id_fkey ( display_name ),
-         thread:forum_threads ( title, slug, is_removed, kategori:forum_categories ( slug ) )`,
-      )
-      .eq('is_removed', false)
-      .order('created_at', { ascending: false })
-      .limit(graense),
-  ]);
+  const { data } = await sb.rpc('admin_forum_mod_traade', {
+    p_soeg: (f.soeg ?? '').trim(),
+    p_kun_opm: f.kunOpm ?? false,
+    p_limit: f.limit ?? 25,
+    p_offset: f.offset ?? 0,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    traade: rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      kategoriSlug: r.kategori_slug ?? '',
+      kategoriNavn: r.kategori_navn ?? '',
+      title: r.title,
+      forfatter: r.forfatter ?? null,
+      lastPostAt: r.last_post_at,
+      replyCount: r.reply_count ?? 0,
+      viewCount: r.view_count ?? 0,
+      isPinned: r.is_pinned ?? false,
+      isLocked: r.is_locked ?? false,
+      harRapport: r.har_rapport ?? false,
+      forfatterSpaerret: r.forfatter_spaerret ?? false,
+    })),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
+}
 
-  const traade: AdminForumTraad[] = ((t.data ?? []) as any[]).map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    kategoriSlug: r.kategori?.slug ?? '',
-    kategoriNavn: r.kategori?.name ?? '',
-    title: r.title,
-    forfatter: r.forfatter?.display_name ?? null,
-    lastPostAt: r.last_post_at,
-    replyCount: r.reply_count ?? 0,
-    viewCount: r.view_count ?? 0,
-    isPinned: r.is_pinned ?? false,
-    isLocked: r.is_locked ?? false,
-  }));
-
-  const indlaeg: AdminForumIndlaeg[] = ((p.data ?? []) as any[])
-    .filter((r) => r.thread && !r.thread.is_removed)
-    .map((r) => ({
+export async function getForumModIndlaeg(f: ForumModFiltre = {}): Promise<ForumModIndlaegSide> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('admin_forum_mod_indlaeg', {
+    p_soeg: (f.soeg ?? '').trim(),
+    p_kun_opm: f.kunOpm ?? false,
+    p_limit: f.limit ?? 25,
+    p_offset: f.offset ?? 0,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    indlaeg: rows.map((r) => ({
       id: r.id,
       body: r.body,
-      forfatter: r.forfatter?.display_name ?? null,
+      forfatter: r.forfatter ?? null,
       createdAt: r.created_at,
       isOpening: r.is_opening ?? false,
-      traadTitel: r.thread?.title ?? '',
-      traadSlug: r.thread?.slug ?? '',
-      kategoriSlug: r.thread?.kategori?.slug ?? '',
-    }));
-
-  return { traade, indlaeg };
+      traadTitel: r.traad_titel ?? '',
+      traadSlug: r.traad_slug ?? '',
+      kategoriSlug: r.kategori_slug ?? '',
+      harRapport: r.har_rapport ?? false,
+      forfatterSpaerret: r.forfatter_spaerret ?? false,
+    })),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
 }
 
 // =========================================================================

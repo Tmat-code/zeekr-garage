@@ -1,6 +1,7 @@
 import { getForumGrupper } from '@/lib/forum';
 import {
-  getAdminForum,
+  getForumModTraade,
+  getForumModIndlaeg,
   getModelOversigt,
   getForumAktivitet,
   getForumRapporter,
@@ -19,14 +20,16 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
-  const [grupper, forum, regler, aktivitet, rapporter, kanModel] = await Promise.all([
-    getForumGrupper(),
-    getAdminForum(25),
-    getForumRegler(),
-    getForumAktivitet(12),
-    getForumRapporter(),
-    erAdmin(),
-  ]);
+  const [grupper, modTraade, modIndlaeg, regler, aktivitet, rapporter, kanModel] =
+    await Promise.all([
+      getForumGrupper(),
+      getForumModTraade({ limit: 25 }),
+      getForumModIndlaeg({ limit: 25 }),
+      getForumRegler(),
+      getForumAktivitet(12),
+      getForumRapporter(),
+      erAdmin(),
+    ]);
 
   // Model-oversigten (til Modeller-panelet) er admin-only; hent kun når admin.
   const modeller = kanModel ? await getModelOversigt() : [];
@@ -53,13 +56,15 @@ export default async function AdminForumSide() {
       <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
         <div className="mb-1 flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold text-grafit-900">Forum-moderering</h2>
-          <span className="text-sm text-grafit-400">{forum.traade.length} seneste tråde</span>
+          <span className="text-sm text-grafit-400">
+            {modTraade.total} tråde · {modIndlaeg.total} indlæg
+          </span>
         </div>
         <p className="mb-4 text-sm text-grafit-500">
           Fastgør, lås eller fjern tråde og indlæg. Handlingerne slår igennem på forummet med det
-          samme.
+          samme. Søg eller filtrér til det der kræver opmærksomhed, og hent flere med "vis flere".
         </p>
-        <ForumModerering traade={forum.traade} indlaeg={forum.indlaeg} />
+        <ForumModerering initialTraade={modTraade} initialIndlaeg={modIndlaeg} />
       </section>
 
       <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">

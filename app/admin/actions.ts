@@ -4,8 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
-import type { AlleBruger, BrugerFiltre, BrugerSide } from '@/lib/queries-admin';
-import { getBrugerOverblik } from '@/lib/queries-admin';
+import type {
+  AlleBruger,
+  BrugerFiltre,
+  BrugerSide,
+  ForumModFiltre,
+  ForumModTraadSide,
+  ForumModIndlaegSide,
+} from '@/lib/queries-admin';
+import { getBrugerOverblik, getForumModTraade, getForumModIndlaeg } from '@/lib/queries-admin';
 import { MOD_GRUND_VALUES } from '@/lib/moderering';
 import { MELD_BUCKET } from '@/lib/billeder';
 import { supabaseService } from '@/lib/supabase/service';
@@ -155,6 +162,19 @@ export async function fjernInvitation(email: string): Promise<void> {
 export async function hentBrugere(f: BrugerFiltre): Promise<BrugerSide> {
   if (!(await erModerator())) throw new Error('Du har ikke adgang.');
   return getBrugerOverblik(f);
+}
+
+// --- Forum-moderering: paginering + filter (P16) ---
+// Moderator-laesbare lister til /admin/forum (soeg + "kraever opmaerksomhed" +
+// "vis flere"). RPC'erne (M5) gater selv i DB; vi stopper tidligt her.
+export async function hentForumTraade(f: ForumModFiltre): Promise<ForumModTraadSide> {
+  if (!(await erModerator())) throw new Error('Du har ikke adgang.');
+  return getForumModTraade(f);
+}
+
+export async function hentForumIndlaeg(f: ForumModFiltre): Promise<ForumModIndlaegSide> {
+  if (!(await erModerator())) throw new Error('Du har ikke adgang.');
+  return getForumModIndlaeg(f);
 }
 
 function tjekGrund(grund: string) {
