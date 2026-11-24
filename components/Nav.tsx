@@ -23,6 +23,7 @@ const LINKS = [
   { href: '/forum', label: 'Forum' },
   { href: '/feedback', label: 'Feedback' },
   { href: '/events', label: 'Events' },
+  { href: '/software', label: 'OTA' },
   { href: '/links', label: 'Links' },
   { href: '/om', label: 'Om' },
 ];

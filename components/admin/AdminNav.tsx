@@ -13,6 +13,7 @@ const FANER: Fane[] = [
   { href: '/admin/feedback', ikon: '🗒️', label: 'Feedback' },
   { href: '/admin/forum', ikon: '💬', label: 'Forum' },
   { href: '/admin/links', ikon: '🔗', label: 'Links' },
+  { href: '/admin/ota', ikon: '📦', label: 'OTA' },
   { href: '/admin/beskeder', ikon: '🚩', label: 'Anmeldelser' },
   { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },

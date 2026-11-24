@@ -195,6 +195,34 @@ export type LinkGruppe = {
 };
 
 // =========================================================================
+// OTA-historik (P27): struktureret software-opdaterings-log pr. model.
+// Et opslag (en version) kan daekke 1..n modeller (join-tabel, som P19).
+// changelog gemmes som ren tekst, een linje pr. punkt; punkter er den splittede
+// visnings-liste.
+// =========================================================================
+export type OtaModel = { slug: string; name: string };
+
+export type SoftwareUpdate = {
+  id: string;
+  version: string;
+  releasedAt: string; // 'YYYY-MM-DD'
+  changelog: string; // raa tekst, een linje pr. punkt
+  punkter: string[]; // changelog splittet (trimmet, tomme linjer fjernet)
+  note: string | null;
+  modeller: OtaModel[]; // modeller opslaget gaelder (>= 1)
+  createdAt: string;
+};
+
+// Offentlig visning: een blok pr. model, nyeste version oeverst.
+export type OtaModelHistorik = {
+  slug: string;
+  name: string;
+  displayOrder: number;
+  nyesteVersion: string | null;
+  opdateringer: SoftwareUpdate[]; // nyeste foerst
+};
+
+// =========================================================================
 // Events / meetups
 // =========================================================================
 export type EventRow = {

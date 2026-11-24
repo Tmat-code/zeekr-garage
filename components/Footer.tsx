@@ -11,6 +11,7 @@ export default function Footer() {
           <Link href="/forum" className="hover:text-kobber-700">Forum</Link>
           <Link href="/feedback" className="hover:text-kobber-700">Feedback</Link>
           <Link href="/events" className="hover:text-kobber-700">Events</Link>
+          <Link href="/software" className="hover:text-kobber-700">OTA</Link>
           <Link href="/links" className="hover:text-kobber-700">Links</Link>
           <Link href="/om" className="hover:text-kobber-700">Om</Link>
         </div>
