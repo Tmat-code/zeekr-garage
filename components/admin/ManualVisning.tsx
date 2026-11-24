@@ -71,11 +71,58 @@ function AdminPunkt({ navn, children }: { navn?: string; children: ReactNode }) 
   );
 }
 
+// Scenarie-liste: fra "det sker" til "hvor + hvad".
+function SituationListe({ children }: { children: ReactNode }) {
+  return (
+    <ul className="divide-y divide-grafit-100 overflow-hidden rounded-xl border border-grafit-200">
+      {children}
+    </ul>
+  );
+}
+
+function Situation({ naar, children }: { naar: string; children: ReactNode }) {
+  return (
+    <li className="px-3 py-2.5">
+      <p className="font-medium text-grafit-900">{naar}</p>
+      <p className="mt-0.5 text-grafit-700">{children}</p>
+    </li>
+  );
+}
+
 // --- Selve manualen. admin=false er moderator-visningen. ---
 
 function ManualIndhold({ admin }: { admin: boolean }) {
   return (
     <div className="space-y-5">
+      {/* Hvad er Zeekr Garage */}
+      <Kort ikon="🚗" titel="Hvad er Zeekr Garage">
+        <p>
+          Zeekr Garage er et uafhængigt, uofficielt community for Zeekr-ejere i Norden. Sitet har to
+          halvdele: <span className="font-medium text-grafit-900">feedback-boardet</span>, hvor
+          ejere melder fejl og ønsker ind, og andre trykker &quot;mig med&quot; for at lægge en
+          stemme på (en <em>melding</em>), og <span className="font-medium text-grafit-900">forummet</span>
+          , hvor man snakker (tråde og svar).
+        </p>
+        <p>
+          Pointen med det hele: de bedste, mest bekræftede meldinger samles i en{' '}
+          <span className="font-medium text-grafit-900">rapport til Zeekr</span> - professionel,
+          struktureret ejer-feedback. Jo renere og mere civilt board og forum, jo stærkere står den
+          rapport. Det er dét, moderering tjener - ikke at patruljere, men at holde signalet skarpt.
+        </p>
+        <p>
+          <span className="font-medium text-grafit-900">Værkstedet</span> (her) er bagscenen, hvor
+          det arbejde foregår.
+        </p>
+        <Liste>
+          <Punkt navn="Hvor forum-rapporterne kommer fra">
+            Brugerne trykker ⚑ ude på selve forummet; det markerede indhold lander i rapport-køen
+            øverst på Forum-fanen. (Forveksl ikke de to slags &quot;rapport&quot;: en{' '}
+            <em>forum-rapport</em> er en anmeldelse fra en bruger - <em>rapporten til Zeekr</em> er
+            den samlede feedback, du sender videre.)
+          </Punkt>
+        </Liste>
+      </Kort>
+
       {/* Sådan hænger det sammen */}
       <Kort ikon="🧭" titel="Sådan hænger Værkstedet sammen">
         <p>
@@ -111,6 +158,70 @@ function ManualIndhold({ admin }: { admin: boolean }) {
             uddybe i fritekst-feltet.
           </Punkt>
         </Liste>
+      </Kort>
+
+      {/* Typiske situationer */}
+      <Kort ikon="🧰" titel="Typiske situationer - sådan gør du">
+        <p>
+          Fra &quot;det sker&quot; til &quot;hvor + hvad&quot;. Mangler du detaljerne, står de under
+          den enkelte flade længere nede.
+        </p>
+        <SituationListe>
+          <Situation naar="Et indlæg eller en tråd er grimt eller et personangreb">
+            Er det allerede anmeldt: Forum-fanen → rapport-køen øverst → 🗑 Fjern med grund (eller 🛡
+            Advar forfatteren). Ellers: Forum-moderering → søg tråden/indlægget frem → 🗑 Fjern med
+            grund. Forfatteren får automatisk en besked.
+          </Situation>
+          <Situation naar="En bruger spammer eller bliver ved">
+            Adgange → find brugeren → 🛡 Advar først; fortsætter det, ⏸ Suspendér (vælg antal dage).
+          </Situation>
+          <Situation naar="To tråde om samme fejl (dublet)">
+            Forum-moderering → Fjern den ene med grund = Dublet, og skriv linket til originalen i
+            uddyb-feltet.
+          </Situation>
+          <Situation naar="En privat besked er anmeldt">
+            Anmeldelser-fanen → læs den → ✓ Markér håndteret, eller 🗑 Slet besked hvis den bryder
+            reglerne.
+          </Situation>
+          <Situation naar="En melding er klassificeret forkert eller skal strammes op">
+            Feedback-fanen → ret Status/Alvor/Kategori på rækken, eller ✏️ Redigér titel og
+            beskrivelse under ⋯-menuen.
+          </Situation>
+          <Situation naar="Zeekr har rettet en fejl i en opdatering">
+            Feedback-fanen → find meldingen → ✅ Markér løst → Løst i OTA.
+          </Situation>
+          {admin && (
+            <>
+              <Situation naar="Du skal sende rapporten til Zeekr">
+                Rapport-fanen → vælg udsnit (antal, indhold, sprog) → Forhåndsvis først → 📮 Dan
+                Zeekr-rapport (markerer udsnittet som sendt).
+              </Situation>
+              <Situation naar="En ny moderator eller admin skal have adgang">
+                Adgange → Giv adgang (email + rolle), eller Søg brugere → sæt rollen direkte.
+              </Situation>
+              <Situation naar="Der er kommet en ny OTA/software-opdatering">
+                OTA-fanen → vælg model(ler), version + dato, og indsæt changeloggen (én linje bliver
+                ét punkt).
+              </Situation>
+              <Situation naar="Et nyt link skal på links-siden">
+                Links-fanen → opret linket i den rigtige gruppe (evt. med model-tag).
+              </Situation>
+              <Situation naar="En ny Zeekr-model skal oprettes">
+                Forum-fanen → Tilføj model - den får automatisk sit eget forum under Modellerne.
+              </Situation>
+              <Situation naar="En bruger skal fjernes helt">
+                Adgange → 👤 Anonymisér (rydder persondata, men beholder biler og bekræftelser - det
+                er QA-signalet). Der er bevidst ingen hard-delete.
+              </Situation>
+            </>
+          )}
+        </SituationListe>
+        {!admin && (
+          <p className="text-grafit-500">
+            Resten - sende rapporten til Zeekr, give adgang, OTA, links, modeller og fjerne en
+            bruger helt - klarer admin. Se &quot;Det her kræver admin&quot; nederst.
+          </p>
+        )}
       </Kort>
 
       {/* Overblik */}
