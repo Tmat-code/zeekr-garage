@@ -64,6 +64,7 @@
 
 ### Parkeret / bevidst manuelt
 - [ ] "Følg denne fejl" uden konto (email) + anonyme kommentarer (navn + captcha). Parkeret.
+- [ ] **P31 - Adgange-oprydning: pæn email-fejl + evt. skjul rolle-badges for moderatorer.** Fundet 24-11 under P30 (lille, ren kode, ingen migration). (a) Når `inviterBruger` afviser en ugyldig email (fx tastefejl med to @), vises Next's generiske "Server Components render"-fejltekst i produktion i stedet for et pænt "Ugyldig email" - fordi server-handlingers fejltekst strippes i prod. Fix: valider email-format (og rolle) klient-side i `AdgangePanel.giv()` FØR kaldet, så en tastefejl giver øjeblikkeligt "Ugyldig email" uden server-rundtur; samme regex som serverens (`/^[^@\s]+@[^@\s]+\.[^@\s]+$/`). Serveren beholder sin validering (defense-in-depth). (b) Bruger-overblikket i Adgange (`BrugerAdministration`, moderator-læsbart) viser stadig rolle-badges inkl. "admin" + rolle-filter med "Admin" + teksten "en admin kan ikke sanktioneres" for moderatorer - P30 lod det bevidst stå, da det hører til bruger-administrationen. Afklar med Torben om admin skal være helt usynlig også dér, før (b) bygges.
 - [ ] Live-verifikation af rolletildeling i Adgange - Torben kører selv, bevidst ikke automatiseret.
 
 ### Gjort 22-11-2026 (så intet glemmes)
