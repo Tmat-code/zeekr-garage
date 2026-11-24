@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import type { OtaModelHistorik, SoftwareUpdate } from '@/lib/types';
 
+// Record<->snak: OTA-historikken er record'en; selve diskussionen bor uroert i
+// forummets Software & OTA-kategori. Follow-up-beslutning (Torben 24-11): linket
+// peger bare paa kategorien (ingen auto-oprettet traad pr. version, ingen DB-
+// kobling at vedligeholde ved ret/slet).
+const FORUM_OTA = '/forum/software-ota';
+
 // Kort model-label til chip: "Zeekr 7GT" -> "7GT".
 function kort(navn: string): string {
   return navn.replace(/^Zeekr\s+/i, '');
@@ -70,6 +76,12 @@ function VersionBlok({ u, aaben, toggle }: { u: SoftwareUpdate; aaben: boolean; 
             <p className="text-sm text-grafit-400">Ingen punkter angivet.</p>
           )}
           {u.note && <p className="mt-3 text-sm italic text-grafit-500">{u.note}</p>}
+          <a
+            href={FORUM_OTA}
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
+          >
+            Diskutér i forummet <span aria-hidden="true">→</span>
+          </a>
         </div>
       )}
     </div>

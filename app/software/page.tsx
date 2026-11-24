@@ -22,8 +22,14 @@ export default async function SoftwareSide() {
         model og fold en version ud for at se changeloggen. Nyeste version står øverst.
       </p>
       <p className="mt-2 text-sm text-grafit-400">
-        Vedligeholdt af os ejere. Vil du diskutere en opdatering, så tag den i Software & OTA på
-        forummet.
+        Vedligeholdt af os ejere. Vil du diskutere en opdatering, så tag den i{' '}
+        <a
+          href="/forum/software-ota"
+          className="font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
+        >
+          Software &amp; OTA
+        </a>{' '}
+        på forummet.
       </p>
 
       <SoftwareHistorik modeller={modeller} />

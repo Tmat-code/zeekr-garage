@@ -27,6 +27,8 @@ function ikonFor(type: string): string {
       return '🛡';
     case 'forum_rapport':
       return '🚩';
+    case 'ota':
+      return '📦';
     default:
       return '🔔';
   }
