@@ -247,7 +247,7 @@ Løftede det sidste afkortnings-hul i moderings-klyngen: Værkstedets forum-mode
 
 **Verificeret:** build + `npx tsc --noEmit` grønne. DB i lokal Postgres 16 (harness med mock `auth.uid()` + roller, kørte den FAKTISKE M5-fil oven på et skema der matcher forum_threads/forum_posts/forum_categories/forum_reports/`profiles.spaerret_til` + de ægte `er_moderator`/`er_admin`): 22 assertions - ikke-moderator får 0 rækker (begge RPC'er); `total` udelader fjernede (tråde) + fjernede/i-fjernet-tråd (indlæg); `kun_opm` = netop de rapporterede + spærret-forfatter-rækker, handled-rapport flagger IKKE; flag-værdier korrekte pr. række; søg på titel + forfatter-navn; limit/offset m. konstant total; sortering nyest først. Live klik-gennemgang + M5 i Studio gøres af Torben (Supabase på Pixa-LAN).
 
-**TILBAGE for Torben:** kør M5 `20261124160000_forum_moderering.sql` i Zeekr-Studio (8002) (SQL'en er leveret i svaret + som fil). Derefter: live-test af `/admin/forum` -> Forum-moderering (søg, Alle/Kræver opmærksomhed, vis flere, opm-mærker, + at fjern-med-grund stadig virker).
+**STATUS:** M5 `20261124160000_forum_moderering.sql` KØRT i Zeekr-Studio (8002) 24-11 (Torben). Udestår kun: live klik-test af `/admin/forum` -> Forum-moderering (søg, Alle/Kræver opmærksomhed, vis flere, opm-mærker, + at fjern-med-grund stadig virker).
 
 ## Værksted: forside + nav + aktivitets-feed (P23) (bygget 23-11-2026)
 Ryddede op i den inkonsekvens at `/admin` landede på feedback-Overblikket PLUS hele feedback-moderingstabellen (+ oprydning), mens alt andet lå som faner - Feedback var altså både "forsiden" og implicit sin egen fane. Ren kode, ingen migration.
