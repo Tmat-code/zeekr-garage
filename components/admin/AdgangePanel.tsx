@@ -79,6 +79,19 @@ export default function AdgangePanel({
   function giv() {
     setBesked(null);
     setFejl(null);
+    // Valider klient-side FØR kaldet: en tastefejl (fx to @) giver et pænt
+    // "Ugyldig email" med det samme, i stedet for Next's generiske prod-
+    // fejltekst (server-handlingers fejltekst strippes i produktion).
+    // Serveren validerer stadig selv - dette er kun for en bedre besked.
+    const e = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) {
+      setFejl('Ugyldig email.');
+      return;
+    }
+    if (rolle !== 'admin' && rolle !== 'moderator') {
+      setFejl('Vælg en gyldig rolle.');
+      return;
+    }
     start(async () => {
       try {
         const r = await inviterBruger(email, rolle);
