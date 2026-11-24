@@ -70,7 +70,7 @@ begin
   select title, author_id into v_title, v_author
     from public.forum_threads where id = p_thread_id;
   if not found then
-    raise exception 'Traaden findes ikke.';
+    raise exception 'Tråden findes ikke.';
   end if;
 
   update public.forum_threads set is_removed = true where id = p_thread_id;
@@ -85,7 +85,7 @@ begin
     insert into public.notifications (modtager_id, type, aktoer_id, reference, tekst, href)
     values (
       v_author, 'moderation', auth.uid(), p_thread_id,
-      'Din traad "' || v_title || '" blev fjernet - grund: '
+      'Din tråd "' || v_title || '" blev fjernet - grund: '
         || public.mod_grund_tekst(p_grund, p_fritekst),
       '/forum/regler'
     );
@@ -133,7 +133,7 @@ begin
     join public.forum_categories c on c.id = th.category_id
     where po.id = p_post_id;
   if not found then
-    raise exception 'Indlaegget findes ikke.';
+    raise exception 'Indlægget findes ikke.';
   end if;
 
   update public.forum_posts set is_removed = true where id = p_post_id;
@@ -147,7 +147,7 @@ begin
     insert into public.notifications (modtager_id, type, aktoer_id, reference, tekst, href)
     values (
       v_author, 'moderation', auth.uid(), p_post_id,
-      'Dit indlaeg i "' || v_title || '" blev fjernet - grund: '
+      'Dit indlæg i "' || v_title || '" blev fjernet - grund: '
         || public.mod_grund_tekst(p_grund, p_fritekst),
       '/forum/' || v_cslug || '/' || v_tslug
     );
@@ -199,7 +199,7 @@ begin
     insert into public.notifications (modtager_id, type, aktoer_id, reference, tekst, href)
     values (
       p_user_id, 'advarsel', auth.uid(), p_user_id,
-      'Du har faaet en advarsel fra moderationen - grund: '
+      'Du har fået en advarsel fra moderationen - grund: '
         || public.mod_grund_tekst(p_grund, p_fritekst),
       '/forum/regler'
     );

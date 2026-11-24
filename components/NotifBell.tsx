@@ -25,6 +25,8 @@ function ikonFor(type: string): string {
     case 'moderation':
     case 'advarsel':
       return '🛡';
+    case 'forum_rapport':
+      return '🚩';
     default:
       return '🔔';
   }
