@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getTraad, getIndlaeg } from '@/lib/forum';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { modelBadge } from '@/lib/model-badge';
 import ForumTraad from '@/components/forum/ForumTraad';
 import TraadModeration from '@/components/forum/TraadModeration';
@@ -36,7 +36,7 @@ export default async function TraadSide({
   if (!traad || traad.kategori.slug !== params.kategori) notFound();
 
   const [indlaeg, ctx] = await Promise.all([getIndlaeg(traad.id), adminKontekst()]);
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   const isLoggedIn = !!ctx.user;
   const naeste = `/forum/${params.kategori}/${traad.slug}`;
 

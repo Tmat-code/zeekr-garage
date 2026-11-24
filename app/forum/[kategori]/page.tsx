@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getKategori, getTraade, getModelEjerTal } from '@/lib/forum';
 import { getSoftwareHistorikPerModel } from '@/lib/ota';
 import type { ModelEjerTal, OtaModelHistorik } from '@/lib/types';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
 import ModelBadge from '@/components/forum/ModelBadge';
 import GarageBadge from '@/components/forum/GarageBadge';
@@ -35,7 +35,7 @@ export default async function KategoriSide({ params }: { params: { kategori: str
   const nyesteOs = kat.modelId
     ? otaHistorik.find((m) => m.slug === kat.slug)?.nyesteVersion ?? null
     : null;
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   const isLoggedIn = !!ctx.user;
   const kanOprette = isLoggedIn && (!kat.isLocked || erModerator);
   const nyUrl = `/forum/${kat.slug}/ny`;

@@ -7,7 +7,7 @@ import {
   getMyCars,
   getVariantFordeling,
 } from '@/lib/queries';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { TYPE_META, kategoriLabel } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
@@ -36,7 +36,7 @@ export default async function MeldingSide({ params }: { params: { id: string } }
 
   if (!issue) notFound();
 
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   const isLoggedIn = !!ctx.user;
   const naeste = `/melding/${issue.id}`;
 

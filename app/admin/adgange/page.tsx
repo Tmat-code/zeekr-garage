@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErAdmin, rolleErSuperadmin } from '@/lib/admin';
 import { getAdgange, getBrugerOverblik } from '@/lib/queries-admin';
 import AdgangePanel from '@/components/admin/AdgangePanel';
 import BrugerAdministration from '@/components/admin/BrugerAdministration';
@@ -8,12 +8,14 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdgangeSide() {
   const { user, rolle } = await adminKontekst();
-  const erAdmin = rolle === 'admin';
+  const erAdmin = rolleErAdmin(rolle);
+  const erSuperadmin = rolleErSuperadmin(rolle);
 
-  // Bruger-overblik er moderator-læsbart; rolle-styring + invitationer er admin-only.
+  // Bruger-overblik + sanktioner er moderator-/admin-niveau; rolle-styring +
+  // invitationer er nu superadmin-only (P32).
   const [overblik, adgange] = await Promise.all([
     getBrugerOverblik({ limit: 25 }),
-    erAdmin ? getAdgange() : Promise.resolve(null),
+    erSuperadmin ? getAdgange() : Promise.resolve(null),
   ]);
 
   return (
@@ -27,7 +29,7 @@ export default async function AdgangeSide() {
 
       <BrugerAdministration initial={overblik} megId={user?.id ?? ''} erAdmin={erAdmin} />
 
-      {erAdmin && adgange && (
+      {erSuperadmin && adgange && (
         <AdgangePanel
           brugere={adgange.brugere}
           invitationer={adgange.invitationer}

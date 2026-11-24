@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getEvents } from '@/lib/events';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { datoTid } from '@/lib/tid';
 import type { EventRow } from '@/lib/types';
 
@@ -33,7 +33,7 @@ function EventKort({ e }: { e: EventRow }) {
 
 export default async function EventsSide() {
   const [{ kommende, afholdte }, ctx] = await Promise.all([getEvents(), adminKontekst()]);
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

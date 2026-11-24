@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErAdmin, rolleErModerator, rolleErSuperadmin } from '@/lib/admin';
 import { getAabneRapporterAntal } from '@/lib/queries-admin';
 import AdminNav from '@/components/admin/AdminNav';
 
 export const dynamic = 'force-dynamic';
 
 const ROLLE_LABEL: Record<string, string> = {
+  superadmin: 'superadmin',
   admin: 'admin',
   moderator: 'moderator',
 };
@@ -14,8 +15,8 @@ const ROLLE_LABEL: Record<string, string> = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, rolle, displayName } = await adminKontekst();
 
-  // Server-gate: kun admin/moderator. Alle andre ryger til forsiden.
-  if (!user || !(rolle === 'admin' || rolle === 'moderator')) {
+  // Server-gate: kun stab (superadmin/admin/moderator). Alle andre ryger til forsiden.
+  if (!user || !rolleErModerator(rolle)) {
     redirect('/');
   }
 
@@ -56,7 +57,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Fane-navigation - egen raekke, wrapper naar den fyldes */}
       <div className="mb-6 border-b border-grafit-200 pb-4">
-        <AdminNav aabneRapporter={aabneRapporter} erAdmin={rolle === 'admin'} />
+        <AdminNav
+          aabneRapporter={aabneRapporter}
+          erAdmin={rolleErAdmin(rolle)}
+          erSuperadmin={rolleErSuperadmin(rolle)}
+        />
       </div>
 
       {children}

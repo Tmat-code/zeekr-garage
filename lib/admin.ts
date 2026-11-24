@@ -1,7 +1,21 @@
 import { supabaseServer } from '@/lib/supabase/server';
 
-// Rolle-model: admin (formand) = alt. moderator = moderere board'et. null = almindelig.
-export type Rolle = 'admin' | 'moderator' | null;
+// Rolle-model: superadmin (Torben alene, DB-only) > admin (formand) = alt >
+// moderator = moderere board'et. null = almindelig.
+// superadmin er et AEGTE superset: den har alle admin- OG moderator-rettigheder.
+export type Rolle = 'superadmin' | 'admin' | 'moderator' | null;
+
+// Rene praedikater (til inline-tjek i pages/komponenter, saa superadmin altid
+// taeller som admin/moderator - praecis som er_admin()/er_moderator() i DB).
+export function rolleErAdmin(r: Rolle): boolean {
+  return r === 'admin' || r === 'superadmin';
+}
+export function rolleErModerator(r: Rolle): boolean {
+  return r === 'admin' || r === 'moderator' || r === 'superadmin';
+}
+export function rolleErSuperadmin(r: Rolle): boolean {
+  return r === 'superadmin';
+}
 
 export type AdminKontekst = {
   user: Awaited<ReturnType<typeof hentUser>>;
@@ -43,10 +57,13 @@ export async function minRolle(): Promise<Rolle> {
 }
 
 export async function erAdmin(): Promise<boolean> {
-  return (await minRolle()) === 'admin';
+  return rolleErAdmin(await minRolle());
 }
 
 export async function erModerator(): Promise<boolean> {
-  const r = await minRolle();
-  return r === 'admin' || r === 'moderator';
+  return rolleErModerator(await minRolle());
+}
+
+export async function erSuperadmin(): Promise<boolean> {
+  return rolleErSuperadmin(await minRolle());
 }

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import EventForm from '@/components/events/EventForm';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +8,7 @@ export const metadata = { title: 'Opret event' };
 
 export default async function NytEventSide() {
   const ctx = await adminKontekst();
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   if (!ctx.user) redirect('/login?naeste=/events/ny');
   if (!erModerator) redirect('/events');
 

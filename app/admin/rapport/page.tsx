@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErAdmin } from '@/lib/admin';
 import { getRapportOverblik, getRapportLog, getRapportFejl } from '@/lib/rapport';
 import RapportPanel from '@/components/admin/RapportPanel';
 
@@ -16,7 +16,7 @@ export default async function RapportSide() {
     getRapportLog(15),
     getRapportFejl('begge', true, 15),
   ]);
-  const erAdmin = rolle === 'admin';
+  const erAdmin = rolleErAdmin(rolle);
 
   return (
     <div className="space-y-6">

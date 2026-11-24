@@ -9,7 +9,11 @@ function RolleBadge({ rolle }: { rolle: string }) {
   return (
     <span
       className={`chip ${
-        rolle === 'admin' ? 'bg-kobber-500 text-white' : 'bg-grafit-200 text-grafit-700'
+        rolle === 'superadmin'
+          ? 'bg-grafit-900 text-white'
+          : rolle === 'admin'
+            ? 'bg-kobber-500 text-white'
+            : 'bg-grafit-200 text-grafit-700'
       }`}
     >
       {rolle}

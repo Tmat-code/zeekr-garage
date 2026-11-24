@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getEvent } from '@/lib/events';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import EventForm from '@/components/events/EventForm';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export default async function RedigerEventSide({ params }: { params: { slug: str
   if (!event) notFound();
 
   const ctx = await adminKontekst();
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   if (!ctx.user) redirect(`/login?naeste=${encodeURIComponent(`/events/${params.slug}/rediger`)}`);
   if (!erModerator) redirect(`/events/${params.slug}`);
 

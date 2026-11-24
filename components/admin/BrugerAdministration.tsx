@@ -55,7 +55,11 @@ function RolleBadge({ rolle }: { rolle: string | null }) {
   return (
     <span
       className={`chip ${
-        rolle === 'admin' ? 'bg-kobber-500 text-white' : 'bg-grafit-200 text-grafit-700'
+        rolle === 'superadmin'
+          ? 'bg-grafit-900 text-white'
+          : rolle === 'admin'
+            ? 'bg-kobber-500 text-white'
+            : 'bg-grafit-200 text-grafit-700'
       }`}
     >
       {rolle}
@@ -79,7 +83,7 @@ function BrugerRaekke({
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const erMaalAdmin = b.rolle === 'admin';
+  const erMaalAdmin = b.rolle === 'admin' || b.rolle === 'superadmin';
   const spaerret = b.status !== 'aktiv';
   const anonymiseret = b.status === 'bannet' && !b.displayName;
   // Sanktioner er meningsloese paa egen konto, paa en admin, og paa en allerede

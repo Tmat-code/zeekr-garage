@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SITE } from '@/lib/config';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { getUlaestAntal } from '@/lib/notifikationer';
 import { getAabneRapporterAntal } from '@/lib/queries-admin';
 import Nav from './Nav';
@@ -8,7 +8,7 @@ import NotifBell from './NotifBell';
 
 export default async function Header() {
   const { user, rolle } = await adminKontekst();
-  const erModerator = rolle === 'admin' || rolle === 'moderator';
+  const erModerator = rolleErModerator(rolle);
   // Klokke kun for indloggede; start-tal fra serveren (ingen tom-blink).
   const ulaest = user ? await getUlaestAntal() : 0;
   // Åbne forum-rapporter -> badge på Værkstedet (kun moderatorer).

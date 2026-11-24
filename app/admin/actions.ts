@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
-import { erModerator, erAdmin } from '@/lib/admin';
+import { erModerator, erAdmin, erSuperadmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
 import type {
   AlleBruger,
@@ -122,8 +122,9 @@ export async function gemRedigering(
 }
 
 // --- Adgange (kun admin) ---
+// --- Rolle-governance (P32): KUN superadmin giver/fjerner admin+moderator ---
 export async function inviterBruger(email: string, rolle: string): Promise<'sat' | 'inviteret'> {
-  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!(await erSuperadmin())) throw new Error('Kun superadmin.');
   const e = email.trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error('Ugyldig email.');
   if (rolle !== 'admin' && rolle !== 'moderator') throw new Error('Ugyldig rolle.');
@@ -136,7 +137,7 @@ export async function inviterBruger(email: string, rolle: string): Promise<'sat'
 
 // Søg blandt ALLE oprettede brugere (email eller visningsnavn). Admin-gated.
 export async function soegBrugere(soeg: string): Promise<AlleBruger[]> {
-  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!(await erSuperadmin())) throw new Error('Kun superadmin.');
   const sb = supabaseServer();
   const { data, error } = await sb.rpc('admin_alle_brugere', { p_soeg: soeg.trim() });
   if (error) throw new Error(error.message);
@@ -144,7 +145,7 @@ export async function soegBrugere(soeg: string): Promise<AlleBruger[]> {
 }
 
 export async function saetRolle(brugerId: string, rolle: string | null): Promise<void> {
-  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!(await erSuperadmin())) throw new Error('Kun superadmin.');
   const sb = supabaseServer();
   const { error } = await sb.rpc('admin_saet_rolle', { p_bruger: brugerId, p_rolle: rolle });
   if (error) throw new Error(error.message);
@@ -153,7 +154,7 @@ export async function saetRolle(brugerId: string, rolle: string | null): Promise
 }
 
 export async function fjernInvitation(email: string): Promise<void> {
-  if (!(await erAdmin())) throw new Error('Kun admin.');
+  if (!(await erSuperadmin())) throw new Error('Kun superadmin.');
   const sb = supabaseServer();
   const { error } = await sb.rpc('admin_fjern_invitation', { p_email: email.toLowerCase() });
   if (error) throw new Error(error.message);

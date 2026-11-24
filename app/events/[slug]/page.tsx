@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getEvent, getMinTilmelding } from '@/lib/events';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { datoTid, relativTid } from '@/lib/tid';
 import TilmeldKnap from '@/components/events/TilmeldKnap';
 import EventAdmin from '@/components/events/EventAdmin';
@@ -18,7 +18,7 @@ export default async function EventDetaljeSide({ params }: { params: { slug: str
   if (!event) notFound();
 
   const [mit, ctx] = await Promise.all([getMinTilmelding(event.id), adminKontekst()]);
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
   const naeste = `/events/${event.slug}`;
 
   return (

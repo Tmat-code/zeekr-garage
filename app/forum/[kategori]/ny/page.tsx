@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getKategori } from '@/lib/forum';
-import { adminKontekst } from '@/lib/admin';
+import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import NyTraadForm from '@/components/forum/NyTraadForm';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export default async function NyTraadSide({ params }: { params: { kategori: stri
   if (!kat) notFound();
 
   const ctx = await adminKontekst();
-  const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
+  const erModerator = rolleErModerator(ctx.rolle);
 
   if (!ctx.user) redirect(`/login?naeste=${encodeURIComponent(`/forum/${kat.slug}/ny`)}`);
   // Låste kategorier (fx regler): kun moderatorer kan starte tråde.
