@@ -27,7 +27,7 @@ export default async function AdminForumSide() {
       getForumModIndlaeg({ limit: 25 }),
       getForumRegler(),
       getForumAktivitet(12),
-      getForumRapporter(),
+      getForumRapporter({ limit: 20 }),
       erAdmin(),
     ]);
 
@@ -42,7 +42,7 @@ export default async function AdminForumSide() {
         <div className="mb-1 flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold text-grafit-900">Indgående rapporter</h2>
           <span className="text-sm text-grafit-400">
-            {rapporter.length === 0 ? 'ingen åbne' : `${rapporter.length} åbne`}
+            {rapporter.total === 0 ? 'ingen åbne' : `${rapporter.total} åbne`}
           </span>
         </div>
         <p className="mb-4 text-sm text-grafit-500">
@@ -50,7 +50,7 @@ export default async function AdminForumSide() {
           (forfatteren får en officiel besked), advar forfatteren, eller afvis rapporten. En
           handling herfra markerer rapporten håndteret.
         </p>
-        <ForumRapporter rapporter={rapporter} />
+        <ForumRapporter initial={rapporter} />
       </section>
 
       <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">

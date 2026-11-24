@@ -11,8 +11,15 @@ import type {
   ForumModFiltre,
   ForumModTraadSide,
   ForumModIndlaegSide,
+  ForumRapportFiltre,
+  ForumRapportSide,
 } from '@/lib/queries-admin';
-import { getBrugerOverblik, getForumModTraade, getForumModIndlaeg } from '@/lib/queries-admin';
+import {
+  getBrugerOverblik,
+  getForumModTraade,
+  getForumModIndlaeg,
+  getForumRapporter,
+} from '@/lib/queries-admin';
 import { MOD_GRUND_VALUES } from '@/lib/moderering';
 import { MELD_BUCKET } from '@/lib/billeder';
 import { supabaseService } from '@/lib/supabase/service';
@@ -175,6 +182,14 @@ export async function hentForumTraade(f: ForumModFiltre): Promise<ForumModTraadS
 export async function hentForumIndlaeg(f: ForumModFiltre): Promise<ForumModIndlaegSide> {
   if (!(await erModerator())) throw new Error('Du har ikke adgang.');
   return getForumModIndlaeg(f);
+}
+
+// --- Rapport-køen: defensivt loft (P24) ---
+// Moderator-læsbar side af den indgående rapport-kø ("vis flere"). RPC'en
+// gater selv i DB; vi stopper tidligt her med en læsbar fejl.
+export async function hentForumRapporter(f: ForumRapportFiltre): Promise<ForumRapportSide> {
+  if (!(await erModerator())) throw new Error('Du har ikke adgang.');
+  return getForumRapporter(f);
 }
 
 function tjekGrund(grund: string) {

@@ -303,13 +303,24 @@ export async function getAabneRapporterAntal(): Promise<number> {
   return count ?? 0;
 }
 
+export type ForumRapportFiltre = { limit?: number; offset?: number };
+export type ForumRapportSide = { rapporter: ForumRapport[]; total: number };
+
 // Kun ÅBNE rapporter (handled=false) - køen er "kræver opmærksomhed".
-export async function getForumRapporter(): Promise<ForumRapport[]> {
+// Defensivt loft (P24): limit/offset + total afkortes nu i RPC'en, samme
+// vej som forum-moderingen (P16) og bruger-overblikket (P20), så en dårlig dag
+// med mange rapporter ikke bliver en mur. handled-filtret ligger nu i basen.
+export async function getForumRapporter(
+  f: ForumRapportFiltre = {},
+): Promise<ForumRapportSide> {
   const sb = supabaseServer();
-  const { data } = await sb.rpc('admin_forum_rapporter');
-  return ((data ?? []) as any[])
-    .filter((r) => !r.handled)
-    .map((r) => ({
+  const { data } = await sb.rpc('admin_forum_rapporter', {
+    p_limit: f.limit ?? 20,
+    p_offset: f.offset ?? 0,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    rapporter: rows.map((r) => ({
       reportId: r.report_id,
       threadId: r.thread_id ?? null,
       postId: r.post_id ?? null,
@@ -325,7 +336,9 @@ export async function getForumRapporter(): Promise<ForumRapport[]> {
       forfatterId: r.forfatter_id ?? null,
       forfatterNavn: r.forfatter_navn ?? 'En ejer',
       erFjernet: r.er_fjernet ?? false,
-    }));
+    })),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
 }
 
 // =========================================================================

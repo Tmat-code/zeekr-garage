@@ -4,13 +4,16 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/tid';
 import { grundLabel } from '@/lib/moderering';
-import type { ForumRapport } from '@/lib/queries-admin';
+import type { ForumRapport, ForumRapportSide } from '@/lib/queries-admin';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import { modFjernTraad, modFjernIndlaeg, modAdvarBruger, afvisRapport } from '@/app/forum/actions';
+import { hentForumRapporter } from '@/app/admin/actions';
+
+const SIDE = 20;
 
 type Handling = 'fjern' | 'advar' | null;
 
-function RapportKort({ r }: { r: ForumRapport }) {
+function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void }) {
   const [handling, setHandling] = useState<Handling>(null);
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -87,7 +90,7 @@ function RapportKort({ r }: { r: ForumRapport }) {
         <button
           className="btn-ghost !py-1 text-sm"
           disabled={pending}
-          onClick={() => koer(() => afvisRapport(r.reportId))}
+          onClick={() => koer(() => afvisRapport(r.reportId).then(onHandlet))}
         >
           Afvis rapport
         </button>
@@ -115,6 +118,7 @@ function RapportKort({ r }: { r: ForumRapport }) {
                 await modFjernTraad(r.threadId!, r.kategoriSlug ?? '', grund, fritekst, r.reportId);
               }
               setHandling(null);
+              onHandlet();
             })
           }
         />
@@ -131,6 +135,7 @@ function RapportKort({ r }: { r: ForumRapport }) {
             koer(async () => {
               await modAdvarBruger(r.forfatterId!, grund, fritekst, r.reportId);
               setHandling(null);
+              onHandlet();
             })
           }
         />
@@ -141,15 +146,47 @@ function RapportKort({ r }: { r: ForumRapport }) {
   );
 }
 
-export default function ForumRapporter({ rapporter }: { rapporter: ForumRapport[] }) {
+export default function ForumRapporter({ initial }: { initial: ForumRapportSide }) {
+  const [rapporter, setRapporter] = useState<ForumRapport[]>(initial.rapporter);
+  const [total, setTotal] = useState(initial.total);
+  const [fejl, setFejl] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  // reset=true: hent fra side 1 (efter en handling - et håndteret punkt falder
+  // ud af køen). reset=false: "vis flere" - hent næste side og hæng på.
+  function hent(reset: boolean) {
+    setFejl(null);
+    start(async () => {
+      try {
+        const r = await hentForumRapporter({ limit: SIDE, offset: reset ? 0 : rapporter.length });
+        setRapporter((cur) => (reset ? r.rapporter : [...cur, ...r.rapporter]));
+        setTotal(r.total);
+      } catch (e: any) {
+        setFejl(e?.message ?? 'Kunne ikke hente rapporter.');
+      }
+    });
+  }
+
   if (rapporter.length === 0) {
     return <p className="text-sm text-grafit-500">Ingen åbne rapporter. 🎉</p>;
   }
+
   return (
-    <div className="space-y-2.5">
-      {rapporter.map((r) => (
-        <RapportKort key={r.reportId} r={r} />
-      ))}
+    <div>
+      <div className={`space-y-2.5 ${pending ? 'opacity-70' : ''}`}>
+        {rapporter.map((r) => (
+          <RapportKort key={r.reportId} r={r} onHandlet={() => hent(true)} />
+        ))}
+      </div>
+      {rapporter.length < total && (
+        <button className="btn-ghost mt-3 !py-1.5 text-sm" disabled={pending} onClick={() => hent(false)}>
+          Vis flere rapporter
+        </button>
+      )}
+      <p className="mt-2 text-xs text-grafit-400">
+        Viser {rapporter.length} af {total}
+      </p>
+      {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
     </div>
   );
 }
