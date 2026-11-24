@@ -6,7 +6,18 @@ import Link from 'next/link';
 type Props = {
   erModerator: boolean;
   indlogget: boolean;
+  aabneRapporter?: number;
 };
+
+// Lille kobber-tal-badge til "kræver opmærksomhed" (åbne forum-rapporter).
+function Badge({ antal }: { antal: number }) {
+  if (antal <= 0) return null;
+  return (
+    <span className="ml-1 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-kobber-600 px-1 text-[10px] font-bold leading-4 text-white">
+      {antal > 9 ? '9+' : antal}
+    </span>
+  );
+}
 
 const LINKS = [
   { href: '/forum', label: 'Forum' },
@@ -16,7 +27,7 @@ const LINKS = [
   { href: '/om', label: 'Om' },
 ];
 
-export default function Nav({ erModerator, indlogget }: Props) {
+export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Props) {
   const [open, setOpen] = useState(false);
   const luk = () => setOpen(false);
 
@@ -36,9 +47,11 @@ export default function Nav({ erModerator, indlogget }: Props) {
         {erModerator && (
           <Link
             href="/admin"
-            className="rounded-lg px-3 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
+            className="inline-flex items-center rounded-lg px-3 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
+            title={aabneRapporter > 0 ? `${aabneRapporter} åbne forum-rapporter` : undefined}
           >
             🔧 Værkstedet
+            <Badge antal={aabneRapporter} />
           </Link>
         )}
         {indlogget ? (
@@ -104,9 +117,10 @@ export default function Nav({ erModerator, indlogget }: Props) {
               <Link
                 href="/admin"
                 onClick={luk}
-                className="rounded-lg px-3 py-2.5 font-medium text-kobber-700 hover:bg-kobber-100"
+                className="inline-flex items-center rounded-lg px-3 py-2.5 font-medium text-kobber-700 hover:bg-kobber-100"
               >
                 🔧 Værkstedet
+                <Badge antal={aabneRapporter} />
               </Link>
             )}
             <div className="mt-1 border-t border-grafit-100 pt-2">

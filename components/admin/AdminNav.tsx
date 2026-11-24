@@ -25,13 +25,15 @@ function erAktiv(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export default function AdminNav() {
+export default function AdminNav({ aabneRapporter = 0 }: { aabneRapporter?: number }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-wrap gap-1.5">
       {FANER.map((f) => {
         const aktiv = erAktiv(pathname, f.href);
+        // Åbne forum-rapporter -> kobber-badge på Forum-fanen.
+        const badge = f.href === '/admin/forum' && aabneRapporter > 0 ? aabneRapporter : 0;
         return (
           <Link
             key={f.href}
@@ -45,6 +47,11 @@ export default function AdminNav() {
           >
             <span aria-hidden>{f.ikon}</span>
             {f.label}
+            {badge > 0 && (
+              <span className="ml-0.5 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-kobber-600 px-1 text-[10px] font-bold leading-4 text-white">
+                {badge > 9 ? '9+' : badge}
+              </span>
+            )}
           </Link>
         );
       })}

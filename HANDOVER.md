@@ -167,6 +167,8 @@ Første feature oven på den delte DB-kerne. Afløser dagens stumme tråd-CRUD (
 
 **TILBAGE for Torben:** kør M1 -> M2 -> M3 i Zeekr-Studio (8002) i den rækkefølge (SQL'en er leveret i svaret + som filer). Derefter: live klik-test af rapportér-knap + kø + fjern-med-grund + at forfatteren får 🛡-notifikationen.
 
+**Follow-up (24-11, ingen migration) - badge for åbne rapporter:** køen var usynlig uden at gå ind i Forum-fanen (Torben fangede det live). Tilføjet `getAabneRapporterAntal()` (`lib/queries-admin.ts`, head-count på `forum_reports` hvor handled=false; RLS sikrer ikke-moderatorer tæller 0) + et lille kobber-tal-badge to steder: på **🔧 Værkstedet** i hoved-nav'en (`Header` -> `Nav`, desktop + mobil, kun moderatorer - så man ser det fra hvor som helst på sitet) og på **Forum-fanen** i Værksteds-undernavigationen (`app/admin/layout.tsx` -> `AdminNav`). Værkstedet-linket peger stadig på `/admin` (P23's neutrale landing, bevidst ikke ændret - badget er signalet). NB: der er stadig IKKE en klokke-notifikation til moderatoren for indgående rapporter - det er bevidst (kø, ikke patrulje); badget er markeringen. Besked-anmeldelser (PB) har ingen tilsvarende badge endnu - kan tilføjes samme vej hvis ønsket.
+
 ## Værksted: forside + nav + aktivitets-feed (P23) (bygget 23-11-2026)
 Ryddede op i den inkonsekvens at `/admin` landede på feedback-Overblikket PLUS hele feedback-moderingstabellen (+ oprydning), mens alt andet lå som faner - Feedback var altså både "forsiden" og implicit sin egen fane. Ren kode, ingen migration.
 

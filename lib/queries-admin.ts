@@ -276,6 +276,17 @@ export type ForumRapport = {
   erFjernet: boolean;
 };
 
+// Antal åbne forum-rapporter - til nav-badges (Værkstedet + Forum-fanen).
+// RLS (forum_reports_select_mod) sikrer at ikke-moderatorer tæller 0.
+export async function getAabneRapporterAntal(): Promise<number> {
+  const sb = supabaseServer();
+  const { count } = await sb
+    .from('forum_reports')
+    .select('id', { count: 'exact', head: true })
+    .eq('handled', false);
+  return count ?? 0;
+}
+
 // Kun ÅBNE rapporter (handled=false) - køen er "kræver opmærksomhed".
 export async function getForumRapporter(): Promise<ForumRapport[]> {
   const sb = supabaseServer();

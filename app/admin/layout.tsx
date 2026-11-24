@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { adminKontekst } from '@/lib/admin';
+import { getAabneRapporterAntal } from '@/lib/queries-admin';
 import AdminNav from '@/components/admin/AdminNav';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user || !(rolle === 'admin' || rolle === 'moderator')) {
     redirect('/');
   }
+
+  const aabneRapporter = await getAabneRapporterAntal();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
@@ -53,7 +56,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Fane-navigation - egen raekke, wrapper naar den fyldes */}
       <div className="mb-6 border-b border-grafit-200 pb-4">
-        <AdminNav />
+        <AdminNav aabneRapporter={aabneRapporter} />
       </div>
 
       {children}
