@@ -342,12 +342,17 @@ export async function getForumRapporter(
 }
 
 // =========================================================================
-// Aktivitet - hændelser pr. time/ugedag/dag (i dansk tid)
+// Aktivitet - vaekst/engagement (P28): unikke aktive brugere pr. dag + nye
+// brugere pr. dag, sidste 30 dage, i dansk tid. "Aktiv" = distinkt bruger der
+// gjorde noget den dag: stemte (confirmations) / meldte (issues) / skrev en
+// forum-traad eller -svar (forum_threads/forum_posts) / sendte en besked
+// (messages). Server-side union - datasaettet er lille, saa ingen migration;
+// en RPC/view bliver foerst relevant hvis maengden vokser. Deploy-timing er
+// degraderet til en enkelt note (roligste klokkeslaet), ikke laengere en graf.
 // =========================================================================
 const KBH = 'Europe/Copenhagen';
-const UGEDAGE = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 
-function deleIKbh(iso: string): { time: number; ugedagMan0: number; dato: string } {
+function deleIKbh(iso: string): { time: number; dato: string } {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: KBH,
     hour12: false,
@@ -355,18 +360,16 @@ function deleIKbh(iso: string): { time: number; ugedagMan0: number; dato: string
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    weekday: 'short',
   }).formatToParts(new Date(iso));
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
   return {
     time: parseInt(get('hour'), 10) % 24,
-    ugedagMan0: map[get('weekday')] ?? 0,
     dato: `${get('year')}-${get('month')}-${get('day')}`,
   };
 }
 
-function sidste30Dage(perDato: Map<string, number>): { dato: string; antal: number }[] {
+// De 30 KBH-datoer t.o.m. i dag (aeldste foerst), som yyyy-mm-dd.
+function sidste30Datoer(): string[] {
   const iDag = new Intl.DateTimeFormat('en-CA', {
     timeZone: KBH,
     year: 'numeric',
@@ -374,27 +377,28 @@ function sidste30Dage(perDato: Map<string, number>): { dato: string; antal: numb
     day: '2-digit',
   }).format(new Date()); // yyyy-mm-dd
   const base = new Date(`${iDag}T12:00:00`);
-  const out: { dato: string; antal: number }[] = [];
+  const out: string[] = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date(base);
     d.setDate(base.getDate() - i);
-    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate(),
-    ).padStart(2, '0')}`;
-    out.push({ dato: ds, antal: perDato.get(ds) ?? 0 });
+    out.push(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`,
+    );
   }
   return out;
 }
 
 export type Aktivitet = {
-  total: number;
-  stemmer: number;
-  nyeMeldinger: number;
-  perTime: number[]; // 24
-  perUgedag: { label: string; antal: number }[]; // 7, Man..Søn
-  per30dage: { dato: string; antal: number }[];
+  aktiveIAlt: number; // distinkte aktive brugere i hele 30-dages-vinduet
+  nyeIAlt: number; // nye brugere i vinduet
+  brugereIAlt: number; // profiles i alt (all-time)
+  aktive30dage: { dato: string; antal: number }[]; // distinkte aktive pr. dag
+  nye30dage: { dato: string; antal: number }[]; // nye brugere pr. dag
   travlestTime: number | null;
   roligstTime: number | null;
+  harData: boolean; // om der overhovedet var aktivitet i vinduet
 };
 
 // =========================================================================
@@ -495,43 +499,85 @@ export async function getBrugerOverblik(f: BrugerFiltre = {}): Promise<BrugerSid
 
 export async function getAktivitet(): Promise<Aktivitet> {
   const sb = supabaseServer();
-  const [iss, con] = await Promise.all([
-    sb.from('issues').select('created_at'),
-    sb.from('confirmations').select('created_at'),
+
+  // Vinduet: de 30 KBH-datoer t.o.m. i dag. Hent raekker lidt bredere (31 dage
+  // i UTC) og lad dag-bucketingen + gyldigeDatoer skaere praecist, saa TZ-kant
+  // (CET/CEST) ikke taber en dag.
+  const gyldigeDatoer = sidste30Datoer();
+  const gyldige = new Set(gyldigeDatoer);
+  const cutoff = new Date(Date.now() - 31 * 864e5).toISOString();
+
+  const [con, iss, traade, indlaeg, msg, nye, antal] = await Promise.all([
+    sb.from('confirmations').select('user_id, created_at').gte('created_at', cutoff),
+    sb.from('issues').select('created_by, created_at').gte('created_at', cutoff),
+    sb.from('forum_threads').select('author_id, created_at').gte('created_at', cutoff),
+    sb.from('forum_posts').select('author_id, created_at').gte('created_at', cutoff),
+    sb.from('messages').select('sender_id, created_at').gte('created_at', cutoff),
+    sb.from('profiles').select('created_at').gte('created_at', cutoff),
+    sb.from('profiles').select('*', { count: 'exact', head: true }),
   ]);
 
-  const haendelser: string[] = [
-    ...((iss.data ?? []) as any[]).map((r) => r.created_at),
-    ...((con.data ?? []) as any[]).map((r) => r.created_at),
+  // Distinkte aktive bruger-id'er pr. dag (Set pr. dato) + raa haendelser pr.
+  // klokkeslaet (til deploy-noten). Null-id'er (slettede forfattere) udelades.
+  const aktivePerDag = new Map<string, Set<string>>();
+  const globalAktive = new Set<string>();
+  const perTime = new Array<number>(24).fill(0);
+
+  const kilder: { rows: any[]; idKey: string }[] = [
+    { rows: (con.data ?? []) as any[], idKey: 'user_id' },
+    { rows: (iss.data ?? []) as any[], idKey: 'created_by' },
+    { rows: (traade.data ?? []) as any[], idKey: 'author_id' },
+    { rows: (indlaeg.data ?? []) as any[], idKey: 'author_id' },
+    { rows: (msg.data ?? []) as any[], idKey: 'sender_id' },
   ];
 
-  const perTime = new Array(24).fill(0);
-  const perUge = new Array(7).fill(0);
-  const perDato = new Map<string, number>();
-
-  for (const ts of haendelser) {
-    const { time, ugedagMan0, dato } = deleIKbh(ts);
-    perTime[time]++;
-    perUge[ugedagMan0]++;
-    perDato.set(dato, (perDato.get(dato) ?? 0) + 1);
+  for (const { rows, idKey } of kilder) {
+    for (const r of rows) {
+      const uid = r[idKey] as string | null;
+      if (!uid || !r.created_at) continue;
+      const { time, dato } = deleIKbh(r.created_at);
+      if (!gyldige.has(dato)) continue;
+      perTime[time]++;
+      let set = aktivePerDag.get(dato);
+      if (!set) {
+        set = new Set<string>();
+        aktivePerDag.set(dato, set);
+      }
+      set.add(uid);
+      globalAktive.add(uid);
+    }
   }
 
+  // Nye brugere pr. dag (profiles.created_at).
+  const nyePerDag = new Map<string, number>();
+  for (const r of (nye.data ?? []) as any[]) {
+    if (!r.created_at) continue;
+    const { dato } = deleIKbh(r.created_at);
+    if (!gyldige.has(dato)) continue;
+    nyePerDag.set(dato, (nyePerDag.get(dato) ?? 0) + 1);
+  }
+
+  const aktive30dage = gyldigeDatoer.map((d) => ({ dato: d, antal: aktivePerDag.get(d)?.size ?? 0 }));
+  const nye30dage = gyldigeDatoer.map((d) => ({ dato: d, antal: nyePerDag.get(d) ?? 0 }));
+  const nyeIAlt = nye30dage.reduce((s, d) => s + d.antal, 0);
+
+  const harData = globalAktive.size > 0;
   let travlestTime: number | null = null;
   let roligstTime: number | null = null;
-  if (haendelser.length > 0) {
+  if (perTime.some((n) => n > 0)) {
     travlestTime = perTime.indexOf(Math.max(...perTime));
     roligstTime = perTime.indexOf(Math.min(...perTime));
   }
 
   return {
-    total: haendelser.length,
-    stemmer: ((con.data ?? []) as any[]).length,
-    nyeMeldinger: ((iss.data ?? []) as any[]).length,
-    perTime,
-    perUgedag: UGEDAGE.map((label, i) => ({ label, antal: perUge[i] })),
-    per30dage: sidste30Dage(perDato),
+    aktiveIAlt: globalAktive.size,
+    nyeIAlt,
+    brugereIAlt: antal.count ?? 0,
+    aktive30dage,
+    nye30dage,
     travlestTime,
     roligstTime,
+    harData,
   };
 }
 
