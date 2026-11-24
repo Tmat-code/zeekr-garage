@@ -657,3 +657,89 @@ export async function getModelOversigt(): Promise<ModelOversigt[]> {
     antalTraade: Number(r.antal_traade ?? 0),
   }));
 }
+
+// =========================================================================
+// Audit-log (P32) - superadmin-only oversigts-log + revert. RPC'erne gater selv
+// paa er_superadmin() (non-superadmin faar 0 raekker), saa disse er aegte selv
+// uden ekstra TS-gate.
+// =========================================================================
+export type AuditAktoer = {
+  aktoer: string | null;
+  navn: string;
+  rolle: string | null;
+  antal: number;
+  seneste: string | null;
+};
+
+export type AuditHaendelse = {
+  id: number;
+  op: 'INSERT' | 'UPDATE' | 'DELETE';
+  tabel: string;
+  raekkeId: string | null;
+  oldData: Record<string, any> | null;
+  newData: Record<string, any> | null;
+  createdAt: string;
+  aktoer?: string | null;
+  aktoerNavn?: string | null;
+  kanFortrydes: boolean;
+};
+
+export type AuditSide = { haendelser: AuditHaendelse[]; total: number };
+
+export async function getAuditAktoerer(): Promise<AuditAktoer[]> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('superadmin_audit_aktoerer');
+  return ((data ?? []) as any[]).map((r) => ({
+    aktoer: r.aktoer ?? null,
+    navn: r.navn ?? 'Ukendt',
+    rolle: r.rolle ?? null,
+    antal: Number(r.antal ?? 0),
+    seneste: r.seneste ?? null,
+  }));
+}
+
+function mapHaendelse(r: any): AuditHaendelse {
+  return {
+    id: Number(r.id),
+    op: r.op,
+    tabel: r.tabel,
+    raekkeId: r.raekke_id ?? null,
+    oldData: r.old_data ?? null,
+    newData: r.new_data ?? null,
+    createdAt: r.created_at,
+    aktoer: r.aktoer ?? undefined,
+    aktoerNavn: r.aktoer_navn ?? undefined,
+    kanFortrydes: !!r.kan_fortrydes,
+  };
+}
+
+export async function getAuditSpor(
+  aktoer: string | null,
+  limit = 50,
+  offset = 0,
+): Promise<AuditSide> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('superadmin_audit_spor', {
+    p_aktoer: aktoer,
+    p_limit: limit,
+    p_offset: offset,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    haendelser: rows.map(mapHaendelse),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
+}
+
+export async function getAuditSeneste(limit = 50, offset = 0): Promise<AuditSide> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('superadmin_audit_seneste', {
+    p_limit: limit,
+    p_offset: offset,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    haendelser: rows.map(mapHaendelse),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
+}

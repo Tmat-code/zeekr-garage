@@ -3,7 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type Fane = { href: string; ikon: string; label: string; kunAdmin?: boolean };
+type Fane = {
+  href: string;
+  ikon: string;
+  label: string;
+  kunAdmin?: boolean;
+  kunSuperadmin?: boolean;
+};
 
 // Vaerkstedets faner som en egen raekke. Ikon + kort label, og raekken
 // wrapper (flex-wrap), saa den aldrig "sprenger" - nye flader slottes bare
@@ -19,6 +25,7 @@ const FANER: Fane[] = [
   { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },
   { href: '/admin/adgange', ikon: '👥', label: 'Adgange' },
+  { href: '/admin/audit', ikon: '🕵️', label: 'Audit', kunSuperadmin: true },
   { href: '/admin/manual', ikon: '📖', label: 'Manual' },
 ];
 
@@ -31,12 +38,18 @@ function erAktiv(pathname: string, href: string): boolean {
 export default function AdminNav({
   aabneRapporter = 0,
   erAdmin = false,
+  erSuperadmin = false,
 }: {
   aabneRapporter?: number;
   erAdmin?: boolean;
+  erSuperadmin?: boolean;
 }) {
   const pathname = usePathname();
-  const faner = erAdmin ? FANER : FANER.filter((f) => !f.kunAdmin);
+  // kunAdmin-faner skjules for moderatorer; kunSuperadmin-faner (Audit) vises kun
+  // for superadmin. (superadmin er superset, saa erAdmin er ogsaa sand for den.)
+  const faner = FANER.filter(
+    (f) => (!f.kunAdmin || erAdmin) && (!f.kunSuperadmin || erSuperadmin),
+  );
 
   return (
     <nav className="flex flex-wrap gap-1.5">
