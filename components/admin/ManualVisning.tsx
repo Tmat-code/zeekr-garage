@@ -1,0 +1,541 @@
+'use client';
+
+import { useState, type ReactNode } from 'react';
+
+// Statisk, rollestyret manual til Værkstedet. Skrevet ud fra den faktiske
+// admin-kode (app/admin/* + components/admin/* + lib/admin.ts), så den
+// beskriver fladerne som de rent faktisk virker - ikke et gæt. Holdes i sync
+// med features: retter du en flade, så ret den tilhørende sektion her.
+//
+// Indholdet er den samme ManualIndhold-komponent styret af en enkelt "admin"-
+// prop: admin=false er PRÆCIS det en moderator ser. Derfor kan en admin slå
+// moderator-manualen op (admin=false) til onboarding og se nøjagtig det samme.
+
+// --- Små præsentations-byggeklodser ---
+
+function Kort({
+  ikon,
+  titel,
+  kunAdmin,
+  children,
+}: {
+  ikon: string;
+  titel: string;
+  kunAdmin?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span aria-hidden className="text-lg">
+          {ikon}
+        </span>
+        <h3 className="text-lg font-semibold text-grafit-900">{titel}</h3>
+        {kunAdmin && <span className="chip bg-kobber-100 text-kobber-800">kun admin</span>}
+      </div>
+      <div className="space-y-3 text-sm leading-relaxed text-grafit-700">{children}</div>
+    </section>
+  );
+}
+
+// Overskrift til en gruppe handlinger.
+function Afsnit({ titel }: { titel: string }) {
+  return (
+    <h4 className="mt-1 text-xs font-semibold uppercase tracking-wide text-grafit-400">{titel}</h4>
+  );
+}
+
+function Liste({ children }: { children: ReactNode }) {
+  return <ul className="space-y-1.5 pl-5 [list-style:disc] marker:text-kobber-500">{children}</ul>;
+}
+
+function Punkt({ navn, children }: { navn?: string; children: ReactNode }) {
+  return (
+    <li>
+      {navn && <span className="font-medium text-grafit-900">{navn}: </span>}
+      {children}
+    </li>
+  );
+}
+
+// Inline "kun admin"-handling - vises kun i admin-visningen.
+function AdminPunkt({ navn, children }: { navn?: string; children: ReactNode }) {
+  return (
+    <li>
+      {navn && <span className="font-medium text-grafit-900">{navn} </span>}
+      <span className="mr-1 align-middle text-[11px] font-semibold uppercase tracking-wide text-kobber-700">
+        [kun admin]
+      </span>
+      {children}
+    </li>
+  );
+}
+
+// --- Selve manualen. admin=false er moderator-visningen. ---
+
+function ManualIndhold({ admin }: { admin: boolean }) {
+  return (
+    <div className="space-y-5">
+      {/* Sådan hænger det sammen */}
+      <Kort ikon="🧭" titel="Sådan hænger Værkstedet sammen">
+        <p>
+          Værkstedet er bagscenen til Zeekr Garage - her modererer vi forummet og feedback-
+          meldingerne, kuraterer links og OTA-historik, samler rapporten til Zeekr og holder styr
+          på brugerne.
+        </p>
+        <p>
+          Der er to roller.{' '}
+          <span className="font-medium text-grafit-900">Moderator</span> klarer det daglige:
+          rapporter, tråde og indlæg, anmeldte beskeder, feedback-meldinger og advarsler/
+          suspensioner.{' '}
+          <span className="font-medium text-grafit-900">Admin</span> kan alt det samme plus
+          strukturen bagved: links, OTA, modeller, roller/invitationer, den officielle Zeekr-
+          rapport, oprydning og forside-beskeden.
+          {admin
+            ? ' Du er admin, så du ser alt herunder.'
+            : ' De admin-kun-flader er skjult eller låst for dig - de står ikke i denne manual.'}
+        </p>
+        <Liste>
+          <Punkt navn="Navigation">
+            Fane-rækken øverst følger fladerne: Overblik, Feedback, Forum, Links, OTA, Anmeldelser,
+            Rapport, Aktivitet, Adgange. Forum-fanen får et lille kobber-tal, når der er åbne
+            rapporter.
+          </Punkt>
+          <Punkt navn="Grundregel">
+            Hver handling, der rammer en bruger - fjern med grund, advarsel, suspension - sender
+            personen en officiel besked med grunden og lander i moderations-loggen. Ingen stumme
+            fjernelser.
+          </Punkt>
+          <Punkt navn="Grunde">
+            De faste grunde er Dublet, Tone / personangreb, Off-topic, Spam og Andet. Du kan altid
+            uddybe i fritekst-feltet.
+          </Punkt>
+        </Liste>
+      </Kort>
+
+      {/* Overblik */}
+      <Kort ikon="📊" titel="Overblik (forsiden)">
+        <p>
+          Landingssiden i Værkstedet. Tal-tiles for Feedback (meldinger, bekræftelser, åbne, løst i
+          OTA) og Forum (kategorier, tråde, indlæg), plus et genvejs-gitter til alle fladerne. Rent
+          overblik - du handler ikke her.
+        </p>
+        {admin && (
+          <>
+            <Afsnit titel="Forside-besked" />
+            <Liste>
+              <AdminPunkt navn="Forside-besked">
+                Nederst kan du skrive en besked øverst på det offentlige site (fx &quot;nu sendt en
+                rapport til Zeekr&quot;). Skriv teksten, og tryk <em>Tænd</em> for at vise den eller{' '}
+                <em>Sluk</em> for at skjule den igen. <em>Gem ændringer</em> gemmer teksten uden at
+                ændre tænd/sluk.
+              </AdminPunkt>
+            </Liste>
+          </>
+        )}
+      </Kort>
+
+      {/* Feedback */}
+      <Kort ikon="🗒️" titel="Feedback - meldinger">
+        <p>
+          Alle ejernes meldinger, sorteret med flest stemmer øverst. Hver række viser stemmetal,
+          titel, type (fejl eller ønske), model og evt. software-version, og et link til
+          kommentarerne, hvis der er nogen.
+        </p>
+        <Afsnit titel="Sådan gør du" />
+        <Liste>
+          <Punkt navn="Klassificér">
+            De tre dropdowns sætter Status, Alvor og Kategori. Det gemmer med det samme.
+          </Punkt>
+          <Punkt navn="Markér løst">
+            Tryk <em>✅ Markér løst</em> og vælg enten <em>Løst i OTA</em> (Zeekr har rettet det i
+            en opdatering) eller <em>💬 Afklaret</em> (afsluttet uden et OTA-fix, fx en misforstået
+            melding).
+          </Punkt>
+          <Punkt navn="Redigér">
+            Under ⋯-menuen: ret titel og beskrivelse (fx stramme en melding op før rapporten).
+          </Punkt>
+          <Punkt navn="Slet">
+            Under ⋯-menuen, med en bekræftelse. Sletningen er uoprettelig og fjerner også meldingens
+            billeder.
+          </Punkt>
+        </Liste>
+        <p className="text-grafit-500">
+          Fanen viser også &quot;Seneste feedback-aktivitet&quot; (nye meldinger og bekræftelser).
+        </p>
+        {admin && (
+          <>
+            <Afsnit titel="Oprydning (nederst på fanen)" />
+            <Liste>
+              <AdminPunkt navn="Oprydning - stemmer">
+                Fjern &quot;mig med&quot;-stemmer fra før en dato, fx test-klik fra før lanceringen.
+                Vælg dato, tryk <em>Vis antal</em>, og tryk så <em>Fjern N stemmer</em>. Kan ikke
+                fortrydes.
+              </AdminPunkt>
+              <AdminPunkt navn="Forældreløse billed-filer">
+                Rydder billed-filer uden reference (fortrudte uploads, rester fra slettede
+                meldinger) i forum-, meld-, avatar- og besked-bucketen. Filer under et døgn gamle
+                spares. Tryk <em>Vis antal</em>, så <em>Ryd N filer</em>. Kan ikke fortrydes.
+              </AdminPunkt>
+            </Liste>
+          </>
+        )}
+      </Kort>
+
+      {/* Forum */}
+      <Kort ikon="💬" titel="Forum - rapport-køen">
+        <p>
+          Øverst på Forum-fanen: indhold som brugere (eller senere AI) har markeret. Hvert kort
+          viser om det er en tråd eller et indlæg, grunden, hvem der rapporterede, forfatteren og et
+          uddrag.
+        </p>
+        <Afsnit titel="Tre valg pr. rapport" />
+        <Liste>
+          <Punkt navn="🗑 Fjern tråd/indlæg">
+            Vælg en grund (forvalgt til rapportens egen) + evt. uddyb, og tryk{' '}
+            <em>Fjern + giv besked</em>. Fjerner indholdet, giver forfatteren besked og markerer
+            rapporten håndteret i ét hug.
+          </Punkt>
+          <Punkt navn="🛡 Advar forfatter">
+            Grund + uddyb + <em>Send advarsel</em>. Sender en officiel besked uden at fjerne
+            indholdet.
+          </Punkt>
+          <Punkt navn="Afvis rapport">
+            Lukker rapporten uden handling - fx hvis den er grundløs.
+          </Punkt>
+        </Liste>
+        <p className="text-grafit-500">
+          En handling henter køen forfra, så det håndterede punkt falder ud. &quot;Vis flere&quot;
+          henter næste side.
+        </p>
+      </Kort>
+
+      <Kort ikon="💬" titel="Forum - moderering af tråde og indlæg">
+        <p>
+          To kolonner - Tråde og Indlæg. Søg i titel eller forfatter, eller slå{' '}
+          <em>⚑ Kræver opmærksomhed</em> til (tråde/indlæg med en åben rapport, eller skrevet af en
+          bruger der er spærret lige nu). &quot;Vis flere&quot; henter næste 25. Handlingerne slår
+          igennem på forummet med det samme.
+        </p>
+        <Afsnit titel="Tråde" />
+        <Liste>
+          <Punkt navn="📌 Fastgør / Fjern fastgør.">
+            Sætter tråden øverst i sin kategori. 📌 ved titlen = allerede fastgjort.
+          </Punkt>
+          <Punkt navn="🔒 Lås / Lås op">
+            Låser for nye svar. 🔒 ved titlen = allerede låst.
+          </Punkt>
+          <Punkt navn="🗑 Fjern tråd">Med grund + besked til forfatteren.</Punkt>
+        </Liste>
+        <Afsnit titel="Indlæg" />
+        <Liste>
+          <Punkt navn="🗑 Fjern">
+            Med grund + besked. Åbnings-indlægget kan ikke fjernes for sig - brug &quot;Fjern
+            tråd&quot; i tråd-kolonnen.
+          </Punkt>
+        </Liste>
+      </Kort>
+
+      <Kort ikon="🗂️" titel="Forum - kategorier">
+        <p>
+          Opret, omdøb, flyt mellem grupper, sortér og lås kategorier - direkte her, uden at gå i
+          databasen.
+        </p>
+        <Liste>
+          <Punkt navn="Ny kategori">
+            &quot;+ Ny kategori&quot; under en gruppe lægger den i netop den gruppe.
+          </Punkt>
+          <Punkt navn="Ny gruppe">&quot;+ Ny gruppe&quot; nederst laver en helt ny spand.</Punkt>
+          <Punkt navn="Sortér + flyt">
+            Pilene omsorterer kategorien i gruppen; dropdown&apos;en flytter den til en anden
+            gruppe; pilene ved gruppe-overskriften omsorterer selve grupperne.
+          </Punkt>
+          <Punkt navn="Lås">
+            En låst kategori kan kun moderatorer starte tråde i (fx en opslagstavle).
+          </Punkt>
+          <Punkt navn="Slet">Kun muligt når kategorien er tom - flyt eller fjern trådene først.</Punkt>
+          <Punkt navn="Model-fora">
+            Fora under Modellerne er fast koblet til en bil-model. De kan ikke flyttes, og
+            Modellerne kan ikke få almindelige kategorier.
+          </Punkt>
+        </Liste>
+      </Kort>
+
+      <Kort ikon="📜" titel="Forum - regler">
+        <p>
+          De fælles spilleregler for forummet. Rediger teksten og gem - så slår den igennem på{' '}
+          <span className="font-mono text-grafit-600">/forum/regler</span> med det samme.
+        </p>
+      </Kort>
+
+      {/* Links - admin */}
+      {admin && (
+        <Kort ikon="🔗" titel="Links" kunAdmin>
+          <p>
+            Kuratér den offentlige links-side (<span className="font-mono text-grafit-600">/links</span>
+            ) uden at gå i databasen.
+          </p>
+          <Liste>
+            <Punkt navn="Opret / omdøb / slet">Links og grupper styres direkte på fanen.</Punkt>
+            <Punkt navn="Sortér + flyt">
+              Pilene omsorterer i gruppen; dropdown&apos;en flytter et link til en anden gruppe;
+              pilene ved gruppe-overskriften omsorterer grupperne.
+            </Punkt>
+            <Punkt navn="Model-tag">
+              Et link kan tagges med en model; links uden model gælder alle. Model-filteret på
+              links-siden dukker op af sig selv, når mindst to modeller har links.
+            </Punkt>
+          </Liste>
+        </Kort>
+      )}
+
+      {/* OTA - admin */}
+      {admin && (
+        <Kort ikon="📦" titel="OTA-historik" kunAdmin>
+          <p>
+            Den strukturerede software-/OTA-log pr. model (adskilt fra snakken i forummet). Vises
+            offentligt på <span className="font-mono text-grafit-600">/software</span>.
+          </p>
+          <Afsnit titel="Log en opdatering" />
+          <Liste>
+            <AdminPunkt navn="Vælg model(ler)">
+              Samme opdatering kan dække flere modeller på én gang (mindst én kræves).
+            </AdminPunkt>
+            <AdminPunkt navn="Version + dato">
+              Skriv versionen (fx Zeekr OS 3.0.4); datoen er forudfyldt til i dag.
+            </AdminPunkt>
+            <AdminPunkt navn="Changelog">
+              Indsæt changeloggen som ren tekst - én linje bliver ét punkt, med live-preview mens du
+              skriver. En valgfri note kan komme oveni.
+            </AdminPunkt>
+            <AdminPunkt navn="Ret / slet">Hvert opslag kan rettes eller slettes fra listen.</AdminPunkt>
+          </Liste>
+          <p className="text-grafit-500">
+            Et nyt opslag sender en klokke-notifikation til ejere af de ramte modeller (ikke alle).
+          </p>
+        </Kort>
+      )}
+
+      {/* Anmeldelser */}
+      <Kort ikon="🚩" titel="Anmeldelser - private beskeder">
+        <p>
+          Beskeder som nogen har anmeldt - du ser kun det anmeldte, ikke de øvrige samtaler. Hvert
+          kort viser anmelderen, begrundelsen og selve beskeden.
+        </p>
+        <Liste>
+          <Punkt navn="Åbn samtale">Hopper til samtalen, hvis du har brug for konteksten.</Punkt>
+          <Punkt navn="✓ Markér håndteret">
+            Lukker anmeldelsen (kan sættes tilbage til &quot;ny&quot; igen).
+          </Punkt>
+          <Punkt navn="🗑 Slet besked">
+            Fjerner den anmeldte besked, med en bekræftelse. Anmeldelsen bliver stående som
+            historik.
+          </Punkt>
+          <Punkt navn="Vis alle / kun nye">Skifter mellem alle anmeldelser og kun de ubehandlede.</Punkt>
+        </Liste>
+      </Kort>
+
+      {/* Rapport */}
+      <Kort ikon="📮" titel="Rapport til Zeekr">
+        <p>
+          Her samles ejernes meldinger til den rapport, der er hele pointen med sitet. Øverst ser du
+          &quot;Siden sidste rapport&quot; (hvor meget nyt der er kommet) og nederst en log over,
+          hvem der har downloadet rapporter.
+        </p>
+        <Afsnit titel="Forhåndsvisning" />
+        <Liste>
+          <Punkt navn="Vælg udsnit">
+            Antal (top 20/50/100/alle), indhold (fejl, ønsker eller begge), og sprog (dansk,
+            engelsk, svensk).
+          </Punkt>
+          <Punkt navn="Til/fra">
+            <em>Inkludér kommentarer</em> (uden den markerede løsning - Zeekr skal have fejlen, ikke
+            workaround&apos;en) og <em>Kun nye + eskalerende</em>.
+          </Punkt>
+          <Punkt navn="Forhåndsvis PDF / CSV">
+            Henter rapporten uden at ændre noget. Den må du gerne bruge frit.
+          </Punkt>
+        </Liste>
+        {admin ? (
+          <>
+            <Afsnit titel="Officiel rapport" />
+            <Liste>
+              <AdminPunkt navn="📮 Dan Zeekr-rapport">
+                Markerer hele det valgte udsnit som sendt til Zeekr (med en bekræftelse). Gør det
+                kun, når du faktisk sender rapporten nu. <em>↩︎ Fortryd sidste</em> ruller den sidste
+                markering tilbage.
+              </AdminPunkt>
+            </Liste>
+          </>
+        ) : (
+          <p className="text-grafit-500">
+            Selve den officielle &quot;Dan Zeekr-rapport&quot; (der markerer udsnittet som sendt) er
+            forbeholdt admin.
+          </p>
+        )}
+      </Kort>
+
+      {/* Aktivitet */}
+      <Kort ikon="📈" titel="Aktivitet">
+        <p>
+          Vækst og engagement: unikke aktive brugere pr. dag (stemte, meldte, skrev i forummet eller
+          sendte en besked) og nye brugere pr. dag, de sidste 30 dage. En deploy-timing-note peger
+          på de roligste timer. Rent overblik - ingen handlinger.
+        </p>
+      </Kort>
+
+      {/* Adgange */}
+      <Kort ikon="👥" titel="Adgange - brugere og sanktioner">
+        <p>
+          Overblik over alle oprettede brugere. Søg på navn eller email, filtrér på rolle og status
+          (aktiv, suspenderet, bannet), og sortér. Hver handling giver brugeren en officiel besked
+          med grunden og lander i loggen. Du kan ikke sanktionere din egen konto eller en admin.
+        </p>
+        <Afsnit titel="Handlinger pr. bruger" />
+        <Liste>
+          <Punkt navn="🛡 Advar">En officiel advarsel med grund, uden at spærre noget.</Punkt>
+          <Punkt navn="⏸ Suspendér">
+            Midlertidig skrive-spærre - vælg varighed (1 til 90 dage) + grund. Brugeren kan stadig
+            læse.
+          </Punkt>
+          {admin ? (
+            <>
+              <AdminPunkt navn="⛔ Ban">
+                Permanent skrive-spærre (kan ophæves igen). Brugeren kan læse, men ikke bidrage.
+              </AdminPunkt>
+              <AdminPunkt navn="✅ Ophæv spærring">Løfter en suspension eller et ban.</AdminPunkt>
+              <AdminPunkt navn="👤 Anonymisér">
+                Rydder persondata (navn, e-mail, VIN/noter) og spærrer permanent. Biler,
+                bekræftelser og forum-indlæg bevares (de er QA-signalet), men bliver forfatterløse.
+                Kan ikke fortrydes.
+              </AdminPunkt>
+            </>
+          ) : (
+            <Punkt navn="Ban, ophæv og anonymisér">
+              Forbeholdt admin - du ser dem ikke på rækken.
+            </Punkt>
+          )}
+        </Liste>
+        {admin && (
+          <>
+            <Afsnit titel="Roller og invitationer" />
+            <Liste>
+              <AdminPunkt navn="Giv adgang">
+                Inviter på email: har personen allerede en konto, får de rollen (moderator eller
+                admin) med det samme; ellers tildeles den automatisk, når de opretter en konto med
+                den email.
+              </AdminPunkt>
+              <AdminPunkt navn="Søg brugere">
+                Find en hvilken som helst oprettet bruger på navn/email og sæt rollen direkte fra
+                dropdown&apos;en.
+              </AdminPunkt>
+              <AdminPunkt navn="Personer med adgang">
+                Skift rolle eller tryk <em>Fjern adgang</em>. Din egen adgang kan du ikke ændre.
+              </AdminPunkt>
+              <AdminPunkt navn="Afventende invitationer">
+                Invitationer der venter på, at personen opretter en konto - kan fjernes igen.
+              </AdminPunkt>
+            </Liste>
+          </>
+        )}
+      </Kort>
+
+      {/* Modeller - admin */}
+      {admin && (
+        <Kort ikon="🚗" titel="Modeller" kunAdmin>
+          <p>
+            Model-administrationen ligger på Forum-fanen (under &quot;Tilføj model&quot;). Den
+            styrer hvilke Zeekr-modeller der kan vælges i Min garage, bruges til bekræftelser og
+            tælles i rapporten.
+          </p>
+          <Liste>
+            <AdminPunkt navn="Tilføj model">
+              Opret en ny model (+ 0..n varianter). Den får automatisk sit eget forum under
+              Modellerne og kan straks vælges i Min garage og meld.
+            </AdminPunkt>
+            <AdminPunkt navn="Arkivér">
+              En model i brug kan arkiveres: den forsvinder fra &quot;vælg model&quot;-listerne,
+              mens data og rapport bevares. <em>Genaktivér</em> låser op igen.
+            </AdminPunkt>
+            <AdminPunkt navn="Slet">
+              Kun muligt når modellen er helt tom (0 tråde, 0 biler, 0 bekræftelser) - typisk en
+              fejloprettet testmodel. Ellers arkivér i stedet.
+            </AdminPunkt>
+          </Liste>
+        </Kort>
+      )}
+
+      {/* Moderator: hvad kræver admin */}
+      {!admin && (
+        <Kort ikon="🔒" titel="Det her kræver admin">
+          <p>
+            Følgende flader og handlinger er forbeholdt admin. Du kan støde på dem, men de er
+            skjult eller låst for dig - sig til formanden (admin), hvis der er brug for noget:
+          </p>
+          <Liste>
+            <Punkt>Links og OTA-historik</Punkt>
+            <Punkt>Oprettelse, arkivering og sletning af modeller</Punkt>
+            <Punkt>Roller og invitationer (give/fjerne adgang)</Punkt>
+            <Punkt>Ban, ophæv spærring og anonymisér af brugere</Punkt>
+            <Punkt>Den officielle Zeekr-rapport (markér som sendt)</Punkt>
+            <Punkt>Oprydning (stemmer og forældreløse filer) og forside-beskeden</Punkt>
+          </Liste>
+        </Kort>
+      )}
+    </div>
+  );
+}
+
+export default function ManualVisning({ erAdmin }: { erAdmin: boolean }) {
+  // Admin lander på admin-manualen; ét klik til moderator-manualen (onboarding).
+  const [visAdmin, setVisAdmin] = useState(erAdmin);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold text-grafit-900">📖 Manual</h2>
+        <p className="mt-0.5 text-sm text-grafit-500">
+          Opslagsværk til hvordan Værkstedet virker - flade for flade.
+        </p>
+      </div>
+
+      {erAdmin && (
+        <div>
+          <div className="inline-flex overflow-hidden rounded-lg border border-grafit-300">
+            <button
+              type="button"
+              onClick={() => setVisAdmin(true)}
+              aria-pressed={visAdmin}
+              className={`px-4 py-2 text-sm font-medium ${
+                visAdmin
+                  ? 'bg-kobber-50 text-kobber-800'
+                  : 'bg-white text-grafit-600 hover:bg-grafit-50'
+              }`}
+            >
+              Admin-manual
+            </button>
+            <button
+              type="button"
+              onClick={() => setVisAdmin(false)}
+              aria-pressed={!visAdmin}
+              className={`border-l border-grafit-300 px-4 py-2 text-sm font-medium ${
+                visAdmin
+                  ? 'bg-white text-grafit-600 hover:bg-grafit-50'
+                  : 'bg-kobber-50 text-kobber-800'
+              }`}
+            >
+              Moderator-manual
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-grafit-400">
+            {visAdmin
+              ? 'Du ser admin-manualen - alt i Værkstedet.'
+              : 'Du ser moderator-manualen - præcis det, en moderator ser. God til onboarding.'}
+          </p>
+        </div>
+      )}
+
+      <ManualIndhold admin={visAdmin} />
+    </div>
+  );
+}

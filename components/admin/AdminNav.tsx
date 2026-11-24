@@ -18,6 +18,7 @@ const FANER: Fane[] = [
   { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },
   { href: '/admin/adgange', ikon: '👥', label: 'Adgange' },
+  { href: '/admin/manual', ikon: '📖', label: 'Manual' },
 ];
 
 function erAktiv(pathname: string, href: string): boolean {
