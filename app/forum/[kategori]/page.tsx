@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getKategori, getTraade, getModelEjerTal } from '@/lib/forum';
-import type { ModelEjerTal } from '@/lib/types';
+import { getSoftwareHistorikPerModel } from '@/lib/ota';
+import type { ModelEjerTal, OtaModelHistorik } from '@/lib/types';
 import { adminKontekst } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
 import ModelBadge from '@/components/forum/ModelBadge';
@@ -20,13 +21,20 @@ export default async function KategoriSide({ params }: { params: { kategori: str
   const kat = await getKategori(params.kategori);
   if (!kat) notFound();
 
-  const [traade, ctx, ejerTal] = await Promise.all([
+  const [traade, ctx, ejerTal, otaHistorik] = await Promise.all([
     getTraade(kat.id),
     adminKontekst(),
     kat.modelId ? getModelEjerTal() : Promise.resolve({} as Record<string, ModelEjerTal>),
+    kat.modelId ? getSoftwareHistorikPerModel() : Promise.resolve([] as OtaModelHistorik[]),
   ]);
   // Ejer-graf (P6) - kun model-fora. Social proof selv med 0 traade.
   const et = kat.modelId ? ejerTal[kat.modelId] : undefined;
+  // "Nyeste OS"-note (P27 follow-up) - kun model-fora. Model-fora deler slug med
+  // deres model (admin_opret_model indsaetter begge med samme slug), saa OTA-
+  // gruppen matches paa slug. Vises kun naar modellen har mindst eet OTA-opslag.
+  const nyesteOs = kat.modelId
+    ? otaHistorik.find((m) => m.slug === kat.slug)?.nyesteVersion ?? null
+    : null;
   const erModerator = ctx.rolle === 'admin' || ctx.rolle === 'moderator';
   const isLoggedIn = !!ctx.user;
   const kanOprette = isLoggedIn && (!kat.isLocked || erModerator);
@@ -92,6 +100,22 @@ export default async function KategoriSide({ params }: { params: { kategori: str
             </span>
           )}
         </div>
+      )}
+
+      {/* Nyeste OS (P27 follow-up): additivt indgangspunkt til OTA-historikken,
+          dér hvor ejeren allerede står. Vises kun når modellen har mindst ét
+          OTA-opslag; linker til hele /software (ingen filter, afklaret 24-11). */}
+      {nyesteOs && (
+        <Link
+          href="/software"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-kobber-200 bg-kobber-50 px-4 py-2.5 text-sm text-kobber-900 transition-colors hover:border-kobber-300 hover:bg-kobber-100"
+        >
+          <span aria-hidden="true">📦</span>
+          <span>
+            Nyeste OS: <span className="font-semibold">{nyesteOs}</span>
+          </span>
+          <span className="ml-auto shrink-0 font-medium text-kobber-700">se historik →</span>
+        </Link>
       )}
 
       {/* Søg i dette forum (scopet til rummet; udvid til alle fora på resultatsiden) */}
