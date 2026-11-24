@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(next, publicOrigin(request)));
     }
   }
-  // Ugyldigt/udloebet link -> tilbage til login med en venlig besked.
-  return NextResponse.redirect(new URL('/login?fejl=reset', publicOrigin(request)));
+  // Ugyldigt/udloebet link -> tilbage til login med en venlig besked. Signup og
+  // recovery faar hver sin tekst (en ny bruger skal ikke se "nulstil"-ordlyd).
+  const fejl = type === 'signup' ? 'bekraeft' : 'reset';
+  return NextResponse.redirect(new URL(`/login?fejl=${fejl}`, publicOrigin(request)));
 }

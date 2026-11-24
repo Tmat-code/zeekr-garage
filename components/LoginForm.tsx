@@ -19,12 +19,21 @@ export default function LoginForm({
   const params = useSearchParams();
   const naeste = params.get('naeste') || '/';
 
+  // Udloebet/brugt mail-link lander paa /login?fejl=... - vis en venlig besked.
+  const fejlParam = params.get('fejl');
+  const fejlInit =
+    fejlParam === 'bekraeft'
+      ? 'Bekræftelseslinket er udløbet eller allerede brugt. Log ind, eller opret kontoen igen.'
+      : fejlParam === 'reset'
+        ? 'Nulstillingslinket er udløbet eller allerede brugt. Bed om et nyt via "Glemt password".'
+        : '';
+
   const [mode, setMode] = useState<Mode>('ind');
   const [email, setEmail] = useState('');
   const [kode, setKode] = useState('');
   const [navn, setNavn] = useState('');
   const [bil, setBil] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
-  const [fejl, setFejl] = useState('');
+  const [fejl, setFejl] = useState(fejlInit);
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -74,31 +83,53 @@ export default function LoginForm({
           }
         }
 
+        // Bil-valget baeres i user-metadata, saa handle_new_user-triggeren kan
+        // oprette bilen - ogsaa ved double opt-in, hvor der ingen session er.
+        const bilModelId = !bil.ejerIkke && bil.modelId ? bil.modelId : null;
+        const bilVariantId = bilModelId
+          ? bil.variantId || varianterForModel[0]?.id || null
+          : null;
+
         const { data, error } = await sb.auth.signUp({
           email,
           password: kode,
           options: {
-            data: { display_name: navn.trim() || email.split('@')[0] },
+            data: {
+              display_name: navn.trim() || email.split('@')[0],
+              car_model_id: bilModelId,
+              car_variant_id: bilVariantId,
+            },
             emailRedirectTo: `${window.location.origin}/auth/callback?naeste=${encodeURIComponent(naeste)}`,
           },
         });
         if (error) throw error;
         if (!data.session) {
-          setInfo('Konto oprettet - tjek din mail for at bekræfte, så er du klar.');
+          // Double opt-in: ingen session. Bilen gemmes af triggeren ud fra
+          // metadata ovenfor.
+          setInfo(
+            'Konto oprettet. Vi har sendt en bekræftelsesmail - klik linket i den for at aktivere din konto. Tjek også din spam-mappe.',
+          );
           setBusy(false);
           return;
         }
-        // Gem bilen (hvis ejer): én raekke i cars (kilden til alle biler) +
-        // samme bil som profilens primaere bil (den der vises i garage-badget).
-        if (!bil.ejerIkke && bil.modelId && data.user) {
-          const variantId = bil.variantId || varianterForModel[0]?.id || null;
-          await sb
+        // Session findes (autoconfirm stadig slået til, eller endnu ikke
+        // migreret trigger). Faldback: gem bilen klient-side, men KUN hvis
+        // triggeren ikke allerede har gjort det - undgaar dobbelt bil.
+        if (bilModelId && data.user) {
+          const { data: eksisterende } = await sb
             .from('cars')
-            .insert({ owner_id: data.user.id, model_id: bil.modelId, variant_id: variantId });
-          await sb
-            .from('profiles')
-            .update({ car_model_id: bil.modelId, car_variant_id: variantId })
-            .eq('id', data.user.id);
+            .select('id')
+            .eq('owner_id', data.user.id)
+            .limit(1);
+          if (!eksisterende || eksisterende.length === 0) {
+            await sb
+              .from('cars')
+              .insert({ owner_id: data.user.id, model_id: bilModelId, variant_id: bilVariantId });
+            await sb
+              .from('profiles')
+              .update({ car_model_id: bilModelId, car_variant_id: bilVariantId })
+              .eq('id', data.user.id);
+          }
         }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password: kode });
