@@ -22,9 +22,18 @@ function ikonFor(type: string): string {
       return '✉️';
     case 'mention':
       return '@';
+    case 'moderation':
+    case 'advarsel':
+      return '🛡';
     default:
       return '🔔';
   }
+}
+
+// Officielle moderings-notifikationer skal ikke forveksles med en ligeværdig
+// besked -> egen kobber-accent-stribe i venstre kant.
+function erOfficiel(type: string): boolean {
+  return type === 'moderation' || type === 'advarsel';
 }
 
 function mapRow(r: any): Notifikation {
@@ -229,7 +238,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
                       onClick={() => aabnNotif(n)}
                       className={`flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-grafit-50 ${
                         n.erLaest ? '' : 'bg-kobber-50/60'
-                      }`}
+                      } ${erOfficiel(n.type) ? 'border-l-2 border-kobber-500' : ''}`}
                     >
                       <span
                         className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${

@@ -9,8 +9,10 @@ import GarageBadge from '@/components/forum/GarageBadge';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
 import { MAKS_ANTAL, forumBilledeUrl } from '@/lib/billeder';
-import { svar, retIndlaeg, fjernIndlaeg } from '@/app/forum/actions';
+import { svar, retIndlaeg, fjernIndlaeg, modFjernIndlaeg } from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
+import GrundVaelger from '@/components/forum/GrundVaelger';
+import RapporterKnap from '@/components/forum/RapporterKnap';
 
 function IndlaegKort({
   p,
@@ -34,6 +36,7 @@ function IndlaegKort({
   pending: boolean;
 }) {
   const [redigerer, setRedigerer] = useState(false);
+  const [modFjerner, setModFjerner] = useState(false);
   const [tekst, setTekst] = useState(p.body);
   // Billed-redigering: paths markeret til fjernelse + netop uploadede nye paths.
   const [fjernede, setFjernede] = useState<string[]>([]);
@@ -42,9 +45,15 @@ function IndlaegKort({
   const minEgen = !!megId && p.authorId === megId;
   const kanRette = minEgen || erModerator;
   // Åbnings-indlægget fjernes ikke her (brug "Fjern tråd" i moderering).
-  const kanFjerne = kanRette && !p.isOpening;
+  // Egen sletning = plain (ingen grund/notif). Moderator-fjern af ANDRES indlæg
+  // kræver grund + giver forfatteren en officiel notifikation (P21).
+  const kanEgenFjern = minEgen && !p.isOpening;
+  const kanModFjern = erModerator && !minEgen && !p.isOpening;
   // Skriv privat til forfatteren (ikke dig selv, kun indlogget).
   const kanSkrive = isLoggedIn && !!p.authorId && !minEgen;
+  // Rapportér: almindelig indlogget bruger, ikke eget indhold, ikke moderator
+  // (moderatorer handler direkte). Åbnings-indlæg rapporterer hele tråden.
+  const kanRapportere = isLoggedIn && !!p.authorId && !minEgen && !erModerator;
 
   // Kun forfatteren kan tilføje NYE billeder (RLS: insert kræver eget indlæg).
   // Moderator kan stadig fjerne eksisterende (RLS: slet eget/moderator).
@@ -170,7 +179,7 @@ function IndlaegKort({
         </div>
       )}
 
-      {!redigerer && (kanRette || kanSkrive) && (
+      {!redigerer && (kanRette || kanSkrive || kanRapportere) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
           {kanRette && (
             <button
@@ -180,7 +189,7 @@ function IndlaegKort({
               ✏️ Ret
             </button>
           )}
-          {kanFjerne && (
+          {kanEgenFjern && (
             <button
               className="text-grafit-500 hover:text-kobber-700"
               disabled={pending}
@@ -189,6 +198,15 @@ function IndlaegKort({
                   koer(() => fjernIndlaeg(p.id, kategoriSlug, traadSlug));
                 }
               }}
+            >
+              🗑 Fjern
+            </button>
+          )}
+          {kanModFjern && (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              disabled={pending}
+              onClick={() => setModFjerner((v) => !v)}
             >
               🗑 Fjern
             </button>
@@ -202,7 +220,28 @@ function IndlaegKort({
               ✉️ Skriv
             </button>
           )}
+          {kanRapportere && (
+            <RapporterKnap
+              threadId={p.isOpening ? p.threadId : null}
+              postId={p.isOpening ? null : p.id}
+            />
+          )}
         </div>
+      )}
+
+      {/* Moderator fjerner ANDRES indlæg med grund -> forfatteren notificeres. */}
+      {!redigerer && kanModFjern && modFjerner && (
+        <GrundVaelger
+          pending={pending}
+          submitLabel="Fjern indlæg + giv besked"
+          onCancel={() => setModFjerner(false)}
+          onSubmit={(grund, fritekst) =>
+            koer(async () => {
+              await modFjernIndlaeg(p.id, kategoriSlug, traadSlug, grund, fritekst);
+              setModFjerner(false);
+            })
+          }
+        />
       )}
     </div>
   );

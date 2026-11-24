@@ -255,6 +255,53 @@ export async function getAdminForum(graense = 25): Promise<{
 }
 
 // =========================================================================
+// Forum-rapporter (P21) - den indgående kø, beriget med det rapporterede
+// indhold via admin_forum_rapporter() (security definer, moderator-gated).
+// =========================================================================
+export type ForumRapport = {
+  reportId: string;
+  threadId: string | null;
+  postId: string | null;
+  reason: string | null;
+  kilde: string;
+  handled: boolean;
+  createdAt: string;
+  reporterNavn: string;
+  kategoriSlug: string | null;
+  traadSlug: string | null;
+  traadTitel: string | null;
+  indhold: string | null;
+  forfatterId: string | null;
+  forfatterNavn: string;
+  erFjernet: boolean;
+};
+
+// Kun ÅBNE rapporter (handled=false) - køen er "kræver opmærksomhed".
+export async function getForumRapporter(): Promise<ForumRapport[]> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('admin_forum_rapporter');
+  return ((data ?? []) as any[])
+    .filter((r) => !r.handled)
+    .map((r) => ({
+      reportId: r.report_id,
+      threadId: r.thread_id ?? null,
+      postId: r.post_id ?? null,
+      reason: r.reason ?? null,
+      kilde: r.kilde ?? 'bruger',
+      handled: r.handled ?? false,
+      createdAt: r.created_at,
+      reporterNavn: r.reporter_navn ?? 'En ejer',
+      kategoriSlug: r.kategori_slug ?? null,
+      traadSlug: r.traad_slug ?? null,
+      traadTitel: r.traad_titel ?? null,
+      indhold: r.indhold ?? null,
+      forfatterId: r.forfatter_id ?? null,
+      forfatterNavn: r.forfatter_navn ?? 'En ejer',
+      erFjernet: r.er_fjernet ?? false,
+    }));
+}
+
+// =========================================================================
 // Aktivitet - hændelser pr. time/ugedag/dag (i dansk tid)
 // =========================================================================
 const KBH = 'Europe/Copenhagen';

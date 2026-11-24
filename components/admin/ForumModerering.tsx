@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/tid';
 import type { AdminForumTraad, AdminForumIndlaeg } from '@/lib/queries-admin';
-import { saetFastgjort, saetLaast, fjernTraad, fjernIndlaeg } from '@/app/forum/actions';
+import { saetFastgjort, saetLaast, modFjernTraad, modFjernIndlaeg } from '@/app/forum/actions';
+import GrundVaelger from '@/components/forum/GrundVaelger';
 
 function useKoer() {
   const [pending, start] = useTransition();
@@ -24,7 +25,7 @@ function useKoer() {
 
 function TraadRaekke({ t }: { t: AdminForumTraad }) {
   const { pending, fejl, koer } = useKoer();
-  const [bekraeftSlet, setBekraeftSlet] = useState(false);
+  const [fjerner, setFjerner] = useState(false);
   const url = `/forum/${t.kategoriSlug}/${t.slug}`;
 
   return (
@@ -61,28 +62,27 @@ function TraadRaekke({ t }: { t: AdminForumTraad }) {
           {t.isLocked ? 'Lås op' : '🔒 Lås'}
         </button>
         <span className="flex-1" />
-        {bekraeftSlet ? (
-          <span className="flex items-center gap-1">
-            <button
-              className="rounded-lg bg-kobber-600 px-2.5 py-1 text-sm font-semibold text-white hover:bg-kobber-700"
-              disabled={pending}
-              onClick={() => koer(() => fjernTraad(t.id, t.kategoriSlug))}
-            >
-              Bekræft fjern
-            </button>
-            <button className="btn-ghost !px-2 !py-1 text-sm" onClick={() => setBekraeftSlet(false)}>
-              Fortryd
-            </button>
-          </span>
-        ) : (
-          <button
-            className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
-            onClick={() => setBekraeftSlet(true)}
-          >
-            🗑 Fjern tråd
-          </button>
-        )}
+        <button
+          className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
+          onClick={() => setFjerner((v) => !v)}
+        >
+          🗑 Fjern tråd
+        </button>
       </div>
+
+      {fjerner && (
+        <GrundVaelger
+          pending={pending}
+          submitLabel="Fjern tråd + giv besked"
+          onCancel={() => setFjerner(false)}
+          onSubmit={(grund, fritekst) =>
+            koer(async () => {
+              await modFjernTraad(t.id, t.kategoriSlug, grund, fritekst);
+              setFjerner(false);
+            })
+          }
+        />
+      )}
       {fejl && <p className="mt-2 text-xs text-kobber-700">{fejl}</p>}
     </div>
   );
@@ -90,7 +90,7 @@ function TraadRaekke({ t }: { t: AdminForumTraad }) {
 
 function IndlaegRaekke({ p }: { p: AdminForumIndlaeg }) {
   const { pending, fejl, koer } = useKoer();
-  const [bekraeftSlet, setBekraeftSlet] = useState(false);
+  const [fjerner, setFjerner] = useState(false);
   const url = `/forum/${p.kategoriSlug}/${p.traadSlug}`;
 
   return (
@@ -108,28 +108,29 @@ function IndlaegRaekke({ p }: { p: AdminForumIndlaeg }) {
         <span className="flex-1" />
         {p.isOpening ? (
           <span className="text-xs text-grafit-400">Åbnings-indlæg - brug “Fjern tråd”</span>
-        ) : bekraeftSlet ? (
-          <span className="flex items-center gap-1">
-            <button
-              className="rounded-lg bg-kobber-600 px-2.5 py-1 text-sm font-semibold text-white hover:bg-kobber-700"
-              disabled={pending}
-              onClick={() => koer(() => fjernIndlaeg(p.id, p.kategoriSlug, p.traadSlug))}
-            >
-              Bekræft fjern
-            </button>
-            <button className="btn-ghost !px-2 !py-1 text-sm" onClick={() => setBekraeftSlet(false)}>
-              Fortryd
-            </button>
-          </span>
         ) : (
           <button
             className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
-            onClick={() => setBekraeftSlet(true)}
+            onClick={() => setFjerner((v) => !v)}
           >
             🗑 Fjern
           </button>
         )}
       </div>
+
+      {!p.isOpening && fjerner && (
+        <GrundVaelger
+          pending={pending}
+          submitLabel="Fjern indlæg + giv besked"
+          onCancel={() => setFjerner(false)}
+          onSubmit={(grund, fritekst) =>
+            koer(async () => {
+              await modFjernIndlaeg(p.id, p.kategoriSlug, p.traadSlug, grund, fritekst);
+              setFjerner(false);
+            })
+          }
+        />
+      )}
       {fejl && <p className="mt-2 text-xs text-kobber-700">{fejl}</p>}
     </div>
   );

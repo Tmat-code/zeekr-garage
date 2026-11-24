@@ -1,9 +1,15 @@
 import { getForumGrupper } from '@/lib/forum';
-import { getAdminForum, getModelOversigt, getForumAktivitet } from '@/lib/queries-admin';
+import {
+  getAdminForum,
+  getModelOversigt,
+  getForumAktivitet,
+  getForumRapporter,
+} from '@/lib/queries-admin';
 import { getForumRegler } from '@/lib/forum-regler';
 import { erAdmin } from '@/lib/admin';
 import KategoriStyring from '@/components/admin/KategoriStyring';
 import ForumModerering from '@/components/admin/ForumModerering';
+import ForumRapporter from '@/components/admin/ForumRapporter';
 import ForumReglerEditor from '@/components/admin/ForumReglerEditor';
 import TilfoejModel from '@/components/admin/TilfoejModel';
 import ModellerPanel from '@/components/admin/ModellerPanel';
@@ -13,11 +19,12 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum - Værkstedet' };
 
 export default async function AdminForumSide() {
-  const [grupper, forum, regler, aktivitet, kanModel] = await Promise.all([
+  const [grupper, forum, regler, aktivitet, rapporter, kanModel] = await Promise.all([
     getForumGrupper(),
     getAdminForum(25),
     getForumRegler(),
     getForumAktivitet(12),
+    getForumRapporter(),
     erAdmin(),
   ]);
 
@@ -29,6 +36,21 @@ export default async function AdminForumSide() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border-2 border-kobber-200 bg-white p-5 sm:p-6">
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-grafit-900">Indgående rapporter</h2>
+          <span className="text-sm text-grafit-400">
+            {rapporter.length === 0 ? 'ingen åbne' : `${rapporter.length} åbne`}
+          </span>
+        </div>
+        <p className="mb-4 text-sm text-grafit-500">
+          Indhold som brugere (eller senere AI) har markeret. Fjern tråden/indlægget med en grund
+          (forfatteren får en officiel besked), advar forfatteren, eller afvis rapporten. En
+          handling herfra markerer rapporten håndteret.
+        </p>
+        <ForumRapporter rapporter={rapporter} />
+      </section>
+
+      <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
         <div className="mb-1 flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold text-grafit-900">Forum-moderering</h2>
           <span className="text-sm text-grafit-400">{forum.traade.length} seneste tråde</span>

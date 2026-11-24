@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator } from '@/lib/admin';
 import { MAKS_ANTAL, FORUM_BUCKET } from '@/lib/billeder';
+import { MOD_GRUND_VALUES } from '@/lib/moderering';
 
 // Vedhæft uploadede billeder (storage-paths) til et indlæg. Validerer at hvert
 // path ligger i brugerens egen mappe (<user_id>/...). RLS tjekker også ejerskab.
@@ -248,11 +249,101 @@ export async function saetLaast(
   revalider(kategoriSlug, traadSlug);
 }
 
-// Fjern hele tråden (soft-remove). RLS: egen eller moderator.
-// Samme P9-beslutning som fjernIndlaeg: reversibelt, så filerne bevares (sweep rydder orphans).
-export async function fjernTraad(threadId: string, kategoriSlug: string): Promise<void> {
+// --- P21: moderering med begrundelse + officiel besked + rapport-kø ---
+// De tidligere stumme fjern-handlinger (ren is_removed-update) er afløst af de
+// atomiske RPC'er mod_fjern_traad / mod_fjern_indlaeg (handling + audit-log +
+// notifikation til forfatteren i ÉN transaktion). Brugerens egen sletning af
+// EGET indlæg kører stadig via den plaine fjernIndlaeg ovenfor (ingen grund,
+// ingen notifikation - det er ikke moderering).
+
+// Bruger rapporterer forum-indhold: en tråd (threadId, typisk åbnings-indlægget)
+// eller et konkret indlæg (postId). RLS sikrer reporter_id = mig + kilde=bruger.
+export async function rapporterForum(
+  threadId: string | null,
+  postId: string | null,
+  reason: string,
+): Promise<void> {
   const sb = supabaseServer();
-  const { error } = await sb.from('forum_threads').update({ is_removed: true }).eq('id', threadId);
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error('Log ind for at rapportere.');
+  if (!threadId && !postId) throw new Error('Ingen reference at rapportere.');
+  if (!MOD_GRUND_VALUES.includes(reason)) throw new Error('Ugyldig grund.');
+
+  const { error } = await sb.from('forum_reports').insert({
+    reporter_id: user.id,
+    thread_id: threadId,
+    post_id: postId,
+    reason,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/forum');
+}
+
+// Moderator: fjern tråd MED grund (RPC = soft-remove + log + notif atomisk).
+// p_report_id markerer den udløsende rapport håndteret i samme transaktion.
+export async function modFjernTraad(
+  threadId: string,
+  kategoriSlug: string,
+  grund: string,
+  fritekst?: string,
+  reportId?: string,
+): Promise<void> {
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('mod_fjern_traad', {
+    p_thread_id: threadId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+    p_report_id: reportId ?? null,
+  });
   if (error) throw new Error(error.message);
   revalider(kategoriSlug);
+}
+
+// Moderator: fjern indlæg MED grund (RPC = soft-remove + log + notif atomisk).
+export async function modFjernIndlaeg(
+  postId: string,
+  kategoriSlug: string,
+  traadSlug: string,
+  grund: string,
+  fritekst?: string,
+  reportId?: string,
+): Promise<void> {
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('mod_fjern_indlaeg', {
+    p_post_id: postId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+    p_report_id: reportId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalider(kategoriSlug, traadSlug);
+}
+
+// Moderator: advar/kontakt en bruger (uafhængigt af en konkret tråd).
+export async function modAdvarBruger(
+  userId: string,
+  grund: string,
+  fritekst?: string,
+  reportId?: string,
+): Promise<void> {
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('mod_advar_bruger', {
+    p_user_id: userId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+    p_report_id: reportId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/forum');
+}
+
+// Moderator: afvis en rapport (markér håndteret uden en indholds-handling).
+export async function afvisRapport(reportId: string): Promise<void> {
+  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+  const sb = supabaseServer();
+  const { error } = await sb.from('forum_reports').update({ handled: true }).eq('id', reportId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/forum');
 }

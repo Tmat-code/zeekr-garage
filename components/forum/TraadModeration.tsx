@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { saetFastgjort, saetLaast, fjernTraad } from '@/app/forum/actions';
+import { saetFastgjort, saetLaast, modFjernTraad } from '@/app/forum/actions';
+import GrundVaelger from './GrundVaelger';
 
 export default function TraadModeration({
   threadId,
@@ -22,6 +23,7 @@ export default function TraadModeration({
 }) {
   const router = useRouter();
   const [fejl, setFejl] = useState<string | null>(null);
+  const [fjerner, setFjerner] = useState(false);
   const [pending, start] = useTransition();
 
   function koer(fn: () => Promise<void>) {
@@ -65,19 +67,27 @@ export default function TraadModeration({
         <button
           className="btn-ghost !py-1.5 text-sm hover:!border-kobber-600 hover:!text-kobber-700"
           disabled={pending}
-          onClick={() => {
-            if (confirm('Fjern hele tråden? Den forsvinder fra forummet.')) {
-              koer(async () => {
-                await fjernTraad(threadId, kategoriSlug);
-                router.push(`/forum/${kategoriSlug}`);
-              });
-            }
-          }}
+          onClick={() => setFjerner((v) => !v)}
         >
           🗑 Fjern tråd
         </button>
         {fejl && <span className="text-kobber-700">{fejl}</span>}
       </div>
+
+      {/* Fjern tråd kræver nu en grund - forfatteren får en officiel notifikation. */}
+      {fjerner && (
+        <GrundVaelger
+          pending={pending}
+          submitLabel="Fjern tråd + giv besked"
+          onCancel={() => setFjerner(false)}
+          onSubmit={(grund, fritekst) =>
+            koer(async () => {
+              await modFjernTraad(threadId, kategoriSlug, grund, fritekst);
+              router.push(`/forum/${kategoriSlug}`);
+            })
+          }
+        />
+      )}
     </div>
   );
 }
