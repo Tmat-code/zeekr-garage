@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
 import type { ForumIndlaeg } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
+import Avatar from '@/components/forum/Avatar';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
 import { MAKS_ANTAL, forumBilledeUrl } from '@/lib/billeder';
-import { svar, retIndlaeg, fjernIndlaeg, modFjernIndlaeg } from '@/app/forum/actions';
+import { svar, retIndlaeg, fjernIndlaeg, modFjernIndlaeg, modFjernAvatar } from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import RapporterKnap from '@/components/forum/RapporterKnap';
@@ -37,6 +38,7 @@ function IndlaegKort({
 }) {
   const [redigerer, setRedigerer] = useState(false);
   const [modFjerner, setModFjerner] = useState(false);
+  const [modFjernerAvatar, setModFjernerAvatar] = useState(false);
   const [tekst, setTekst] = useState(p.body);
   // Billed-redigering: paths markeret til fjernelse + netop uploadede nye paths.
   const [fjernede, setFjernede] = useState<string[]>([]);
@@ -54,6 +56,8 @@ function IndlaegKort({
   // Rapportér: almindelig indlogget bruger, ikke eget indhold, ikke moderator
   // (moderatorer handler direkte). Åbnings-indlæg rapporterer hele tråden.
   const kanRapportere = isLoggedIn && !!p.authorId && !minEgen && !erModerator;
+  // Moderator: fjern en upassende avatar (handling-med-grund, notif til bruger).
+  const kanFjernAvatar = erModerator && !minEgen && !!p.authorId && !!p.avatar;
 
   // Kun forfatteren kan tilføje NYE billeder (RLS: insert kræver eget indlæg).
   // Moderator kan stadig fjerne eksisterende (RLS: slet eget/moderator).
@@ -78,6 +82,7 @@ function IndlaegKort({
       }`}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Avatar url={p.avatar} navn={p.forfatter} px={32} className="mr-0.5" />
         <span className="font-medium text-grafit-900">{p.forfatter || 'Ejer'}</span>
         <GarageBadge bil={p.bil} />
         <span className="text-xs text-grafit-400">
@@ -179,7 +184,7 @@ function IndlaegKort({
         </div>
       )}
 
-      {!redigerer && (kanRette || kanSkrive || kanRapportere) && (
+      {!redigerer && (kanRette || kanSkrive || kanRapportere || kanFjernAvatar) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
           {kanRette && (
             <button
@@ -211,6 +216,15 @@ function IndlaegKort({
               🗑 Fjern
             </button>
           )}
+          {kanFjernAvatar && (
+            <button
+              className="text-grafit-500 hover:text-kobber-700"
+              disabled={pending}
+              onClick={() => setModFjernerAvatar((v) => !v)}
+            >
+              🧑 Fjern avatar
+            </button>
+          )}
           {kanSkrive && (
             <button
               className="text-grafit-500 hover:text-kobber-700"
@@ -239,6 +253,21 @@ function IndlaegKort({
             koer(async () => {
               await modFjernIndlaeg(p.id, kategoriSlug, traadSlug, grund, fritekst);
               setModFjerner(false);
+            })
+          }
+        />
+      )}
+
+      {/* Moderator fjerner en upassende avatar med grund -> brugeren notificeres. */}
+      {!redigerer && kanFjernAvatar && modFjernerAvatar && (
+        <GrundVaelger
+          pending={pending}
+          submitLabel="Fjern avatar + giv besked"
+          onCancel={() => setModFjernerAvatar(false)}
+          onSubmit={(grund, fritekst) =>
+            koer(async () => {
+              await modFjernAvatar(p.authorId!, kategoriSlug, traadSlug, grund, fritekst);
+              setModFjernerAvatar(false);
             })
           }
         />

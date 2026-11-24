@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
-import { meldBilledeUrl } from '@/lib/billeder';
+import { meldBilledeUrl, avatarUrl } from '@/lib/billeder';
 import type { IssueRow, Model, Kommentar, VariantMap, MinBil, GarageBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
@@ -163,6 +163,23 @@ export async function getMitNavn(): Promise<string> {
   return (data as any)?.display_name ?? '';
 }
 
+// --- Mit profilbillede (avatar) - rå storage-path, eller null (P22) ---
+export async function getMitAvatar(): Promise<string | null> {
+  const sb = supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await sb
+    .from('profiles')
+    .select('avatar_path')
+    .eq('id', user.id)
+    .single();
+
+  return (data as any)?.avatar_path ?? null;
+}
+
 // --- Varianter pr. model (til "mig med"-flowet) ---
 export async function getVarianter(): Promise<VariantMap> {
   const sb = supabaseServer();
@@ -207,7 +224,9 @@ export async function getComments(issueId: string): Promise<Kommentar[]> {
   const sb = supabaseServer();
   const { data, error } = await sb
     .from('comments')
-    .select('id, body, is_solution, created_at, author_id, author_navn, profiles ( display_name )')
+    .select(
+      'id, body, is_solution, created_at, author_id, author_navn, profiles ( display_name, avatar_path )',
+    )
     .eq('issue_id', issueId)
     .order('created_at', { ascending: true });
 
@@ -219,6 +238,7 @@ export async function getComments(issueId: string): Promise<Kommentar[]> {
     created_at: r.created_at,
     author_id: r.author_id,
     author_navn: r.profiles?.display_name ?? r.author_navn ?? null,
+    author_avatar: r.profiles?.avatar_path ? avatarUrl(r.profiles.avatar_path) : null,
   }));
 }
 

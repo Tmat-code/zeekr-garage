@@ -7,6 +7,9 @@ export const MELD_BUCKET = 'meld';
 // offentlig URL (billedeUrl nedenfor) - kun samtalens parter maa se dem. Se
 // beskedBilledeUrl() + serve-ruten.
 export const BESKED_BUCKET = 'besked';
+// Profilbilleder (P22): egen OFFENTLIG bucket (som forum/meld). Billedet
+// center-beskaeres + resizes klient-side til et lille kvadrat foer upload.
+export const AVATAR_BUCKET = 'avatar';
 
 // Den offentlige URL skal nås fra browseren -> brug den offentlige Supabase-URL.
 const BASE = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -20,6 +23,9 @@ export function forumBilledeUrl(path: string): string {
 }
 export function meldBilledeUrl(path: string): string {
   return billedeUrl(MELD_BUCKET, path);
+}
+export function avatarUrl(path: string): string {
+  return billedeUrl(AVATAR_BUCKET, path);
 }
 
 // Besked-billeder (P10): PRIVAT bucket. IKKE den offentlige /object/public/-vej
@@ -39,3 +45,8 @@ export function beskedBilledeUrl(path: string): string {
 export const TILLADTE_TYPER = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export const MAKS_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAKS_ANTAL = 6; // billeder pr. indlæg
+
+// Avatar (P22): klient-resizes til et lille kvadrat (center-beskaeret) som JPEG,
+// saa den uploadede fil altid er lille uanset kilde-stoerrelse.
+export const AVATAR_PX = 256; // kvadrat-side i px (skarp paa retina ved ~32-64px visning)
+export const AVATAR_KVALITET = 0.85; // JPEG-kvalitet

@@ -1,11 +1,12 @@
 import { supabaseServer } from '@/lib/supabase/server';
-import { beskedBilledeUrl } from '@/lib/billeder';
+import { beskedBilledeUrl, avatarUrl } from '@/lib/billeder';
 import type { SamtaleRow, SamtaleDetalje, AndenPart, Deltager, Besked } from '@/lib/types';
 
 // Embed af en deltagers profil + bil (garage-badge), samme FK-hints som forum.
 const PART_SELECT = `user_id, last_read_at, hidden_at,
   profil:profiles!conversation_participants_user_id_fkey (
     display_name,
+    avatar_path,
     bil:models!profiles_car_model_id_fkey ( name ),
     variant:variants!profiles_car_variant_id_fkey ( name )
   )`;
@@ -22,7 +23,12 @@ function partBil(pr: any): string | null {
 
 function mapPart(p: any): AndenPart {
   const pr = p?.profil;
-  return { id: p.user_id, navn: pr?.display_name ?? null, bil: partBil(pr) };
+  return {
+    id: p.user_id,
+    navn: pr?.display_name ?? null,
+    bil: partBil(pr),
+    avatar: pr?.avatar_path ? avatarUrl(pr.avatar_path) : null,
+  };
 }
 
 // Afled en visnings-label for en gruppe: eksplicit navn vinder, ellers
@@ -153,7 +159,11 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
   // men deres tidligere beskeder skal stadig vise et navn). Profiler er
   // offentligt læsbare, så ét opslag på de distinkte sender_id'er.
   const navnMap = new Map<string, string | null>();
-  for (const d of deltagere) navnMap.set(d.id, d.navn);
+  const avatarMap = new Map<string, string | null>();
+  for (const d of deltagere) {
+    navnMap.set(d.id, d.navn);
+    avatarMap.set(d.id, d.avatar);
+  }
   if (erGruppe) {
     const mangler = [
       ...new Set(
@@ -165,9 +175,12 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
     if (mangler.length) {
       const { data: profs } = await sb
         .from('profiles')
-        .select('id, display_name')
+        .select('id, display_name, avatar_path')
         .in('id', mangler);
-      for (const p of (profs ?? []) as any[]) navnMap.set(p.id, p.display_name ?? null);
+      for (const p of (profs ?? []) as any[]) {
+        navnMap.set(p.id, p.display_name ?? null);
+        avatarMap.set(p.id, p.avatar_path ? avatarUrl(p.avatar_path) : null);
+      }
     }
   }
 
@@ -193,6 +206,7 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
     body: m.body,
     senderId: m.sender_id ?? null,
     senderNavn: m.sender_id ? (navnMap.get(m.sender_id) ?? null) : null,
+    senderAvatar: m.sender_id ? (avatarMap.get(m.sender_id) ?? null) : null,
     createdAt: m.created_at,
     billeder: billedMap.get(m.id) ?? [],
   }));
@@ -285,7 +299,7 @@ export async function soegBrugere(q: string): Promise<AndenPart[]> {
   const { data } = await sb
     .from('profiles')
     .select(
-      `id, display_name,
+      `id, display_name, avatar_path,
        bil:models!profiles_car_model_id_fkey ( name ),
        variant:variants!profiles_car_variant_id_fkey ( name )`,
     )
@@ -297,5 +311,10 @@ export async function soegBrugere(q: string): Promise<AndenPart[]> {
   return ((data ?? []) as any[])
     .filter((p) => !udeluk.has(p.id))
     .slice(0, 10)
-    .map((p): AndenPart => ({ id: p.id, navn: p.display_name ?? null, bil: partBil(p) }));
+    .map((p): AndenPart => ({
+      id: p.id,
+      navn: p.display_name ?? null,
+      bil: partBil(p),
+      avatar: p.avatar_path ? avatarUrl(p.avatar_path) : null,
+    }));
 }

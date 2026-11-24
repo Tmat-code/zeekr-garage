@@ -16,7 +16,7 @@
 // bevidst, så et evt. gendannet indlæg ikke får brudte billeder.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { FORUM_BUCKET, MELD_BUCKET, BESKED_BUCKET } from '@/lib/billeder';
+import { FORUM_BUCKET, MELD_BUCKET, BESKED_BUCKET, AVATAR_BUCKET } from '@/lib/billeder';
 
 // Bred nok til både den cookie-baserede server-klient (@supabase/ssr) OG
 // service-rolle-klienten (@supabase/supabase-js) - besked-sweep'et kører med
@@ -88,16 +88,18 @@ async function alleObjekter(sb: SB, bucket: string): Promise<Objekt[]> {
 }
 
 // Alle refererede paths fra en koblings-tabel (ALLE rækker, også is_removed-
-// indholdets - de skal netop bevares).
-async function refereredePaths(sb: SB, tabel: string): Promise<Set<string>> {
+// indholdets - de skal netop bevares). Path-kolonnen er som regel 'path', men
+// avatar-sporet refererer via profiles.avatar_path (ingen koblings-tabel), saa
+// kolonnen er parametriseret. Null-værdier (profil uden avatar) springes over.
+async function refereredePaths(sb: SB, tabel: string, kolonne = 'path'): Promise<Set<string>> {
   const set = new Set<string>();
   let fra = 0;
   for (;;) {
-    const { data, error } = await sb.from(tabel).select('path').range(fra, fra + SIDE - 1);
+    const { data, error } = await sb.from(tabel).select(kolonne).range(fra, fra + SIDE - 1);
     if (error) throw new Error(error.message);
     const batch = data ?? [];
     for (const r of batch) {
-      const p = (r as any).path;
+      const p = (r as any)[kolonne];
       if (typeof p === 'string') set.add(p);
     }
     if (batch.length < SIDE) break;
@@ -118,9 +120,10 @@ export async function findForaeldreloese(
   sb: SB,
   bucket: string,
   tabel: string,
+  kolonne = 'path',
 ): Promise<ForaeldreloeseResultat> {
   const objekter = await alleObjekter(sb, bucket);
-  const ref = await refereredePaths(sb, tabel);
+  const ref = await refereredePaths(sb, tabel, kolonne);
   const graense = Date.now() - MIN_ALDER_MS;
   const foraeldreloese = objekter
     .filter((o) => !ref.has(o.path))
@@ -145,11 +148,14 @@ export async function fjernFiler(sb: SB, bucket: string, paths: string[]): Promi
   return n;
 }
 
-// De to OFFENTLIGE billed-spor, så actions kan løbe begge i ét kald med den
-// almindelige (cookie-baserede) klient.
-export const BILLED_SPOR: { bucket: string; tabel: string }[] = [
+// De OFFENTLIGE billed-spor, så actions kan løbe dem i ét kald med den
+// almindelige (cookie-baserede) klient. Avatar-sporet (P22) refererer via
+// profiles.avatar_path (ingen koblings-tabel; profiler er offentligt læsbare),
+// derfor den eksplicitte kolonne.
+export const BILLED_SPOR: { bucket: string; tabel: string; kolonne?: string }[] = [
   { bucket: FORUM_BUCKET, tabel: 'forum_post_images' },
   { bucket: MELD_BUCKET, tabel: 'issue_images' },
+  { bucket: AVATAR_BUCKET, tabel: 'profiles', kolonne: 'avatar_path' },
 ];
 
 // Det PRIVATE besked-spor (P10). Køres separat MED SERVICE-ROLLEN, fordi

@@ -261,19 +261,22 @@ export async function fjernBekraeftelserFoer(dato: string): Promise<number> {
 //
 // De to offentlige spor (forum/meld) køres med den almindelige klient; det
 // private besked-spor køres med SERVICE-ROLLEN (bucketen har ingen læse-policy).
-type OprydTal = { forum: number; meld: number; besked: number };
+// Ét tal pr. offentligt spor (bucket-navn -> antal) + det private besked-spor.
+type OprydTal = { forum: number; meld: number; avatar: number; besked: number };
 
 export async function taelForaeldreloeseFiler(): Promise<OprydTal> {
   if (!(await erAdmin())) throw new Error('Kun admin.');
   const sb = supabaseServer();
   const svc = supabaseService();
   const [res, beskedRes] = await Promise.all([
-    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel))),
+    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel, s.kolonne))),
     findForaeldreloese(svc, BESKED_SPOR.bucket, BESKED_SPOR.tabel),
   ]);
+  const pr = new Map(BILLED_SPOR.map((s, i) => [s.bucket, res[i].foraeldreloese.length]));
   return {
-    forum: res[0].foraeldreloese.length,
-    meld: res[1].foraeldreloese.length,
+    forum: pr.get(BILLED_SPOR[0].bucket) ?? 0,
+    meld: pr.get(BILLED_SPOR[1].bucket) ?? 0,
+    avatar: pr.get(BILLED_SPOR[2].bucket) ?? 0,
     besked: beskedRes.foraeldreloese.length,
   };
 }
@@ -283,14 +286,21 @@ export async function rydForaeldreloeseFiler(): Promise<OprydTal> {
   const sb = supabaseServer();
   const svc = supabaseService();
   const [res, beskedRes] = await Promise.all([
-    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel))),
+    Promise.all(BILLED_SPOR.map((s) => findForaeldreloese(sb, s.bucket, s.tabel, s.kolonne))),
     findForaeldreloese(svc, BESKED_SPOR.bucket, BESKED_SPOR.tabel),
   ]);
-  const forum = await fjernFiler(sb, BILLED_SPOR[0].bucket, res[0].foraeldreloese);
-  const meld = await fjernFiler(sb, BILLED_SPOR[1].bucket, res[1].foraeldreloese);
+  const fjernet = new Map<string, number>();
+  for (let i = 0; i < BILLED_SPOR.length; i++) {
+    fjernet.set(BILLED_SPOR[i].bucket, await fjernFiler(sb, BILLED_SPOR[i].bucket, res[i].foraeldreloese));
+  }
   const besked = await fjernFiler(svc, BESKED_SPOR.bucket, beskedRes.foraeldreloese);
   revalider();
-  return { forum, meld, besked };
+  return {
+    forum: fjernet.get(BILLED_SPOR[0].bucket) ?? 0,
+    meld: fjernet.get(BILLED_SPOR[1].bucket) ?? 0,
+    avatar: fjernet.get(BILLED_SPOR[2].bucket) ?? 0,
+    besked,
+  };
 }
 
 // --- Forside-besked (kun admin) ---

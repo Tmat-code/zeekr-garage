@@ -6,6 +6,7 @@ import { adminKontekst } from '@/lib/admin';
 import { relativTid } from '@/lib/tid';
 import ModelBadge from '@/components/forum/ModelBadge';
 import GarageBadge from '@/components/forum/GarageBadge';
+import Avatar from '@/components/forum/Avatar';
 import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
 
 export const dynamic = 'force-dynamic';
@@ -117,6 +118,7 @@ export default async function KategoriSide({ params }: { params: { kategori: str
                 href={`/forum/${kat.slug}/${t.slug}`}
                 className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-grafit-50"
               >
+                <Avatar url={t.avatar} navn={t.forfatter} px={36} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {t.isPinned && <span className="shrink-0 text-xs" title="Fastgjort">📌</span>}

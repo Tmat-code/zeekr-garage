@@ -6,6 +6,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/tid';
 import type { AndenPart, Besked, Deltager } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
+import Avatar from '@/components/forum/Avatar';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
 import GruppePanel from '@/components/beskeder/GruppePanel';
@@ -66,12 +67,20 @@ export default function SamtaleView({
     return m;
   }, [deltagere]);
 
+  // Avatar-opslag pr. deltager (til afsender-visning i grupper + realtime).
+  const avatarMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const d of deltagere) m.set(d.id, d.avatar);
+    return m;
+  }, [deltagere]);
+
   function mapRow(r: any): Besked {
     return {
       id: r.id,
       body: r.body,
       senderId: r.sender_id ?? null,
       senderNavn: r.sender_id ? (navnMap.get(r.sender_id) ?? null) : null,
+      senderAvatar: r.sender_id ? (avatarMap.get(r.sender_id) ?? null) : null,
       createdAt: r.created_at,
       billeder: [], // billeder hentes separat (hentOgSaetBilleder)
     };
@@ -160,6 +169,7 @@ export default function SamtaleView({
                   body: b,
                   senderId: megId,
                   senderNavn: navnMap.get(megId) ?? null,
+                  senderAvatar: avatarMap.get(megId) ?? null,
                   createdAt: new Date().toISOString(),
                   billeder: paths.map(beskedBilledeUrl),
                 },
@@ -238,6 +248,9 @@ export default function SamtaleView({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grafit-200 pb-3">
         <div className="flex min-w-0 items-center gap-2">
+          {!erGruppe && (
+            <Avatar url={andenPart?.avatar ?? null} navn={andenPart?.navn ?? titel} px={32} />
+          )}
           <span className="truncate text-lg font-semibold text-grafit-900">{titel || 'Ejer'}</span>
           {erGruppe ? (
             <button
@@ -359,7 +372,8 @@ export default function SamtaleView({
               <div key={m.id} className={`flex ${min ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[80%] space-y-1">
                   {visNavn && (
-                    <div className="pl-1 text-[11px] font-medium text-grafit-500">
+                    <div className="flex items-center gap-1.5 pl-1 text-[11px] font-medium text-grafit-500">
+                      <Avatar url={m.senderAvatar} navn={m.senderNavn} px={18} />
                       {m.senderNavn || 'Ejer'}
                     </div>
                   )}

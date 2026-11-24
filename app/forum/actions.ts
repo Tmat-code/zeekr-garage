@@ -321,6 +321,27 @@ export async function modFjernIndlaeg(
   revalider(kategoriSlug, traadSlug);
 }
 
+// Moderator: fjern en brugers upassende avatar MED grund (RPC = nulstil
+// avatar_path + log + notif atomisk; selve filen ryddes af P9-sweepet). P22.
+export async function modFjernAvatar(
+  userId: string,
+  kategoriSlug: string,
+  traadSlug: string,
+  grund: string,
+  fritekst?: string,
+  reportId?: string,
+): Promise<void> {
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('mod_fjern_avatar', {
+    p_user_id: userId,
+    p_grund: grund,
+    p_fritekst: fritekst ?? null,
+    p_report_id: reportId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalider(kategoriSlug, traadSlug);
+}
+
 // Moderator: advar/kontakt en bruger (uafhængigt af en konkret tråd).
 export async function modAdvarBruger(
   userId: string,

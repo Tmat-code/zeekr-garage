@@ -7,7 +7,7 @@ function ord(n: number): string {
   return n === 1 ? 'fil' : 'filer';
 }
 
-type OprydTal = { forum: number; meld: number; besked: number };
+type OprydTal = { forum: number; meld: number; avatar: number; besked: number };
 
 export default function StorageOprydningPanel() {
   const [antal, setAntal] = useState<OprydTal | null>(null);
@@ -33,9 +33,9 @@ export default function StorageOprydningPanel() {
     start(async () => {
       try {
         const r = await rydForaeldreloeseFiler();
-        const i = r.forum + r.meld + r.besked;
+        const i = r.forum + r.meld + r.avatar + r.besked;
         setResultat(
-          `Fjernede ${i} ${ord(i)} (forum: ${r.forum}, meld: ${r.meld}, besked: ${r.besked}).`,
+          `Fjernede ${i} ${ord(i)} (forum: ${r.forum}, meld: ${r.meld}, avatar: ${r.avatar}, besked: ${r.besked}).`,
         );
         setAntal(null);
       } catch (e: any) {
@@ -44,7 +44,7 @@ export default function StorageOprydningPanel() {
     });
   }
 
-  const ialt = antal ? antal.forum + antal.meld + antal.besked : 0;
+  const ialt = antal ? antal.forum + antal.meld + antal.avatar + antal.besked : 0;
 
   return (
     <section className="rounded-2xl border-2 border-kobber-200 bg-white p-5 sm:p-6">
@@ -54,7 +54,7 @@ export default function StorageOprydningPanel() {
       </div>
       <p className="mb-3 text-sm text-grafit-500">
         Billed-filer uden reference - typisk uploads der blev fortrudt i skrive-/redigér-boksen,
-        eller rester fra slettede meldinger. Dækker forum-, meld- og besked-billeder. Filer yngre end
+        eller rester fra slettede meldinger. Dækker forum-, meld-, avatar- og besked-billeder. Filer yngre end
         et døgn spares (en upload kan stadig være på vej). Viser antal først; sletning{' '}
         <strong>kan ikke fortrydes</strong>.
       </p>
@@ -67,7 +67,8 @@ export default function StorageOprydningPanel() {
         {antal !== null && (
           <>
             <span className="text-sm text-grafit-600">
-              {ialt} {ord(ialt)} (forum: {antal.forum}, meld: {antal.meld}, besked: {antal.besked}).
+              {ialt} {ord(ialt)} (forum: {antal.forum}, meld: {antal.meld}, avatar: {antal.avatar},
+              besked: {antal.besked}).
             </span>
             {ialt > 0 && (
               <button

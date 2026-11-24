@@ -1,7 +1,15 @@
 import { redirect } from 'next/navigation';
-import { getCurrentUser, getModels, getVarianter, getMyCars, getMitNavn } from '@/lib/queries';
+import {
+  getCurrentUser,
+  getModels,
+  getVarianter,
+  getMyCars,
+  getMitNavn,
+  getMitAvatar,
+} from '@/lib/queries';
 import MinGarageForm from '@/components/MinGarageForm';
 import VisningsnavnForm from '@/components/VisningsnavnForm';
+import AvatarUpload from '@/components/AvatarUpload';
 import SkiftMailForm from '@/components/SkiftMailForm';
 
 export const dynamic = 'force-dynamic';
@@ -11,11 +19,12 @@ export default async function GarageSide() {
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/garage');
 
-  const [models, varianter, biler, mitNavn] = await Promise.all([
+  const [models, varianter, biler, mitNavn, mitAvatar] = await Promise.all([
     getModels(),
     getVarianter(),
     getMyCars(),
     getMitNavn(),
+    getMitAvatar(),
   ]);
 
   return (
@@ -25,6 +34,7 @@ export default async function GarageSide() {
         Dit navn og dine Zeekr - navnet vises som forfatter, bilerne bruges til &quot;mig
         med&quot;. Ejer du flere, kan du tilføje dem alle.
       </p>
+      <AvatarUpload initialPath={mitAvatar} navn={mitNavn} />
       <VisningsnavnForm initial={mitNavn} />
       <MinGarageForm models={models} varianter={varianter} initialCars={biler} />
       <SkiftMailForm nuvaerende={user.email ?? ''} />

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
 import type { Kommentar } from '@/lib/types';
+import Avatar from '@/components/forum/Avatar';
 import {
   tilfoejKommentar,
   retKommentar,
@@ -42,8 +43,11 @@ function KommentarKort({
         k.is_solution ? 'border-l-4 border-l-[#4f6f4a] border-grafit-200 bg-grafit-50' : 'border-grafit-200 bg-white'
       }`}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-medium text-grafit-900">{k.author_navn || 'Ejer'}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Avatar url={k.author_avatar} navn={k.author_navn} px={28} />
+          <span className="font-medium text-grafit-900">{k.author_navn || 'Ejer'}</span>
+        </div>
         <span className="text-xs text-grafit-400">{relativTid(k.created_at)}</span>
       </div>
 

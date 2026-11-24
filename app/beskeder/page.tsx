@@ -3,6 +3,7 @@ import { adminKontekst } from '@/lib/admin';
 import { getSamtaler } from '@/lib/beskeder';
 import { relativTid } from '@/lib/tid';
 import GarageBadge from '@/components/forum/GarageBadge';
+import Avatar from '@/components/forum/Avatar';
 import IndbakkeSletKnap from '@/components/beskeder/IndbakkeSletKnap';
 
 export const dynamic = 'force-dynamic';
@@ -58,15 +59,27 @@ export default async function BeskederSide() {
             >
               <Link
                 href={`/beskeder/${s.id}`}
-                className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3"
+                className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"
               >
-                {s.ulaest && (
-                  <span
-                    className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full bg-kobber-500"
-                    aria-hidden="true"
-                  />
-                )}
-                <div className={`min-w-0 flex-1 ${s.ulaest ? '' : 'pl-5'}`}>
+                <div className="relative shrink-0">
+                  {s.erGruppe ? (
+                    <span
+                      aria-hidden="true"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-grafit-200 bg-grafit-100 text-grafit-500"
+                    >
+                      👥
+                    </span>
+                  ) : (
+                    <Avatar url={s.andenPart?.avatar ?? null} navn={s.andenPart?.navn ?? null} px={36} />
+                  )}
+                  {s.ulaest && (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-kobber-500"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span
                       className={`truncate ${s.ulaest ? 'font-semibold text-grafit-900' : 'font-medium text-grafit-800'}`}

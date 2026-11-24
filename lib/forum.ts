@@ -1,5 +1,5 @@
 import { supabaseServer } from '@/lib/supabase/server';
-import { forumBilledeUrl } from '@/lib/billeder';
+import { forumBilledeUrl, avatarUrl } from '@/lib/billeder';
 import type {
   ForumGruppe,
   ForumKategori,
@@ -16,19 +16,21 @@ import type {
 function authorSelect(fk: string): string {
   return `author:profiles!${fk} (
       display_name,
+      avatar_path,
       bil:models!profiles_car_model_id_fkey ( name ),
       variant:variants!profiles_car_variant_id_fkey ( name )
     )`;
 }
 
-// a: det embeddede author-objekt -> { navn, bil }.
-function mapAuthor(a: any): { navn: string | null; bil: string | null } {
-  if (!a) return { navn: null, bil: null };
+// a: det embeddede author-objekt -> { navn, bil, avatar }.
+function mapAuthor(a: any): { navn: string | null; bil: string | null; avatar: string | null } {
+  if (!a) return { navn: null, bil: null, avatar: null };
   const navn = a.display_name ?? null;
   const modelNavn = a.bil?.name ?? null;
   const variantNavn = a.variant?.name ?? null;
   const bil = modelNavn ? (variantNavn ? `${modelNavn} · ${variantNavn}` : modelNavn) : null;
-  return { navn, bil };
+  const avatar = a.avatar_path ? avatarUrl(a.avatar_path) : null;
+  return { navn, bil, avatar };
 }
 
 function mapKategori(r: any): ForumKategori {
@@ -185,13 +187,14 @@ export async function getTraade(categoryId: string): Promise<ForumTraadRow[]> {
     .order('last_post_at', { ascending: false });
 
   return ((data ?? []) as any[]).map((r) => {
-    const { navn, bil } = mapAuthor(r.author);
+    const { navn, bil, avatar } = mapAuthor(r.author);
     return {
       id: r.id,
       slug: r.slug,
       title: r.title,
       forfatter: navn,
       bil,
+      avatar,
       createdAt: r.created_at,
       lastPostAt: r.last_post_at,
       replyCount: r.reply_count ?? 0,
@@ -297,7 +300,7 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
     .order('created_at', { ascending: true });
 
   return ((data ?? []) as any[]).map((r) => {
-    const { navn, bil } = mapAuthor(r.author);
+    const { navn, bil, avatar } = mapAuthor(r.author);
     const sorterede = ((r.billeder ?? []) as any[]).sort(
       (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
     );
@@ -309,6 +312,7 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
       body: r.body,
       forfatter: navn,
       bil,
+      avatar,
       authorId: r.author_id ?? null,
       createdAt: r.created_at,
       edited: r.edited ?? false,

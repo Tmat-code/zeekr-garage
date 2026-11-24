@@ -61,6 +61,7 @@ export type Kommentar = {
   created_at: string;
   author_id: string | null;
   author_navn: string | null;
+  author_avatar: string | null; // offentlig avatar-URL eller null (P22)
 };
 
 // =========================================================================
@@ -112,6 +113,7 @@ export type ForumTraadRow = {
   title: string;
   forfatter: string | null;
   bil: string | null;       // garage-badge ("Zeekr 7GT · Long Range RWD")
+  avatar: string | null;    // offentlig avatar-URL eller null (P22)
   createdAt: string;
   lastPostAt: string;
   replyCount: number;
@@ -127,6 +129,7 @@ export type ForumIndlaeg = {
   body: string;
   forfatter: string | null;
   bil: string | null;
+  avatar: string | null;    // offentlig avatar-URL eller null (P22)
   authorId: string | null;
   createdAt: string;
   edited: boolean;
@@ -227,7 +230,12 @@ export type MinTilmelding = { tilmeldt: boolean; note: string | null };
 // Private beskeder (PB / chat)
 // =========================================================================
 // En part i en samtale (1:1-modpart eller gruppe-deltager).
-export type AndenPart = { id: string; navn: string | null; bil: string | null };
+export type AndenPart = {
+  id: string;
+  navn: string | null;
+  bil: string | null;
+  avatar: string | null; // offentlig avatar-URL eller null (P22)
+};
 // Alias: en deltager i en gruppe (samme form - id/navn/bil).
 export type Deltager = AndenPart;
 
@@ -250,6 +258,7 @@ export type Besked = {
   body: string;
   senderId: string | null;
   senderNavn: string | null; // til gruppe-visning: afsender-navn pr. besked
+  senderAvatar: string | null; // afsenderens avatar-URL eller null (P22)
   createdAt: string;
   // Vedhaeftede billeder (P10) - private serve-rute-URL'er, i display-raekkefoelge.
   billeder: string[];
