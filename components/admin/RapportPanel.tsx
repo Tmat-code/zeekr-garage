@@ -9,6 +9,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
   const [type, setType] = useState('fejl');
   const [sprog, setSprog] = useState('da');
   const [kommentarer, setKommentarer] = useState(false);
+  const [billeder, setBilleder] = useState(false);
   const [kunAendrede, setKunAendrede] = useState(false);
   const [besked, setBesked] = useState<string | null>(null);
   const [fejl, setFejl] = useState<string | null>(null);
@@ -22,6 +23,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
       sprog,
       kunAendrede: kunAendrede ? '1' : '0',
       kommentarer: kommentarer ? '1' : '0',
+      billeder: billeder ? '1' : '0',
     });
     return `/api/admin/rapport/${format}?${p.toString()}`;
   }
@@ -91,6 +93,15 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
             Inkludér kommentarer
             <span className="block text-xs text-grafit-400">
               Tager ejernes kommentarer med (den markerede løsning udelades - Zeekr skal have fejlen, ikke workaround&apos;en).
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-grafit-700">
+          <input type="checkbox" className="mt-0.5" checked={billeder} onChange={(e) => setBilleder(e.target.checked)} />
+          <span>
+            Inkludér billeder
+            <span className="block text-xs text-grafit-400">
+              Tager ejernes foto-bevis med (maks 2 pr. melding). PDF&apos;en indlejrer billederne, CSV&apos;en får en kolonne med klikbare URL&apos;er. Gør PDF&apos;en større - især ved Alle.
             </span>
           </span>
         </label>

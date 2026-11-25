@@ -13,7 +13,7 @@ import {
   TYPE_FILNAVN,
   rapportKategoriLabel,
 } from '@/lib/rapport-i18n';
-import { getRapportFejl, getRapportKommentarer, grupperEfterKategori } from '@/lib/rapport';
+import { getRapportFejl, getRapportKommentarer, getRapportBilleder, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +23,23 @@ const GRAFIT = '#17191d';
 const KOBBER = '#c2683f';
 const GRAA = '#656e7a';
 const GROEN = '#4f6f4a';
+
+// Foto-bevis (P37): billed-mål i PDF'en.
+const BILLED_HOEJDE = 90; // fast højde pr. thumbnail (px)
+const BILLED_SLOT = 120; // bredde pr. plads (fit holder billedet inde, bevarer aspekt)
+const BILLED_GAP = 10; // mellemrum mellem thumbnails
+
+// Hent ét billede server-side til en Buffer. Best-effort: en fejlet download
+// (netværk, 404, bucket ikke nået) giver null, så rapporten aldrig crasher.
+async function hentBillede(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: Request) {
   if (!(await erModerator())) {
@@ -35,6 +52,7 @@ export async function GET(req: Request) {
   const sprog = erGyldigtSprog(searchParams.get('sprog'));
   const kunAendrede = searchParams.get('kunAendrede') === '1';
   const medKommentarer = searchParams.get('kommentarer') === '1';
+  const medBilleder = searchParams.get('billeder') === '1';
   const rapportType = erGyldigRapportType(searchParams.get('type'));
   const t = I18N[sprog];
   const ramme = RAPPORT_RAMME[sprog][rapportType];
@@ -44,6 +62,23 @@ export async function GET(req: Request) {
   const kommMap = medKommentarer
     ? await getRapportKommentarer(fejl.map((f) => f.id), sprog)
     : {};
+
+  // Foto-bevis (P37): download alle billed-bytes server-side FØR PDF-genereringen,
+  // fordi pdfkit-tegningen nedenfor er synkron (doc.image kræver en Buffer i hånden).
+  // Best-effort pr. billede; en fejlet download springes bare over. Kun når toggle
+  // er slået til (embedding gør PDF'en tung, især ved top=alle).
+  const billedBufMap: Record<string, Buffer[]> = {};
+  if (medBilleder) {
+    const urlMap = await getRapportBilleder(fejl.map((f) => f.id));
+    await Promise.all(
+      Object.entries(urlMap).map(async ([id, urls]) => {
+        const bufs = (await Promise.all(urls.map(hentBillede))).filter(
+          (b): b is Buffer => b !== null,
+        );
+        if (bufs.length > 0) billedBufMap[id] = bufs;
+      }),
+    );
+  }
 
   const pdfBytes: Buffer = await new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
@@ -144,6 +179,36 @@ export async function GET(req: Request) {
             .text(k.tekst);
           doc.moveDown(0.15);
         }
+      }
+
+      // Foto-bevis (P37): indlejrede thumbnails, side om side, fast højde. pdfkit
+      // kan kun JPEG/PNG - en WebP/GIF (eller korrupt fil) får doc.image til at
+      // kaste, og fanges, så rapporten ikke crasher (billedet springes over).
+      const bufs = medBilleder ? (billedBufMap[f.id] ?? []) : [];
+      if (bufs.length > 0) {
+        doc.moveDown(0.3);
+        // Sidebryd-guard: hele billedrækken skal kunne være på siden (samme
+        // doc.y-tjek som resten af koden).
+        if (doc.y + BILLED_HOEJDE > doc.page.height - 70) {
+          doc.addPage();
+          doc.y = 50;
+        }
+        const raekkeY = doc.y;
+        let x = 58;
+        for (const buf of bufs) {
+          try {
+            doc.image(buf, x, raekkeY, {
+              fit: [BILLED_SLOT, BILLED_HOEJDE],
+              align: 'center',
+              valign: 'center',
+            });
+          } catch {
+            // Uunderstøttet format/korrupt billede - spring over, rapporten står.
+          }
+          x += BILLED_SLOT + BILLED_GAP;
+        }
+        doc.y = raekkeY + BILLED_HOEJDE;
+        doc.moveDown(0.3);
       }
 
       doc.moveDown(0.6);

@@ -2,6 +2,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import type { RapportType, RapportSprog } from '@/lib/rapport-i18n';
 import { oversaetTekster } from '@/lib/oversaet';
 import { ISSUE_CATEGORIES } from '@/lib/config';
+import { meldBilledeUrl, MELD_MAKS_BILLEDER } from '@/lib/billeder';
 
 export type RapportFejl = {
   id: string;
@@ -166,6 +167,31 @@ export async function getRapportKommentarer(
       tekst: oversatte[i] ?? r.body,
     });
   });
+  return map;
+}
+
+// Foto-bevis pr. melding (P37): de OFFENTLIGE billed-URL'er pr. issue, så de kan
+// tages med i Zeekr-rapporten. Hentes separat fra issue_images (offentlig læsning,
+// public 'meld'-bucket) - SAMME separat-fetch-mønster som kategori i getRapportFejl
+// (ingen migration, rapport_fejl-RPC'en urørt). Sorteret på display_order, cappet
+// til MELD_MAKS_BILLEDER pr. melding (matcher P36; ældre meldinger kan have op til
+// 6). Gælder både fejl og ønske - issueIds afgør udvalget, ikke typen.
+export async function getRapportBilleder(
+  issueIds: string[],
+): Promise<Record<string, string[]>> {
+  if (issueIds.length === 0) return {};
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('issue_images')
+    .select('issue_id, path, display_order')
+    .in('issue_id', issueIds)
+    .order('display_order', { ascending: true });
+
+  const map: Record<string, string[]> = {};
+  for (const r of (data ?? []) as any[]) {
+    const liste = (map[r.issue_id] ??= []);
+    if (liste.length < MELD_MAKS_BILLEDER) liste.push(meldBilledeUrl(r.path));
+  }
   return map;
 }
 

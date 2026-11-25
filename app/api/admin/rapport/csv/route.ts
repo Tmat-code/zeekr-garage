@@ -9,7 +9,7 @@ import {
   erGyldigRapportType,
   rapportKategoriLabel,
 } from '@/lib/rapport-i18n';
-import { getRapportFejl, getRapportKommentarer, grupperEfterKategori } from '@/lib/rapport';
+import { getRapportFejl, getRapportKommentarer, getRapportBilleder, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
 
 export const dynamic = 'force-dynamic';
@@ -26,12 +26,17 @@ export async function GET(req: Request) {
   const sprog = erGyldigtSprog(searchParams.get('sprog'));
   const kunAendrede = searchParams.get('kunAendrede') === '1';
   const medKommentarer = searchParams.get('kommentarer') === '1';
+  const medBilleder = searchParams.get('billeder') === '1';
   const rapportType = erGyldigRapportType(searchParams.get('type'));
   const t = I18N[sprog];
 
   const raaFejl = await getRapportFejl(rapportType, kunAendrede, antal);
   const fejl = await oversaetFejl(raaFejl, sprog);
   const kommMap = medKommentarer ? await getRapportKommentarer(fejl.map((f) => f.id), sprog) : {};
+  // Foto-bevis (P37): offentlige URL'er pr. melding, klikbare i Excel/Calc hvis
+  // bucketen er offentligt nåelig. Kun når toggle er slået til (kolonnen udelades
+  // ellers, så default-CSV'en er uændret).
+  const billederMap = medBilleder ? await getRapportBilleder(fejl.map((f) => f.id)) : {};
 
   function esc(v: string | number): string {
     return `"${String(v).replace(/"/g, '""')}"`;
@@ -49,33 +54,35 @@ export async function GET(req: Request) {
       const bilBekr = f.variant_fordeling.reduce((s, r) => s + r.n, 0);
       const varianter = f.variant_fordeling.map((r) => `${r.n}× ${r.variant}`).join(', ');
       const kommentarer = (kommMap[f.id] ?? []).map((k) => `${k.navn}: ${k.tekst}`).join('  |  ');
-      raekker.push(
-        [
-          rang,
-          f.stemmer,
-          deltaTekst(f, sprog),
-          bilBekr,
-          varianter,
-          f.antal_svar,
-          f.title,
-          f.modeller,
-          katLabel,
-          f.software_version ?? '',
-          f.phone_model ?? '',
-          f.phone_os ?? '',
-          oversaetStatus(f.status, sprog),
-          f.description,
-          f.created_at,
-          kommentarer,
-        ]
-          .map(esc)
-          .join(';'),
-      );
+      const felter: (string | number)[] = [
+        rang,
+        f.stemmer,
+        deltaTekst(f, sprog),
+        bilBekr,
+        varianter,
+        f.antal_svar,
+        f.title,
+        f.modeller,
+        katLabel,
+        f.software_version ?? '',
+        f.phone_model ?? '',
+        f.phone_os ?? '',
+        oversaetStatus(f.status, sprog),
+        f.description,
+        f.created_at,
+        kommentarer,
+      ];
+      // Billeder-kolonnen (offentlige URL'er, mellemrums-joinet) tilføjes KUN når
+      // toggle er slået til - matcher 'Billeder' sidst i t.csvKolonner nedenfor.
+      if (medBilleder) felter.push((billederMap[f.id] ?? []).join(' '));
+      raekker.push(felter.map(esc).join(';'));
     }
   }
 
   // BOM + semikolon → åbner korrekt i dansk Excel/LibreOffice Calc.
-  const csv = '﻿' + [t.csvKolonner.map(esc).join(';'), ...raekker].join('\r\n');
+  // 'Billeder' er sidste kolonne i t.csvKolonner; udelades når toggle er slået fra.
+  const kolonner = medBilleder ? t.csvKolonner : t.csvKolonner.slice(0, -1);
+  const csv = '﻿' + [kolonner.map(esc).join(';'), ...raekker].join('\r\n');
 
   const { displayName, rolle } = await adminKontekst();
   await supabaseServer()
