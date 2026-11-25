@@ -99,7 +99,7 @@ begin
     -- Direkte-svar-notifikation: den man svarer direkte paa (ud over foelgerne).
     -- Uafhaengig af follow/mute - et direkte svar skal naa frem. Samme deep-link.
     if v_direkte is not null then
-      v_dtekst := v_navn || ' svarede paa dit indlaeg i "' || v_title || '"';
+      v_dtekst := v_navn || ' svarede på dit indlæg i "' || v_title || '"';
       insert into public.notifications (modtager_id, type, aktoer_id, reference, tekst, href)
       values (v_direkte, 'forum_svar', new.author_id, new.thread_id, v_dtekst, v_href);
     end if;
