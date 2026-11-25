@@ -290,33 +290,42 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
   const { data } = await sb
     .from('forum_posts')
     .select(
-      `id, thread_id, body, is_opening, edited, created_at, author_id,
+      `id, thread_id, body, is_opening, edited, created_at, author_id, parent_id, is_removed,
        ${authorSelect('forum_posts_author_id_fkey')},
+       svarTil:profiles!forum_posts_reply_to_author_fkey ( display_name ),
        billeder:forum_post_images ( path, display_order )`,
     )
     .eq('thread_id', threadId)
-    .eq('is_removed', false)
+    // Fjernede indlæg hentes med, så et fjernet top-svar kan vises som tombstone
+    // uden at tage sine undersvar med sig. Indholdet blankes server-side nedenfor.
     .order('is_opening', { ascending: false })
     .order('created_at', { ascending: true });
 
   return ((data ?? []) as any[]).map((r) => {
     const { navn, bil, avatar } = mapAuthor(r.author);
+    const fjernet = r.is_removed ?? false;
     const sorterede = ((r.billeder ?? []) as any[]).sort(
       (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
     );
-    const billederPaths = sorterede.map((i) => i.path as string);
+    const billederPaths = fjernet ? [] : sorterede.map((i) => i.path as string);
     const billeder = billederPaths.map((p) => forumBilledeUrl(p));
+    const svarTilNavn =
+      (Array.isArray(r.svarTil) ? r.svarTil[0]?.display_name : r.svarTil?.display_name) ?? null;
     return {
       id: r.id,
       threadId: r.thread_id,
-      body: r.body,
-      forfatter: navn,
-      bil,
-      avatar,
+      // Fjernet indlæg leaker hverken tekst eller billeder - kun positionen bevares.
+      body: fjernet ? '' : r.body,
+      forfatter: fjernet ? null : navn,
+      bil: fjernet ? null : bil,
+      avatar: fjernet ? null : avatar,
       authorId: r.author_id ?? null,
       createdAt: r.created_at,
       edited: r.edited ?? false,
       isOpening: r.is_opening ?? false,
+      parentId: r.parent_id ?? null,
+      isRemoved: fjernet,
+      svarTilNavn: fjernet ? null : svarTilNavn,
       billeder,
       billederPaths,
     };

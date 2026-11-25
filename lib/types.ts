@@ -134,6 +134,9 @@ export type ForumIndlaeg = {
   createdAt: string;
   edited: boolean;
   isOpening: boolean;
+  parentId: string | null; // ankeret (et top-svar) hvis dette er et undersvar; ellers null
+  isRemoved: boolean; // fjernet (tombstone hvis det har undersvar; indhold blankes server-side)
+  svarTilNavn: string | null; // "@Navn" - den direkte besvarede, kun på undersvar der svarer et undersvar
   billeder: string[]; // offentlige URL'er til vedhæftede billeder
   billederPaths: string[]; // rå storage-paths, parallelt ordnet med billeder (til redigering)
 };

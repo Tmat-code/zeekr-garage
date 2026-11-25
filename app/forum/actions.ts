@@ -110,6 +110,7 @@ export async function svar(
   traadSlug: string,
   body: string,
   billeder: string[] = [],
+  svarTilPostId: string | null = null,
 ): Promise<void> {
   const sb = supabaseServer();
   const {
@@ -121,9 +122,40 @@ export async function svar(
   if (!b && !harBilleder) throw new Error('Skriv et svar eller vedhæft et billede.');
   if (b.length > 10000) throw new Error('Svaret er for langt.');
 
+  // Ét niveau (FB-stil): fladebalancér målet til et top-svar-anker.
+  //  - mål = åbningsindlæg        -> top-svar (parent null)
+  //  - mål = et top-svar          -> undersvar under det (parent = målet)
+  //  - mål = et undersvar         -> undersvar under SAMME anker + "@Navn" til målets forfatter
+  let parentId: string | null = null;
+  let replyToAuthor: string | null = null;
+  if (svarTilPostId) {
+    const { data: maal } = await sb
+      .from('forum_posts')
+      .select('id, thread_id, is_opening, parent_id, author_id')
+      .eq('id', svarTilPostId)
+      .single();
+    if (!maal || maal.thread_id !== threadId) {
+      throw new Error('Svar-målet findes ikke i tråden.');
+    }
+    if (maal.is_opening) {
+      // top-svar
+    } else if (!maal.parent_id) {
+      parentId = maal.id;
+    } else {
+      parentId = maal.parent_id;
+      replyToAuthor = maal.author_id ?? null;
+    }
+  }
+
   const { data: post, error } = await sb
     .from('forum_posts')
-    .insert({ thread_id: threadId, author_id: user.id, body: b })
+    .insert({
+      thread_id: threadId,
+      author_id: user.id,
+      body: b,
+      parent_id: parentId,
+      reply_to_author: replyToAuthor,
+    })
     .select('id')
     .single();
   if (error || !post) throw new Error(error?.message ?? 'Kunne ikke sende svaret.');

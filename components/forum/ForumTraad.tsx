@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
@@ -22,8 +22,10 @@ function IndlaegKort({
   megId,
   erModerator,
   isLoggedIn,
+  kanSvare,
   koer,
   skrivTil,
+  onSvar,
   pending,
 }: {
   p: ForumIndlaeg;
@@ -32,8 +34,10 @@ function IndlaegKort({
   megId: string | null;
   erModerator: boolean;
   isLoggedIn: boolean;
+  kanSvare: boolean;
   koer: (fn: () => Promise<void>) => void;
   skrivTil: (authorId: string) => void;
+  onSvar: () => void;
   pending: boolean;
 }) {
   const [redigerer, setRedigerer] = useState(false);
@@ -90,6 +94,13 @@ function IndlaegKort({
           {p.edited && ' · redigeret'}
         </span>
       </div>
+
+      {/* "@Navn" når dette undersvar svarer et andet undersvar */}
+      {p.svarTilNavn && !redigerer && (
+        <p className="mt-1 text-xs text-grafit-400">
+          svarer <span className="font-medium text-grafit-500">@{p.svarTilNavn}</span>
+        </p>
+      )}
 
       {redigerer ? (
         <div className="mt-2 space-y-2">
@@ -184,8 +195,17 @@ function IndlaegKort({
         </div>
       )}
 
-      {!redigerer && (kanRette || kanSkrive || kanRapportere || kanFjernAvatar) && (
+      {!redigerer && (kanSvare || kanRette || kanSkrive || kanRapportere || kanFjernAvatar) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+          {kanSvare && (
+            <button
+              className="font-medium text-kobber-700 hover:text-kobber-800"
+              disabled={pending}
+              onClick={onSvar}
+            >
+              ↩ Svar
+            </button>
+          )}
           {kanRette && (
             <button
               className="text-grafit-500 hover:text-kobber-700"
@@ -301,7 +321,10 @@ export default function ForumTraad({
   const [svarBilleder, setSvarBilleder] = useState<string[]>([]);
   const [billedNulstil, setBilledNulstil] = useState(0);
   const [fejl, setFejl] = useState<string | null>(null);
+  // Hvilket indlæg svarer vi på? null = top-svar til tråden.
+  const [svarTil, setSvarTil] = useState<{ id: string; navn: string } | null>(null);
   const [pending, start] = useTransition();
+  const svarRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
 
   function koer(fn: () => Promise<void>) {
@@ -330,32 +353,78 @@ export default function ForumTraad({
 
   function send() {
     koer(async () => {
-      await svar(threadId, kategoriSlug, traadSlug, ny, svarBilleder);
+      await svar(threadId, kategoriSlug, traadSlug, ny, svarBilleder, svarTil?.id ?? null);
       setNy('');
       setSvarBilleder([]);
+      setSvarTil(null);
       setBilledNulstil((n) => n + 1); // nulstil upload-komponenten
     });
   }
 
-  const antalSvar = Math.max(0, indlaeg.filter((p) => !p.isOpening).length);
+  // Sæt svar-mål og flyt fokus til skrivefeltet nederst.
+  function startSvar(id: string, navn: string) {
+    if (isLocked || !isLoggedIn) return;
+    setSvarTil({ id, navn });
+    requestAnimationFrame(() => {
+      svarRef.current?.focus();
+      svarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  const grundKanSvare = isLoggedIn && !isLocked;
+
+  // Ét niveau (FB): åbning + top-svar, med undersvar grupperet under hvert top-svar.
+  const aabning = indlaeg.find((p) => p.isOpening) ?? null;
+  const topSvar = indlaeg
+    .filter((p) => !p.isOpening && !p.parentId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const underSvarAf = (id: string) =>
+    indlaeg
+      .filter((p) => p.parentId === id && !p.isRemoved)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const antalSvar = indlaeg.filter((p) => !p.isOpening && !p.isRemoved).length;
+
+  const kort = (p: ForumIndlaeg) => (
+    <IndlaegKort
+      key={p.id}
+      p={p}
+      kategoriSlug={kategoriSlug}
+      traadSlug={traadSlug}
+      megId={megId}
+      erModerator={erModerator}
+      isLoggedIn={isLoggedIn}
+      kanSvare={grundKanSvare}
+      koer={koer}
+      skrivTil={skrivTil}
+      onSvar={() => startSvar(p.id, p.forfatter || 'Ejer')}
+      pending={pending}
+    />
+  );
 
   return (
     <div className="mt-6">
       <div className="space-y-3">
-        {indlaeg.map((p) => (
-          <IndlaegKort
-            key={p.id}
-            p={p}
-            kategoriSlug={kategoriSlug}
-            traadSlug={traadSlug}
-            megId={megId}
-            erModerator={erModerator}
-            isLoggedIn={isLoggedIn}
-            koer={koer}
-            skrivTil={skrivTil}
-            pending={pending}
-          />
-        ))}
+        {aabning && kort(aabning)}
+        {topSvar.map((t) => {
+          const boern = underSvarAf(t.id);
+          if (t.isRemoved && boern.length === 0) return null; // fjernet uden undersvar: væk
+          return (
+            <div key={t.id} className="space-y-3">
+              {t.isRemoved ? (
+                <div className="rounded-xl border border-dashed border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-400">
+                  🚫 Svar fjernet
+                </div>
+              ) : (
+                kort(t)
+              )}
+              {boern.length > 0 && (
+                <div className="ml-5 space-y-3 border-l-2 border-grafit-100 pl-3 sm:ml-8 sm:pl-4">
+                  {boern.map((c) => kort(c))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Svar-felt */}
@@ -369,11 +438,27 @@ export default function ForumTraad({
           </div>
         ) : isLoggedIn ? (
           <div className="space-y-2">
+            {svarTil && (
+              <div className="flex items-center gap-2 rounded-lg border border-kobber-200 bg-kobber-50 px-3 py-1.5 text-sm text-grafit-700">
+                <span>
+                  Svarer <span className="font-medium">{svarTil.navn}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSvarTil(null)}
+                  className="ml-auto text-grafit-400 hover:text-kobber-700"
+                  aria-label="Annullér svar-mål"
+                >
+                  × Svar til hele tråden
+                </button>
+              </div>
+            )}
             <textarea
+              ref={svarRef}
               className="input min-h-[100px]"
               value={ny}
               onChange={(e) => setNy(e.target.value)}
-              placeholder="Skriv et svar…"
+              placeholder={svarTil ? `Svar til ${svarTil.navn}…` : 'Skriv et svar…'}
             />
             <BilledeUpload key={billedNulstil} onChange={setSvarBilleder} disabled={pending} />
             <div className="flex items-center gap-3">
