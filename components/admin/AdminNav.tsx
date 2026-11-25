@@ -18,11 +18,11 @@ type Fane = {
 const FANER: Fane[] = [
   { href: '/admin', ikon: '📊', label: 'Overblik' },
   { href: '/admin/feedback', ikon: '🗒️', label: 'Feedback' },
+  { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/forum', ikon: '💬', label: 'Forum' },
   { href: '/admin/links', ikon: '🔗', label: 'Links', kunAdmin: true },
   { href: '/admin/ota', ikon: '📦', label: 'OTA', kunAdmin: true },
   { href: '/admin/beskeder', ikon: '🚩', label: 'Anmeldelser' },
-  { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
   { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },
   { href: '/admin/adgange', ikon: '👥', label: 'Adgange' },
   { href: '/admin/audit', ikon: '🕵️', label: 'Audit', kunSuperadmin: true },

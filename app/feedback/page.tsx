@@ -34,7 +34,7 @@ export default async function FeedbackSide() {
           konstruktive rapporter til Zeekr - som en medspiller, der vil se gode biler blive endnu bedre.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/meld" className="btn-primary">Meld en fejl</Link>
+          <Link href="/meld?type=fejl" className="btn-primary">Meld en fejl</Link>
           <Link href="/meld?type=oenske" className="btn-secondary">Foreslå et ønske</Link>
           {!user && <Link href="/login" className="btn-ghost">Log ind for at bidrage</Link>}
         </div>
