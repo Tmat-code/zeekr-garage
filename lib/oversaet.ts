@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
+import { forberedKilde, genindsaetTermer } from '@/lib/rapport-ordliste';
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
@@ -27,10 +28,21 @@ async function ltKald(tekster: string[], kilde: string, maal: string): Promise<s
   return Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
 }
 
-// da->en direkte; da->andet pivoterer via engelsk (Argos har ingen direkte da->sv).
+// da->en med term-beskyttelse + kilde-rensning (trin 1, nordisk i18n): rens +
+// beskyt den danske kilde FØR oversættelse, og genindsæt de korrekte engelske
+// termer EFTER. Fanger de tilbagevendende fagtermer (modkørende, vognbaneskift,
+// lade-punkt, ACC/LCC/OTA ...) som LibreTranslate ellers vender om eller æder.
+async function daTilEngelsk(tekster: string[]): Promise<string[]> {
+  const forberedt = tekster.map(forberedKilde);
+  const raa = await ltKald(forberedt.map((f) => f.tekst), 'da', 'en');
+  return raa.map((t, i) => genindsaetTermer(t, forberedt[i].erstatninger));
+}
+
+// da->en direkte; da->andet pivoterer via den RENSEDE/BESKYTTEDE engelske (Argos
+// har ingen direkte da->sv), så term-beskyttelsen også løfter pivot-sprogene.
 async function libreOversaet(tekster: string[], maal: string): Promise<string[]> {
-  if (maal === 'en') return ltKald(tekster, 'da', 'en');
-  const engelsk = await ltKald(tekster, 'da', 'en');
+  const engelsk = await daTilEngelsk(tekster);
+  if (maal === 'en') return engelsk;
   return ltKald(engelsk, 'en', maal);
 }
 
