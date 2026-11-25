@@ -1,5 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { forumBilledeUrl, avatarUrl } from '@/lib/billeder';
+import { foersteUrl, normaliserUrl } from '@/lib/forum-links';
 import type {
   ForumGruppe,
   ForumKategori,
@@ -301,7 +302,7 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
     .order('is_opening', { ascending: false })
     .order('created_at', { ascending: true });
 
-  return ((data ?? []) as any[]).map((r) => {
+  const poster: ForumIndlaeg[] = ((data ?? []) as any[]).map((r) => {
     const { navn, bil, avatar } = mapAuthor(r.author);
     const fjernet = r.is_removed ?? false;
     const sorterede = ((r.billeder ?? []) as any[]).sort(
@@ -328,6 +329,45 @@ export async function getIndlaeg(threadId: string): Promise<ForumIndlaeg[]> {
       svarTilNavn: fjernet ? null : svarTilNavn,
       billeder,
       billederPaths,
+      linkPreview: null,
     };
   });
+
+  // P38: slå første URL i hvert (ikke-fjernet) indlæg op i preview-cachen og
+  // hæng et kort på. Cachen er keyet på den NORMALISEREDE URL; vi beholder den
+  // rå URL til den klikbare titel. ÉT kort pr. indlæg (første link). Best-effort:
+  // mangler tabellen (migration ikke kørt endnu) sluges fejlen -> ingen kort.
+  const raaUrlPr: Record<string, string> = {};
+  const noegler = new Set<string>();
+  for (const p of poster) {
+    if (p.isRemoved || !p.body) continue;
+    const raw = foersteUrl(p.body);
+    if (!raw) continue;
+    raaUrlPr[p.id] = raw;
+    noegler.add(normaliserUrl(raw));
+  }
+  if (noegler.size > 0) {
+    const { data: previews } = await sb
+      .from('forum_link_previews')
+      .select('url, title, description, image_url, ok')
+      .in('url', Array.from(noegler));
+    const kort: Record<string, any> = {};
+    for (const row of (previews ?? []) as any[]) {
+      if (row.ok && (row.title || row.image_url)) kort[row.url] = row;
+    }
+    for (const p of poster) {
+      const raw = raaUrlPr[p.id];
+      if (!raw) continue;
+      const row = kort[normaliserUrl(raw)];
+      if (!row) continue;
+      p.linkPreview = {
+        url: raw,
+        title: row.title ?? null,
+        description: row.description ?? null,
+        image: row.image_url ?? null,
+      };
+    }
+  }
+
+  return poster;
 }

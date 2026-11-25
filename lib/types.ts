@@ -139,6 +139,15 @@ export type ForumIndlaeg = {
   svarTilNavn: string | null; // "@Navn" - den direkte besvarede, kun på undersvar der svarer et undersvar
   billeder: string[]; // offentlige URL'er til vedhæftede billeder
   billederPaths: string[]; // rå storage-paths, parallelt ordnet med billeder (til redigering)
+  linkPreview: ForumLinkPreview | null; // P38: Open Graph-kort for første URL i body
+};
+
+// Et link-preview-kort (Open Graph-snapshot) for første URL i et indlæg (P38).
+export type ForumLinkPreview = {
+  url: string; // den oprindelige (klikbare) URL fra body
+  title: string | null;
+  description: string | null;
+  image: string | null; // hotlinket og:image-URL (eller null)
 };
 
 // Et tvaergaaende soege-resultat (en traad der matcher i titel eller indlaeg).

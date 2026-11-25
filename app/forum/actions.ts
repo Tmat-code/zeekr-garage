@@ -5,6 +5,34 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator } from '@/lib/admin';
 import { MAKS_ANTAL, FORUM_BUCKET } from '@/lib/billeder';
 import { MOD_GRUND_VALUES } from '@/lib/moderering';
+import { foersteUrl, normaliserUrl } from '@/lib/forum-links';
+import { hentLinkPreview } from '@/lib/link-preview';
+
+// P38: detektér FØRSTE http(s)-URL i et indlægs body, hent sidens Open Graph-
+// snapshot (SSRF-sikkert) og cache det via RPC'en, keyet på den NORMALISEREDE
+// URL. BEST-EFFORT: enhver fejl sluges, så et indlæg ALDRIG fejler på at hente
+// et preview. Fås intet brugbart (blokeret/timeout/ingen OG) gemmes ok=false,
+// så rendereren viser intet kort og vi ikke gen-henter den samme døde URL.
+async function opdaterLinkPreview(
+  sb: ReturnType<typeof supabaseServer>,
+  body: string,
+): Promise<void> {
+  try {
+    const url = foersteUrl(body);
+    if (!url) return;
+    const key = normaliserUrl(url);
+    const preview = await hentLinkPreview(url);
+    await sb.rpc('forum_saet_link_preview', {
+      p_url: key,
+      p_title: preview?.title ?? null,
+      p_desc: preview?.description ?? null,
+      p_image: preview?.image ?? null,
+      p_ok: !!(preview && (preview.title || preview.image)),
+    });
+  } catch {
+    /* best-effort: intet kort, men indlægget står */
+  }
+}
 
 // Vedhæft uploadede billeder (storage-paths) til et indlæg. Validerer at hvert
 // path ligger i brugerens egen mappe (<user_id>/...). RLS tjekker også ejerskab.
@@ -98,6 +126,7 @@ export async function opretTraad(
   }
 
   await tilfoejBilleder(sb, aabning.id, user.id, billeder);
+  await opdaterLinkPreview(sb, b);
 
   revalider(kategoriSlug, traad.slug);
   return `/forum/${kategoriSlug}/${traad.slug}`;
@@ -159,6 +188,7 @@ export async function svar(
   if (error || !post) throw new Error(error?.message ?? 'Kunne ikke sende svaret.');
 
   await tilfoejBilleder(sb, post.id, user.id, billeder);
+  await opdaterLinkPreview(sb, b);
   revalider(kategoriSlug, traadSlug);
 }
 
@@ -231,6 +261,9 @@ export async function retIndlaeg(
   if (tilfoejes.length > 0) {
     await tilfoejBilleder(sb, postId, user.id, tilfoejes, beholdte.length);
   }
+
+  // Redigering kan have ændret body'ens første URL -> genhent snapshottet.
+  await opdaterLinkPreview(sb, b);
 
   revalider(kategoriSlug, traadSlug);
 }

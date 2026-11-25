@@ -14,6 +14,8 @@ import { svar, retIndlaeg, fjernIndlaeg, modFjernIndlaeg, modFjernAvatar } from 
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import RapporterKnap from '@/components/forum/RapporterKnap';
+import AutolinkTekst from '@/components/forum/AutolinkTekst';
+import LinkPreviewKort from '@/components/forum/LinkPreviewKort';
 
 function IndlaegKort({
   p,
@@ -191,7 +193,15 @@ function IndlaegKort({
           </div>
         </div>
       ) : (
-        p.body && <p className="mt-2 whitespace-pre-line text-grafit-800">{p.body}</p>
+        <>
+          {p.body && (
+            <p className="mt-2 whitespace-pre-line break-words text-grafit-800">
+              <AutolinkTekst text={p.body} />
+            </p>
+          )}
+          {/* P38: ét link-preview-kort pr. indlæg (første URL i body) */}
+          {p.linkPreview && <LinkPreviewKort preview={p.linkPreview} />}
+        </>
       )}
 
       {!redigerer && p.billeder.length > 0 && (
