@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/tid';
@@ -9,6 +10,11 @@ import type { Notifikation } from '@/lib/types';
 // Facebook-agtig klokke: ulaest-badge + dropdown. Supabase Realtime -> badgen
 // opdaterer live uden refresh. SSR giver start-tallet (ingen tom-blink).
 type Props = { userId: string; initialUnread: number };
+
+// Samme navn som i NotifikationerListe - /notifikationer-siden fyrer dette
+// window-event naar den sletter/markerer laest, saa klokken opfriskes med (de
+// to komponenter deler ingen state, og realtime her lytter kun paa INSERT).
+const NOTIF_EVENT = 'notifikationer:aendret';
 
 // Lille type-ikon foran teksten, saa en notifikation er genkendelig paa ét blik.
 // Ukendte typer falder tilbage til en neutral prik (ingen "tom" raekke).
@@ -140,6 +146,13 @@ export default function NotifBell({ userId, initialUnread }: Props) {
     };
   }, [hent]);
 
+  // --- Foelg med naar /notifikationer-siden sletter/markerer laest ---
+  useEffect(() => {
+    const paaAendret = () => void hent();
+    window.addEventListener(NOTIF_EVENT, paaAendret);
+    return () => window.removeEventListener(NOTIF_EVENT, paaAendret);
+  }, [hent]);
+
   // --- Luk ved klik udenfor + Escape ---
   useEffect(() => {
     if (!open) return;
@@ -264,6 +277,16 @@ export default function NotifBell({ userId, initialUnread }: Props) {
                 ))}
               </ul>
             )}
+          </div>
+
+          <div className="border-t border-grafit-100 px-3 py-2 text-center">
+            <Link
+              href="/notifikationer"
+              onClick={() => setOpen(false)}
+              className="text-sm font-medium text-kobber-700 hover:underline"
+            >
+              Se alle
+            </Link>
           </div>
         </div>
       )}
