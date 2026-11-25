@@ -45,6 +45,7 @@ export function beskedBilledeUrl(path: string): string {
 export const TILLADTE_TYPER = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export const MAKS_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAKS_ANTAL = 6; // billeder pr. indlæg
+export const MELD_MAKS_BILLEDER = 2; // billeder pr. feedback-melding
 
 // Avatar (P22): klient-resizes til et lille kvadrat (center-beskaeret) som JPEG,
 // saa den uploadede fil altid er lille uanset kilde-stoerrelse.

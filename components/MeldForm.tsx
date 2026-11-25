@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { SEVERITIES, SEVERITY_STYLE, ISSUE_CATEGORIES, type Severity, type IssueType } from '@/lib/config';
-import { MELD_BUCKET, MAKS_ANTAL, meldBilledeUrl } from '@/lib/billeder';
+import { MELD_BUCKET, MELD_MAKS_BILLEDER, meldBilledeUrl } from '@/lib/billeder';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import type { Model } from '@/lib/types';
 
@@ -89,7 +89,7 @@ export default function MeldForm({
       // her må ikke tabe selve meldingen (billederne ryddes evt. senere, P9).
       const rene = billeder
         .filter((p) => typeof p === 'string' && p.startsWith(`${user.id}/`))
-        .slice(0, MAKS_ANTAL);
+        .slice(0, MELD_MAKS_BILLEDER);
       if (rene.length > 0) {
         await sb
           .from('issue_images')
@@ -148,7 +148,7 @@ export default function MeldForm({
             ? 'Vedhæft fx en skitse eller et eksempel på funktionen.'
             : 'Foto-bevis vejer tungt over for Zeekr - skærmbillede af fejlbesked/OTA-skærm, en fysisk defekt eller en log.'}
         </p>
-        <BilledeUpload bucket={MELD_BUCKET} urlFor={meldBilledeUrl} onChange={setBilleder} disabled={busy} />
+        <BilledeUpload bucket={MELD_BUCKET} urlFor={meldBilledeUrl} maksAntal={MELD_MAKS_BILLEDER} onChange={setBilleder} disabled={busy} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
