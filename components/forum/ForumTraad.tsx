@@ -50,6 +50,9 @@ function IndlaegKort({
   const [uploadNulstil, setUploadNulstil] = useState(0);
   const minEgen = !!megId && p.authorId === megId;
   const kanRette = minEgen || erModerator;
+  // Svar-knappen vises IKKE på åbningsindlægget: at svare på selve tråd-opslaget
+  // er bare et top-svar (den nederste skrivboks), ikke noget der rykker ind.
+  const kanSvarePaa = kanSvare && !p.isOpening;
   // Åbnings-indlægget fjernes ikke her (brug "Fjern tråd" i moderering).
   // Egen sletning = plain (ingen grund/notif). Moderator-fjern af ANDRES indlæg
   // kræver grund + giver forfatteren en officiel notifikation (P21).
@@ -195,9 +198,9 @@ function IndlaegKort({
         </div>
       )}
 
-      {!redigerer && (kanSvare || kanRette || kanSkrive || kanRapportere || kanFjernAvatar) && (
+      {!redigerer && (kanSvarePaa || kanRette || kanSkrive || kanRapportere || kanFjernAvatar) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-          {kanSvare && (
+          {kanSvarePaa && (
             <button
               className="font-medium text-kobber-700 hover:text-kobber-800"
               disabled={pending}
