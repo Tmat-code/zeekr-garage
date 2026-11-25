@@ -26,7 +26,7 @@ export default function LinkPreviewKort({ preview }: { preview: ForumLinkPreview
       href={preview.url}
       target="_blank"
       rel="noopener noreferrer nofollow"
-      className={`group mt-2 block max-w-sm overflow-hidden rounded-xl border border-grafit-200 bg-white transition-all hover:border-kobber-300 hover:shadow-sm ${
+      className={`group mt-2 block max-w-[340px] overflow-hidden rounded-xl border border-grafit-200 bg-white transition-all hover:border-kobber-300 hover:shadow-sm ${
         visBillede ? '' : 'border-l-[3px] border-l-kobber-400'
       }`}
     >
