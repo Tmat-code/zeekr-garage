@@ -26,6 +26,22 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
     description: BESKRIVELSE,
+    // Delings-/preview-billede (grafit+kobber-banner). metadataBase gør den absolut,
+    // så Facebook/Messenger + vores egne forum-link-kort (P38) viser et billede.
+    images: [
+      {
+        url: '/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'Zeekr Garage - uofficielt community for Zeekr-ejere i Norden',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
+    description: BESKRIVELSE,
+    images: ['/og-default.png'],
   },
 };
 

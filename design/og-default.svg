@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0e0f12"/>
+  <!-- subtil grafit-panel-kant -->
+  <rect x="0" y="0" width="1200" height="630" fill="none"/>
+  <!-- kobber accent-barer top/bund (ren, ikke bugherrers fare-striber) -->
+  <rect x="0" y="0" width="1200" height="10" fill="#c2683f"/>
+  <rect x="0" y="620" width="1200" height="10" fill="#c2683f"/>
+  <!-- dæmpet kobber hairline under wordmark -->
+  <rect x="72" y="360" width="120" height="5" fill="#c2683f"/>
+
+  <!-- pill -->
+  <rect x="72" y="92" width="232" height="46" rx="23" fill="#c2683f"/>
+  <text x="188" y="123" font-family="Archivo Black" font-size="22" letter-spacing="2" fill="#0e0f12" text-anchor="middle">COMMUNITY</text>
+
+  <!-- wordmark -->
+  <text x="70" y="300" font-family="Archivo Black" font-size="122" letter-spacing="-2">
+    <tspan fill="#eceef0">Zeekr</tspan><tspan fill="#d67c4f" dx="30">Garage</tspan>
+  </text>
+
+  <!-- tagline -->
+  <text x="74" y="420" font-family="Archivo SemiBold" font-weight="700" font-size="40" fill="#d5d9dd">Uofficielt community for Zeekr-ejere i Norden</text>
+
+  <!-- footer meta -->
+  <text x="74" y="565" font-family="Archivo SemiBold" font-weight="700" font-size="27" fill="#848d98">Meld &#183; bekr&#230;ft &#183; stem p&#229; softwarefejl &#183; <tspan fill="#d67c4f">zeekr-garage.dk</tspan></text>
+</svg>
