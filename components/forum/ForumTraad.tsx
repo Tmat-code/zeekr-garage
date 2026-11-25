@@ -76,6 +76,9 @@ function IndlaegKort({
   const restPlads = Math.max(0, MAKS_ANTAL - beholdtePaths.length);
   const harIndhold = tekst.trim().length > 0 || beholdtePaths.length + nyeBilleder.length > 0;
   const kanGemme = p.isOpening ? tekst.trim().length > 0 : harIndhold;
+  // P38 (FB-stil): er indlægget KUN linket (intet andet), skjul URL-teksten og
+  // vis bare kortet. Er der også tekst, beholdes den (med linket klikbart) + kort.
+  const kunLink = !!p.linkPreview && p.body.trim() === p.linkPreview.url;
 
   function nulstilRedigering() {
     setTekst(p.body);
@@ -194,12 +197,13 @@ function IndlaegKort({
         </div>
       ) : (
         <>
-          {p.body && (
+          {p.body && !kunLink && (
             <p className="mt-2 whitespace-pre-line break-words text-grafit-800">
               <AutolinkTekst text={p.body} />
             </p>
           )}
-          {/* P38: ét link-preview-kort pr. indlæg (første URL i body) */}
+          {/* P38: ét link-preview-kort pr. indlæg (første URL i body). Er indlægget
+              kun linket, står kortet alene (URL-teksten skjult, FB-stil). */}
           {p.linkPreview && <LinkPreviewKort preview={p.linkPreview} />}
         </>
       )}
