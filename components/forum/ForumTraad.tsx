@@ -325,6 +325,8 @@ export default function ForumTraad({
   const [fejl, setFejl] = useState<string | null>(null);
   // Hvilket indlæg svarer vi på? null = top-svar til tråden.
   const [svarTil, setSvarTil] = useState<{ id: string; navn: string } | null>(null);
+  // Hvilke svar-grupper er foldet UD (ellers pakket bag "Vis N svar").
+  const [vist, setVist] = useState<Set<string>>(() => new Set());
   const [pending, start] = useTransition();
   const svarRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -363,10 +365,12 @@ export default function ForumTraad({
     });
   }
 
-  // Sæt svar-mål og flyt fokus til skrivefeltet nederst.
-  function startSvar(id: string, navn: string) {
+  // Sæt svar-mål og flyt fokus til skrivefeltet nederst. Fold samtidig den gruppe
+  // ud, svaret lander i (ankeret), så man ser konteksten + sit svar bagefter.
+  function startSvar(id: string, navn: string, ankerId: string) {
     if (isLocked || !isLoggedIn) return;
     setSvarTil({ id, navn });
+    setVist((s) => new Set(s).add(ankerId));
     requestAnimationFrame(() => {
       svarRef.current?.focus();
       svarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -398,18 +402,37 @@ export default function ForumTraad({
       kanSvare={grundKanSvare}
       koer={koer}
       skrivTil={skrivTil}
-      onSvar={() => startSvar(p.id, p.forfatter || 'Ejer')}
+      onSvar={() => startSvar(p.id, p.forfatter || 'Ejer', p.parentId ?? p.id)}
       pending={pending}
     />
   );
 
-  // Indrykket blok med et indlægs undersvar (null hvis ingen).
+  // Indrykket blok med et indlægs undersvar, pakket bag "Vis N svar" (som FB), så
+  // en tråd med mange svar ikke bliver uendelig lang.
   const boernBlok = (id: string) => {
     const boern = underSvarAf(id);
     if (boern.length === 0) return null;
+    const aaben = vist.has(id);
     return (
-      <div className="ml-5 space-y-3 border-l-2 border-grafit-100 pl-3 sm:ml-8 sm:pl-4">
-        {boern.map((c) => kort(c))}
+      <div className="ml-5 sm:ml-8">
+        <button
+          className="mb-2 flex items-center gap-1 text-sm font-medium text-kobber-700 hover:text-kobber-800"
+          onClick={() =>
+            setVist((s) => {
+              const n = new Set(s);
+              if (n.has(id)) n.delete(id);
+              else n.add(id);
+              return n;
+            })
+          }
+        >
+          {aaben ? '▾ Skjul svar' : `▸ Vis ${boern.length} svar`}
+        </button>
+        {aaben && (
+          <div className="space-y-3 border-l-2 border-grafit-100 pl-3 sm:pl-4">
+            {boern.map((c) => kort(c))}
+          </div>
+        )}
       </div>
     );
   };
