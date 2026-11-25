@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/tid';
@@ -27,6 +27,7 @@ function IndlaegKort({
   skrivTil,
   onSvar,
   pending,
+  fremhaevet,
 }: {
   p: ForumIndlaeg;
   kategoriSlug: string;
@@ -39,6 +40,7 @@ function IndlaegKort({
   skrivTil: (authorId: string) => void;
   onSvar: () => void;
   pending: boolean;
+  fremhaevet: boolean;
 }) {
   const [redigerer, setRedigerer] = useState(false);
   const [modFjerner, setModFjerner] = useState(false);
@@ -83,8 +85,9 @@ function IndlaegKort({
 
   return (
     <div
-      className={`rounded-xl border p-4 ${
-        p.isOpening ? 'border-grafit-200 bg-white' : 'border-grafit-200 bg-white'
+      id={`post-${p.id}`}
+      className={`scroll-mt-24 rounded-xl border p-4 transition-colors duration-700 ${
+        fremhaevet ? 'border-kobber-400 bg-kobber-50 ring-2 ring-kobber-300' : 'border-grafit-200 bg-white'
       }`}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -327,9 +330,42 @@ export default function ForumTraad({
   const [svarTil, setSvarTil] = useState<{ id: string; navn: string } | null>(null);
   // Hvilke svar-grupper er foldet UD (ellers pakket bag "Vis N svar").
   const [vist, setVist] = useState<Set<string>>(() => new Set());
+  // Hvilket indlæg skal fremhæves kort (deep-link fra en notifikation).
+  const [fremhaev, setFremhaev] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const svarRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+
+  // Deep-link fra en notifikation: '#post-<id>' -> fold evt. gruppen ud, scroll
+  // til indlægget og fremhæv det kort. Kører ved mount (direkte landing) og på
+  // hashchange (notif-klik mens man allerede står i tråden).
+  useEffect(() => {
+    function gaaTilHash() {
+      const m = /^#post-(.+)$/.exec(window.location.hash);
+      if (!m) return;
+      const id = m[1];
+      const maal = indlaeg.find((p) => p.id === id);
+      if (!maal) return;
+      // Ligger svaret i en sammenfoldet "Vis N svar"-gruppe? Fold den ud, ellers
+      // lander linket på noget skjult.
+      if (maal.parentId) {
+        setVist((s) => (s.has(maal.parentId!) ? s : new Set(s).add(maal.parentId!)));
+      }
+      // Vent til (en evt.) udfoldning er renderet, så elementet findes i DOM'en.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const el = document.getElementById(`post-${id}`);
+          if (!el) return;
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setFremhaev(id);
+          window.setTimeout(() => setFremhaev((cur) => (cur === id ? null : cur)), 2600);
+        }),
+      );
+    }
+    gaaTilHash();
+    window.addEventListener('hashchange', gaaTilHash);
+    return () => window.removeEventListener('hashchange', gaaTilHash);
+  }, [indlaeg]);
 
   function koer(fn: () => Promise<void>) {
     setFejl(null);
@@ -404,6 +440,7 @@ export default function ForumTraad({
       skrivTil={skrivTil}
       onSvar={() => startSvar(p.id, p.forfatter || 'Ejer', p.parentId ?? p.id)}
       pending={pending}
+      fremhaevet={fremhaev === p.id}
     />
   );
 
