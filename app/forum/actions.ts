@@ -122,27 +122,25 @@ export async function svar(
   if (!b && !harBilleder) throw new Error('Skriv et svar eller vedhæft et billede.');
   if (b.length > 10000) throw new Error('Svaret er for langt.');
 
-  // Ét niveau (FB-stil): fladebalancér målet til et top-svar-anker.
-  //  - mål = åbningsindlæg        -> top-svar (parent null)
-  //  - mål = et top-svar          -> undersvar under det (parent = målet)
-  //  - mål = et undersvar         -> undersvar under SAMME anker + "@Navn" til målets forfatter
+  // Ét niveau (FB-stil): fladebalancér målet til et top-niveau-anker, så svaret
+  // lander indrykket lige under det, man svarer på.
+  //  - mål = åbning eller et top-svar  -> undersvar under det (anker = målet)
+  //  - mål = et undersvar              -> undersvar under SAMME anker + "@Navn" til målets forfatter
   let parentId: string | null = null;
   let replyToAuthor: string | null = null;
   if (svarTilPostId) {
     const { data: maal } = await sb
       .from('forum_posts')
-      .select('id, thread_id, is_opening, parent_id, author_id')
+      .select('id, thread_id, parent_id, author_id')
       .eq('id', svarTilPostId)
       .single();
     if (!maal || maal.thread_id !== threadId) {
       throw new Error('Svar-målet findes ikke i tråden.');
     }
-    if (maal.is_opening) {
-      // top-svar
-    } else if (!maal.parent_id) {
-      parentId = maal.id;
+    if (!maal.parent_id) {
+      parentId = maal.id; // åbning eller top-svar: anker = målet
     } else {
-      parentId = maal.parent_id;
+      parentId = maal.parent_id; // undersvar: flad ud til ankeret
       replyToAuthor = maal.author_id ?? null;
     }
   }

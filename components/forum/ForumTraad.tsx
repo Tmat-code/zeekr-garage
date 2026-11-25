@@ -50,9 +50,8 @@ function IndlaegKort({
   const [uploadNulstil, setUploadNulstil] = useState(0);
   const minEgen = !!megId && p.authorId === megId;
   const kanRette = minEgen || erModerator;
-  // Svar-knappen vises IKKE på åbningsindlægget: at svare på selve tråd-opslaget
-  // er bare et top-svar (den nederste skrivboks), ikke noget der rykker ind.
-  const kanSvarePaa = kanSvare && !p.isOpening;
+  // Svar på et hvilket som helst indlæg (også åbningen) lander indrykket under det.
+  const kanSvarePaa = kanSvare;
   // Åbnings-indlægget fjernes ikke her (brug "Fjern tråd" i moderering).
   // Egen sletning = plain (ingen grund/notif). Moderator-fjern af ANDRES indlæg
   // kræver grund + giver forfatteren en officiel notifikation (P21).
@@ -404,10 +403,26 @@ export default function ForumTraad({
     />
   );
 
+  // Indrykket blok med et indlægs undersvar (null hvis ingen).
+  const boernBlok = (id: string) => {
+    const boern = underSvarAf(id);
+    if (boern.length === 0) return null;
+    return (
+      <div className="ml-5 space-y-3 border-l-2 border-grafit-100 pl-3 sm:ml-8 sm:pl-4">
+        {boern.map((c) => kort(c))}
+      </div>
+    );
+  };
+
   return (
     <div className="mt-6">
       <div className="space-y-3">
-        {aabning && kort(aabning)}
+        {aabning && (
+          <div className="space-y-3">
+            {kort(aabning)}
+            {boernBlok(aabning.id)}
+          </div>
+        )}
         {topSvar.map((t) => {
           const boern = underSvarAf(t.id);
           if (t.isRemoved && boern.length === 0) return null; // fjernet uden undersvar: væk
@@ -420,11 +435,7 @@ export default function ForumTraad({
               ) : (
                 kort(t)
               )}
-              {boern.length > 0 && (
-                <div className="ml-5 space-y-3 border-l-2 border-grafit-100 pl-3 sm:ml-8 sm:pl-4">
-                  {boern.map((c) => kort(c))}
-                </div>
-              )}
+              {boernBlok(t.id)}
             </div>
           );
         })}
