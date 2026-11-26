@@ -19,13 +19,14 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // kilde aldrig forveksles i `oversaettelser` - ingen migration nødvendig.
 // BEMÆRK: dette er RAPPORTENS motor. Forum-oversættelsen (senere trin 3) skal blive
 // på LibreTranslate/gist og må IKKE route gennem denne NLLB-vej.
-// v2-nllb-c (bumpet igen 26-11 efter live-test): det FØRSTE degenerations-værn
-// (v2-nllb-b) var for konservativt og missede den faktiske "The following is the
-// list of the following"-degeneration i top-20-rapporten. Omkalibreret + re-bumpet,
-// så alt re-evalueres gennem det rettede værn (og en evt. forkert-cachet #1 fra
-// v2-nllb-b bustes). Dækker også 2.3-ordlisten. Hash dækker fortsat HELE meldingen
-// (titel+beskrivelse), ingen migration.
-const MOTOR_ID = NLLB_URL ? 'v2-nllb-c' : 'v1';
+// v2-nllb-d (trin 2.4, titel-rutning): den fulde "alle"-rapport viste at
+// degenerations-værnet (v2-nllb-c) kun fangede den GENTAGENDE #1 - tre flere korte
+// titler degenererede til flydende, ikke-gentagende boilerplate som heuristik ikke
+// kan fange. Løsningen er rutning, ikke mere detektion: titler oversættes nu med
+// LibreTranslate (se oversaetFejl), beskrivelser + kommentarer bliver på NLLB.
+// Bumpet buster cachen så titlerne re-oversættes via LibreTranslate. Hash dækker
+// fortsat HELE meldingen (titel+beskrivelse), ingen migration.
+const MOTOR_ID = NLLB_URL ? 'v2-nllb-d' : 'v1';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -150,48 +151,49 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
   const KLUMP = 5;
   for (let start = 0; start < mangler.length; start += KLUMP) {
     const gruppe = mangler.slice(start, start + KLUMP);
-    const tekster: string[] = [];
-    gruppe.forEach((i) => tekster.push(fejl[i].title, fejl[i].description));
-
-    let oversat: string[];
+    // TITEL-RUTNING (trin 2.4): titler -> ALTID LibreTranslate; beskrivelser -> NLLB.
+    // NLLB (grådig, distilleret) hallucinerer korte TITLER til flydende, IKKE-
+    // gentagende boilerplate ("The vehicle shall be equipped with a 'R' system",
+    // "The following information is provided for the purpose of this Annex") der
+    // hverken er et drop eller gentagende - altså uopdageligt for det heuristiske
+    // værn - og OVENI er det ikke-deterministisk: samme titel kan være fin i én
+    // kørsel og degenereret i næste (batch-afhængigt, da alle sætninger sendes i ét
+    // kald). Heuristik-jagt er derfor whack-a-mole. I stedet fjernes ÅRSAGEN: NLLB
+    // free-runner kun på korte input, så korte titler oversættes med LibreTranslate
+    // (mere ordret, laver ikke den fejl). Beskrivelser (længere tekst) bliver på
+    // NLLB hvor den er stærk og ikke degenererer, med content-loss-/degenerations-
+    // værnet som backup. Budskabet skal nå frem - en lidt mindre flydende titel er
+    // langt bedre end hallucineret boilerplate der vildleder Zeekr.
+    let oversatTitler: string[];
+    let oversatBeskr: string[];
     try {
-      oversat = await motorOversaet(tekster, maal);
+      [oversatTitler, oversatBeskr] = await Promise.all([
+        motorOversaet(gruppe.map((i) => fejl[i].title), maal, true), // tving LibreTranslate
+        motorOversaet(gruppe.map((i) => fejl[i].description), maal),  // NLLB
+      ]);
     } catch (e) {
       console.error('[oversaet] klump fejlede, beholder dansk:', e);
       continue;
     }
 
-    // Trin 2.1 længde-vagt + trin 2.2 degenerations-værn: NLLB (grådig) kan enten
-    // DROPPE en hel sætning i lange meldinger (`erIndholdstab`, pr. melding) ELLER
-    // hallucinere en kort TITEL til looping-boilerplate (`erDegeneration`, pr. felt
-    // - degenerationen rammer det korte felt og ville udvandes i en kombineret
-    // titel+beskrivelse-sammenligning). Begge genoversættes NETOP den melding med
-    // LibreTranslate (samme graceful `tvingLT`-mønster). Kun når NLLB er aktiv OG
-    // der er en LibreTranslate at falde tilbage til.
+    // Content-loss-/degenerations-værn på BESKRIVELSERNE (NLLB-stien): kan NLLB
+    // droppe en sætning (`erIndholdstab`) eller - sjældent på længere tekst -
+    // degenerere (`erDegeneration`), genoversæt NETOP den beskrivelse med
+    // LibreTranslate. Titlerne er allerede LibreTranslate, så de behøver ikke værnet.
     if (NLLB_URL && LT_URL) {
       const tabt: number[] = []; // indeks ind i gruppe
       gruppe.forEach((i, j) => {
-        const kilde = `${fejl[i].title}\n${fejl[i].description}`;
-        const ud = `${oversat[j * 2] ?? ''}\n${oversat[j * 2 + 1] ?? ''}`;
-        const titelUd = oversat[j * 2] ?? '';
-        const beskUd = oversat[j * 2 + 1] ?? '';
-        if (
-          erIndholdstab(kilde, ud) ||
-          erDegeneration(fejl[i].title, titelUd) ||
-          erDegeneration(fejl[i].description, beskUd)
-        ) tabt.push(j);
+        const ud = oversatBeskr[j] ?? '';
+        if (erIndholdstab(fejl[i].description, ud) || erDegeneration(fejl[i].description, ud)) tabt.push(j);
       });
       if (tabt.length > 0) {
-        const ltTekster: string[] = [];
-        tabt.forEach((j) => ltTekster.push(fejl[gruppe[j]].title, fejl[gruppe[j]].description));
         try {
-          const ltUd = await motorOversaet(ltTekster, maal, true); // tving LibreTranslate
+          const ltUd = await motorOversaet(tabt.map((j) => fejl[gruppe[j]].description), maal, true);
           tabt.forEach((j, k) => {
-            if (ltUd[k * 2] != null) oversat[j * 2] = ltUd[k * 2];
-            if (ltUd[k * 2 + 1] != null) oversat[j * 2 + 1] = ltUd[k * 2 + 1];
+            if (ltUd[k] != null) oversatBeskr[j] = ltUd[k];
           });
         } catch (e) {
-          console.error('[oversaet] længde-vagt: LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
+          console.error('[oversaet] beskrivelses-vagt: LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
         }
       }
     }
@@ -199,8 +201,8 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
     const upserts: any[] = [];
     gruppe.forEach((i, j) => {
       const f = fejl[i];
-      const nyTitel = oversat[j * 2] ?? f.title;
-      const nyBesk = oversat[j * 2 + 1] ?? f.description;
+      const nyTitel = oversatTitler[j] ?? f.title;
+      const nyBesk = oversatBeskr[j] ?? f.description;
       resultat[i] = { ...f, title: nyTitel, description: nyBesk };
       upserts.push({
         issue_id: f.id,
