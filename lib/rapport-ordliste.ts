@@ -379,21 +379,32 @@ export function erIndholdstab(kilde: string, oversat: string): boolean {
 
 // --- Degenerations-værn (trin 2.2) -------------------------------------------
 // NLLB (distilleret, grådig beam=1) hallucinerer lejlighedsvis en KORT titel til
-// looping-boilerplate ("The following is the list of the list of ...") - set live
-// 26-11 (ADAS-meldinger #1/#4/#8). Det er IKKE et drop (outputtet er lige langt
+// boilerplate - set LIVE i top-20-rapporten 26-11: melding #1's titel blev
+// "The following is the list of the following:" (den ægte danske titel om
+// selv-bremsning forsvandt helt). Det er IKKE et drop (outputtet er lige langt
 // eller LÆNGERE end kilden), så længde-vagten `erIndholdstab` fanger det ikke.
 // Dette er modstykket: fanger output der er degenereret snarere end tabt. Routes
 // til SAMME `tvingLT`->LibreTranslate-fallback pr. melding i oversaet.ts.
 //
-// To sprog-AGNOSTISKE signaler (ingen hardcodede engelske fraser - sv dækkes med):
+// KALIBRERET MOD DEN FAKTISKE FEJL (26-11): den rigtige degeneration er MILDERE
+// end de ekstreme loops man forestiller sig - "The following is the list of the
+// following" har kun unik-ratio ~0,63 og ét bigram gentaget 2x. En første, for
+// konservativ udgave (<0,5 og >=3) MISSEDE den. Tærsklerne her er sat så den
+// fanges, OG så alle 19 øvrige rigtige titler i samme rapport IKKE flagges
+// (ADAS interrupts in heavy rain, Cruise control, Improve ACC and LCC tuning ...).
+//
+// Tre sprog-AGNOSTISKE signaler (ingen hardcodede engelske fraser - sv dækkes med):
 //  A) længde-blowup: en KORT kilde (<=40 tegn) hvis output er drastisk længere
-//     (>=2,5x tegn OG mindst 30 tegn ekstra) - en looping-titel bliver mange
-//     gange længere, mens en normal kort da->en/sv-oversættelse aldrig er det.
-//  B) intern gentagelse: outputtet har både lav unik-ord-ratio OG et bigram der
-//     gentages >=3 gange (looping gentager de samme par ord). Konjunktion, så en
-//     normal tekst med ét tilfældigt gentaget bigram ikke flagges.
-// Konservativ: begge veje kræver et tydeligt afvigende mønster; en normal kort
-// titel ("Bakkamera fryser på motorvej") eller en normal lang melding lades være.
+//     (>=2,5x tegn OG mindst 30 tegn ekstra).
+//  B) kort/titel-agtigt output (6..14 ord) der er boilerplate: et bigram gentaget
+//     (>=2x) i lav-diversitets-tekst (unik-ratio <0,7), ELLER ét ord der dominerer
+//     (>=40% af ordene). Øvre ord-grænse, så en ægte men ordrig BESKRIVELSE ikke
+//     rammes (lange tekster har naturligt lavere unik-ratio).
+//  C) ekstrem looping (vilkårlig længde): så lav diversitet (<0,4) OG så gentaget
+//     (bigram >=3x) at ægte tekst aldrig rammer det - fanger lange "x of the x of
+//     the x"-loops som B's ord-vindue ville springe over.
+// Fallback-prisen er lav (LibreTranslate er en gyldig motor), så B er sat til at
+// fange den milde boilerplate frem for at være maksimalt konservativ.
 export function erDegeneration(kilde: string, oversat: string): boolean {
   const k = kilde.trim();
   const o = oversat.trim();
@@ -404,20 +415,33 @@ export function erDegeneration(kilde: string, oversat: string): boolean {
   const oLen = o.length;
   if (kLen > 0 && kLen <= 40 && oLen >= kLen * 2.5 && oLen - kLen >= 30) return true;
 
-  // B) Høj intern gentagelse (sprog-agnostisk ord-tælling, ingen faste fraser).
-  const ord = (o.toLowerCase().match(/\p{L}+/gu) ?? []);
-  if (ord.length >= 6) {
-    const unikRatio = new Set(ord).size / ord.length;
-    const bigrams = new Map<string, number>();
-    let maksBigram = 0;
-    for (let i = 0; i < ord.length - 1; i++) {
-      const bg = ord[i] + ' ' + ord[i + 1];
-      const n = (bigrams.get(bg) ?? 0) + 1;
-      bigrams.set(bg, n);
-      if (n > maksBigram) maksBigram = n;
-    }
-    if (unikRatio < 0.5 && maksBigram >= 3) return true;
+  const ord = o.toLowerCase().match(/\p{L}+/gu) ?? [];
+  if (ord.length < 6) return false;
+
+  const unikRatio = new Set(ord).size / ord.length;
+  const ordFrekv = new Map<string, number>();
+  const bigrams = new Map<string, number>();
+  let maksOrd = 0;
+  let maksBigram = 0;
+  for (let i = 0; i < ord.length; i++) {
+    const n = (ordFrekv.get(ord[i]) ?? 0) + 1;
+    ordFrekv.set(ord[i], n);
+    if (n > maksOrd) maksOrd = n;
   }
+  for (let i = 0; i < ord.length - 1; i++) {
+    const bg = ord[i] + ' ' + ord[i + 1];
+    const n = (bigrams.get(bg) ?? 0) + 1;
+    bigrams.set(bg, n);
+    if (n > maksBigram) maksBigram = n;
+  }
+
+  // B) Titel-agtigt, kort output (op til ~14 ord): boilerplate.
+  if (ord.length <= 14) {
+    if (maksBigram >= 2 && unikRatio < 0.7) return true;
+    if (maksOrd / ord.length >= 0.4) return true;
+  }
+  // C) Ekstrem looping, vilkårlig længde.
+  if (maksBigram >= 3 && unikRatio < 0.4) return true;
 
   return false;
 }

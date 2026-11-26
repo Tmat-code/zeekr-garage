@@ -19,11 +19,13 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // kilde aldrig forveksles i `oversaettelser` - ingen migration nødvendig.
 // BEMÆRK: dette er RAPPORTENS motor. Forum-oversættelsen (senere trin 3) skal blive
 // på LibreTranslate/gist og må IKKE route gennem denne NLLB-vej.
-// v2-nllb-b (bumpet i 2.2+2.3): tvinger gen-oversættelse af HELE cachen gennem det
-// nye degenerations-værn + den rettede ordliste (fjernet bare 'lader', tilføjet
-// 'bakke'->reverse) - ellers serveres de cachede fejl videre. Hash dækker fortsat
-// HELE meldingen (titel+beskrivelse), ingen migration.
-const MOTOR_ID = NLLB_URL ? 'v2-nllb-b' : 'v1';
+// v2-nllb-c (bumpet igen 26-11 efter live-test): det FØRSTE degenerations-værn
+// (v2-nllb-b) var for konservativt og missede den faktiske "The following is the
+// list of the following"-degeneration i top-20-rapporten. Omkalibreret + re-bumpet,
+// så alt re-evalueres gennem det rettede værn (og en evt. forkert-cachet #1 fra
+// v2-nllb-b bustes). Dækker også 2.3-ordlisten. Hash dækker fortsat HELE meldingen
+// (titel+beskrivelse), ingen migration.
+const MOTOR_ID = NLLB_URL ? 'v2-nllb-c' : 'v1';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
