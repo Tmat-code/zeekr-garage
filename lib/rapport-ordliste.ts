@@ -40,9 +40,11 @@ export const ORDLISTE: readonly TermRegel[] = [
   // ADAS / kørehjælp
   { da: ['adaptiv fartpilot'], en: 'adaptive cruise control' },
   { da: ['fartpilot', 'fartpiloten'], en: 'cruise control' },
-  { da: ['vognbaneskift', 'vognbaneskifte', 'banenskift', 'vognbane-skift'], en: 'lane change' },
+  { da: ['vognbaneskift', 'vognbaneskifte', 'banenskift', 'vognbane-skift', 'baneskift', 'baneskifte'], en: 'lane change' },
+  { da: ['svingbane', 'svingbanen'], en: 'turn lane' },
   { da: ['vognbanen', 'vognbane', 'kørebane', 'kørebanen'], en: 'lane' },
   { da: ['vognbaneassistent', 'vognbaneassistenten', 'banehjælp'], en: 'lane assist' },
+  { da: ['afkørsel', 'afkørslen', 'afkørsler', 'afkørslerne'], en: 'exit' },
   { da: ['nødbremsning', 'automatisk nødbremsning', 'automatisk nødbremse'], en: 'automatic emergency braking' },
   { da: ['nødbremse', 'nødbremsen'], en: 'emergency brake' },
   { da: ['kørehjælp', 'kørehjælpen', 'førerstøtte'], en: 'driver assistance' },
@@ -54,8 +56,10 @@ export const ORDLISTE: readonly TermRegel[] = [
 
   // Modkørende / lys / udsyn (25-11: "modkørende" -> "On-board", "fjernlys")
   { da: ['modkørende', 'modkørendes'], en: 'oncoming traffic' },
-  { da: ['fjernlys', 'fjernlyset'], en: 'high beam' },
-  { da: ['nærlys', 'nærlyset'], en: 'low beam' },
+  { da: ['blændet', 'blændes'], en: 'dazzled' }, // participium: "bliver blændet" -> "becomes dazzled" (undgår bevidst "blænder": bøjning/kongruens)
+  { da: ['fjernlys', 'fjernlyset', 'langt lys', 'lange lys'], en: 'high beam' },
+  { da: ['nærlys', 'nærlyset', 'kort lys'], en: 'low beam' },
+  { da: ['nedblændning', 'nedblænding', 'nedblændningen'], en: 'high-beam dimming' },
   { da: ['automatisk fjernlys', 'automatiske fjernlys'], en: 'automatic high beam' },
   { da: ['blinklys', 'blinklyset', 'blinklysene'], en: 'turn signal' },
   { da: ['tågelys', 'tågelyset', 'tågeforlygte'], en: 'fog light' },
@@ -103,6 +107,9 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['kabine', 'kabinen'], en: 'cabin' },
   { da: ['klimaanlæg', 'klimaanlægget'], en: 'climate control' },
   { da: ['sædevarme', 'sædevarmen'], en: 'seat heating' },
+  { da: ['sædejustering', 'sædejusteringen', 'sædeindstilling', 'sædeindstillingen'], en: 'seat adjustment' },
+  { da: ['sæde', 'sædet', 'sæder', 'sæderne', 'sædder'], en: 'seat' }, // 'sædder' = kilde-stavefejl (ellers -> "seed")
+  { da: ['sikkerhedssele', 'sikkerhedsselen', 'sikkerhedsseler', 'sikkerhedsselerne'], en: 'seat belt' },
   { da: ['varmepumpe', 'varmepumpen'], en: 'heat pump' },
   { da: ['dæktryk', 'dæktrykket'], en: 'tyre pressure' },
   { da: ['fælg', 'fælgen', 'fælge', 'fælgene'], en: 'wheel rim' },
