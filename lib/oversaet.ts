@@ -209,15 +209,42 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
 }
 
 // Oversætter en simpel liste af tekster (fx kommentarer). Ingen cache. Graceful.
+// Får samme trin 2.1-værn som oversaetFejl: sætnings-split (lag 1, inde i
+// motorOversaet) + længde-vagt (lag 2) - en kommentar hvis NLLB-output ser ud til
+// at have tabt indhold genoversættes med LibreTranslate. Hver tekst er sin egen
+// enhed (ingen titel/beskrivelse-parring her).
 export async function oversaetTekster(tekster: string[], sprog: RapportSprog): Promise<string[]> {
   const maal = MAALSPROG[sprog];
   if (!maal || (!LT_URL && !NLLB_URL) || tekster.length === 0) return tekster;
+
+  let oversat: string[];
   try {
-    return await motorOversaet(tekster, maal);
+    oversat = await motorOversaet(tekster, maal);
   } catch (e) {
     console.error('[oversaet] kunne ikke oversætte kommentarer:', e);
     return tekster;
   }
+
+  // Trin 2.1 længde-vagt (samme mønster som oversaetFejl). Kun når NLLB er aktiv
+  // OG der er en LibreTranslate at falde tilbage til.
+  if (NLLB_URL && LT_URL) {
+    const tabt: number[] = [];
+    tekster.forEach((kilde, i) => {
+      if (erIndholdstab(kilde, oversat[i] ?? '')) tabt.push(i);
+    });
+    if (tabt.length > 0) {
+      try {
+        const ltUd = await motorOversaet(tabt.map((i) => tekster[i]), maal, true); // tving LibreTranslate
+        tabt.forEach((i, k) => {
+          if (ltUd[k] != null) oversat[i] = ltUd[k];
+        });
+      } catch (e) {
+        console.error('[oversaet] længde-vagt (kommentarer): LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
+      }
+    }
+  }
+
+  return oversat;
 }
 
 export type OversaetStatus = {
