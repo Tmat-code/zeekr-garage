@@ -1,0 +1,7 @@
+# CPU-only torch (ingen CUDA-bloat) hentes fra PyTorch's CPU-index i Dockerfile.
+torch==2.4.1
+transformers==4.44.2
+sentencepiece==0.2.0
+protobuf==5.28.2
+flask==3.0.3
+gunicorn==23.0.0

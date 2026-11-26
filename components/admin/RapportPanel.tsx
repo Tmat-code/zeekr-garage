@@ -4,6 +4,10 @@ import { useState, useTransition } from 'react';
 import { danRapport, fortrydMarkering, testOversaettelse } from '@/app/admin/rapport/actions';
 import type { OversaetStatus } from '@/lib/oversaet';
 
+function motorNavn(motor: OversaetStatus['motor']): string {
+  return motor === 'nllb' ? 'NLLB-600M' : motor === 'libretranslate' ? 'LibreTranslate' : 'oversætter';
+}
+
 export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
   const [top, setTop] = useState('20');
   const [type, setType] = useState('fejl');
@@ -168,11 +172,11 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
         {oversat && (
           <span className="text-sm">
             {!oversat.konfigureret ? (
-              <span className="text-grafit-500">LibreTranslate er ikke konfigureret (LIBRETRANSLATE_URL mangler) - rapporter er kun på dansk.</span>
+              <span className="text-grafit-500">Ingen oversætter-motor konfigureret (hverken NLLB_URL eller LIBRETRANSLATE_URL) - rapporter er kun på dansk.</span>
             ) : oversat.ok ? (
-              <span className="text-loest">OK ({oversat.vaert}): &quot;{oversat.prove?.kilde}&quot; → &quot;{oversat.prove?.resultat}&quot;</span>
+              <span className="text-loest">OK · {motorNavn(oversat.motor)} ({oversat.vaert}): &quot;{oversat.prove?.kilde}&quot; → &quot;{oversat.prove?.resultat}&quot;</span>
             ) : (
-              <span className="text-kobber-700">Kunne ikke nå LibreTranslate ({oversat.vaert}): {oversat.fejl}</span>
+              <span className="text-kobber-700">Kunne ikke nå {motorNavn(oversat.motor)} ({oversat.vaert}): {oversat.fejl}</span>
             )}
           </span>
         )}

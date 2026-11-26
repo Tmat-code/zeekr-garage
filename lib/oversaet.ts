@@ -1,5 +1,7 @@
-// Oversætter meldings-tekster (titel + beskrivelse) via selvhostet LibreTranslate,
-// med cache i databasen. Graceful: ingen LIBRETRANSLATE_URL eller dansk → original.
+// Oversætter RAPPORTENS meldings-tekster (titel + beskrivelse) via en selvhostet
+// motor - NLLB-600M når NLLB_URL er sat (trin 2), ellers LibreTranslate (trin 1) -
+// med term-beskyttelse + kilde-rensning uden om og cache i databasen. Graceful:
+// ingen motor-URL eller dansk → original; NLLB-fejl → fallback til LibreTranslate.
 
 import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -9,9 +11,18 @@ import { forberedKilde, genindsaetTermer } from '@/lib/rapport-ordliste';
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
+const NLLB_URL = process.env.NLLB_URL || '';
+
+// Aktiv RAPPORT-motor: NLLB-600M når NLLB_URL er sat (trin 2 - bedre kvalitet på
+// rapportens fagsprog), ellers LibreTranslate (trin 1). Motor-id'et foldes ind i
+// cache-hash'et (nedenfor) så en NLLB- og en LibreTranslate-oversættelse af samme
+// kilde aldrig forveksles i `oversaettelser` - ingen migration nødvendig.
+// BEMÆRK: dette er RAPPORTENS motor. Forum-oversættelsen (senere trin 3) skal blive
+// på LibreTranslate/gist og må IKKE route gennem denne NLLB-vej.
+const MOTOR_ID = NLLB_URL ? 'v2-nllb' : 'v1';
 
 function hash(s: string): string {
-  return crypto.createHash('sha1').update('v1\n' + s).digest('hex');
+  return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
 }
 
 async function ltKald(tekster: string[], kilde: string, maal: string): Promise<string[]> {
@@ -28,27 +39,66 @@ async function ltKald(tekster: string[], kilde: string, maal: string): Promise<s
   return Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
 }
 
+// FLORES-200-sprogkoder til NLLB (dansk/engelsk/svensk, latinsk skrift).
+const FLORES: Record<string, string> = { da: 'dan_Latn', en: 'eng_Latn', sv: 'swe_Latn' };
+
+// NLLB-600M on-demand inference-service på Pixa. SAMME {q,source,target} ->
+// {translatedText}-kontrakt som ltKald, så motorerne er ombyttelige. Modellen
+// loades on-demand i servicen; første kald efter idle kan være langsomt -> lang timeout.
+async function nllbKald(tekster: string[], kilde: string, maal: string): Promise<string[]> {
+  const src = FLORES[kilde];
+  const tgt = FLORES[maal];
+  if (!src || !tgt) throw new Error(`NLLB: ukendt sprogkode ${kilde}->${maal}`);
+  const res = await fetch(`${NLLB_URL.replace(/\/$/, '')}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: tekster, source: src, target: tgt }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) throw new Error(`NLLB svarede ${res.status} (${src}->${tgt})`);
+  const data = (await res.json()) as { translatedText: string | string[] };
+  return Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
+}
+
+// Motor-agnostisk rå-kald. NLLB når NLLB_URL er sat, med GRACEFUL FALLBACK til
+// LibreTranslate hvis NLLB-kaldet fejler (samme try/catch-ånd som resten af filen);
+// ellers LibreTranslate direkte. Term-laget (forberedKilde/genindsaetTermer i
+// daTilEngelsk) ligger UÆNDRET uden om dette kald - det var hele pointen med at
+// bygge laget motor-agnostisk i trin 1.
+async function motorKald(tekster: string[], kilde: string, maal: string): Promise<string[]> {
+  if (!NLLB_URL) return ltKald(tekster, kilde, maal);
+  try {
+    return await nllbKald(tekster, kilde, maal);
+  } catch (e) {
+    if (!LT_URL) throw e; // ingen fallback-motor -> lad det ydre try/catch beholde dansk
+    console.error('[oversaet] NLLB fejlede, falder tilbage til LibreTranslate:', e);
+    return ltKald(tekster, kilde, maal);
+  }
+}
+
 // da->en med term-beskyttelse + kilde-rensning (trin 1, nordisk i18n): rens +
 // beskyt den danske kilde FØR oversættelse, og genindsæt de korrekte engelske
 // termer EFTER. Fanger de tilbagevendende fagtermer (modkørende, vognbaneskift,
-// lade-punkt, ACC/LCC/OTA ...) som LibreTranslate ellers vender om eller æder.
+// lade-punkt, ACC/LCC/OTA ...) som motoren ellers vender om eller æder. Laget er
+// motor-agnostisk: kun selve da->en-kaldet (motorKald) skifter mellem NLLB og LT.
 async function daTilEngelsk(tekster: string[]): Promise<string[]> {
   const forberedt = tekster.map(forberedKilde);
-  const raa = await ltKald(forberedt.map((f) => f.tekst), 'da', 'en');
+  const raa = await motorKald(forberedt.map((f) => f.tekst), 'da', 'en');
   return raa.map((t, i) => genindsaetTermer(t, forberedt[i].erstatninger));
 }
 
-// da->en direkte; da->andet pivoterer via den RENSEDE/BESKYTTEDE engelske (Argos
-// har ingen direkte da->sv), så term-beskyttelsen også løfter pivot-sprogene.
-async function libreOversaet(tekster: string[], maal: string): Promise<string[]> {
+// da->en direkte; da->andet pivoterer via den RENSEDE/BESKYTTEDE engelske (hverken
+// Argos eller vores NLLB-brug laver direkte da->sv her - pivoten holder term-laget
+// om da->en-trinnet uændret og lader de engelske termer følge med til sv).
+async function motorOversaet(tekster: string[], maal: string): Promise<string[]> {
   const engelsk = await daTilEngelsk(tekster);
   if (maal === 'en') return engelsk;
-  return ltKald(engelsk, 'en', maal);
+  return motorKald(engelsk, 'en', maal);
 }
 
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {
   const maal = MAALSPROG[sprog];
-  if (!maal || !LT_URL || fejl.length === 0) return fejl;
+  if (!maal || (!LT_URL && !NLLB_URL) || fejl.length === 0) return fejl;
 
   const sb = supabaseServer();
   const resultat: RapportFejl[] = [...fejl];
@@ -84,7 +134,7 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
 
     let oversat: string[];
     try {
-      oversat = await libreOversaet(tekster, maal);
+      oversat = await motorOversaet(tekster, maal);
     } catch (e) {
       console.error('[oversaet] klump fejlede, beholder dansk:', e);
       continue;
@@ -118,9 +168,9 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
 // Oversætter en simpel liste af tekster (fx kommentarer). Ingen cache. Graceful.
 export async function oversaetTekster(tekster: string[], sprog: RapportSprog): Promise<string[]> {
   const maal = MAALSPROG[sprog];
-  if (!maal || !LT_URL || tekster.length === 0) return tekster;
+  if (!maal || (!LT_URL && !NLLB_URL) || tekster.length === 0) return tekster;
   try {
-    return await libreOversaet(tekster, maal);
+    return await motorOversaet(tekster, maal);
   } catch (e) {
     console.error('[oversaet] kunne ikke oversætte kommentarer:', e);
     return tekster;
@@ -129,26 +179,31 @@ export async function oversaetTekster(tekster: string[], sprog: RapportSprog): P
 
 export type OversaetStatus = {
   konfigureret: boolean;
+  motor: 'nllb' | 'libretranslate' | null;
   vaert: string | null;
   ok: boolean;
   prove?: { kilde: string; resultat: string };
   fejl?: string;
 };
 
-// "Test oversættelse" i admin - live-diagnose.
+// "Test oversættelse" i admin - live-diagnose af den AKTIVE rapport-motor (NLLB når
+// NLLB_URL er sat, ellers LibreTranslate). Kører den rigtige pipeline (motorOversaet),
+// så term-/rensnings-laget og en evt. NLLB->LibreTranslate-fallback testes med.
 export async function oversaetDiagnose(): Promise<OversaetStatus> {
-  if (!LT_URL) return { konfigureret: false, vaert: null, ok: false };
-  let vaert = LT_URL;
+  const motor: OversaetStatus['motor'] = NLLB_URL ? 'nllb' : LT_URL ? 'libretranslate' : null;
+  const aktivUrl = NLLB_URL || LT_URL;
+  if (!aktivUrl) return { konfigureret: false, motor: null, vaert: null, ok: false };
+  let vaert = aktivUrl;
   try {
-    vaert = new URL(LT_URL).host;
+    vaert = new URL(aktivUrl).host;
   } catch {
     /* behold rå værdi */
   }
   const kilde = 'Bilen bremser pludseligt i bakgear.';
   try {
-    const [resultat] = await libreOversaet([kilde], 'en');
-    return { konfigureret: true, vaert, ok: true, prove: { kilde, resultat } };
+    const [resultat] = await motorOversaet([kilde], 'en');
+    return { konfigureret: true, motor, vaert, ok: true, prove: { kilde, resultat } };
   } catch (e) {
-    return { konfigureret: true, vaert, ok: false, fejl: e instanceof Error ? e.message : String(e) };
+    return { konfigureret: true, motor, vaert, ok: false, fejl: e instanceof Error ? e.message : String(e) };
   }
 }
