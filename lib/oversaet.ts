@@ -19,14 +19,21 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // kilde aldrig forveksles i `oversaettelser` - ingen migration nødvendig.
 // BEMÆRK: dette er RAPPORTENS motor. Forum-oversættelsen (senere trin 3) skal blive
 // på LibreTranslate/gist og må IKKE route gennem denne NLLB-vej.
-// v2-nllb-d (trin 2.4, titel-rutning): den fulde "alle"-rapport viste at
-// degenerations-værnet (v2-nllb-c) kun fangede den GENTAGENDE #1 - tre flere korte
-// titler degenererede til flydende, ikke-gentagende boilerplate som heuristik ikke
-// kan fange. Løsningen er rutning, ikke mere detektion: titler oversættes nu med
-// LibreTranslate (se oversaetFejl), beskrivelser + kommentarer bliver på NLLB.
-// Bumpet buster cachen så titlerne re-oversættes via LibreTranslate. Hash dækker
-// fortsat HELE meldingen (titel+beskrivelse), ingen migration.
-const MOTOR_ID = NLLB_URL ? 'v2-nllb-d' : 'v1';
+// v3-lt (trin 2.5): rapporten kører nu på LibreTranslate, IKKE NLLB. Begrundelse:
+// NLLB-600M (distilleret, grådig, batchet) degenererede ikke-deterministisk til
+// flydende boilerplate ("The vehicle shall be equipped with a 'R' system", "The
+// speed of the motorway ... speed limit of the motorway") - og det viste sig
+// BATCH-AFHÆNGIGT: samme beskrivelse var fin i én batch og degenereret i en anden
+// (bevist da titel-rutningen ændrede batch-sammensætningen og #4's beskrivelse så
+// degenererede). Derfor kan det hverken opdages (heuristik-værnet missede det tre
+// gange) eller rutes væk felt-for-felt (både titler OG beskrivelser rammes).
+// LibreTranslate er deterministisk (laver aldrig den fejl) og lettere/hurtigere på
+// boksen. Rettesnor (Torben): Zeekr skal FORSTÅ budskabet - LibreTranslates lidt
+// mindre flydende sprog >> NLLB-boilerplate der vildleder. NLLB-koden (nllbKald +
+// titel-rutning + erDegeneration-værn) beholdes dvalende til evt. genoplivning med
+// bedre hardware / fikset batching. Frisk id, så ingen gammel v1/v2-cache serveres
+// (den gamle v1 havde fx det rettede `lader`-ordliste-bug). Ingen migration.
+const MOTOR_ID = 'v3-lt';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -112,10 +119,15 @@ async function daTilEngelsk(tekster: string[], tvingLT = false): Promise<string[
 // da->en direkte; da->andet pivoterer via den RENSEDE/BESKYTTEDE engelske (hverken
 // Argos eller vores NLLB-brug laver direkte da->sv her - pivoten holder term-laget
 // om da->en-trinnet uændret og lader de engelske termer følge med til sv).
-async function motorOversaet(tekster: string[], maal: string, tvingLT = false): Promise<string[]> {
-  const engelsk = await daTilEngelsk(tekster, tvingLT);
+async function motorOversaet(tekster: string[], maal: string, _tvingLT = false): Promise<string[]> {
+  // Trin 2.5: rapporten kører på LibreTranslate - tving det her i ÉT choke-point
+  // (både oversaetFejl og oversaetTekster går gennem motorOversaet), så NLLB aldrig
+  // kaldes uanset NLLB_URL. Se MOTOR_ID-noten for hvorfor. nllbKald m.m. beholdes
+  // dvalende; sæt daTilEngelsk/motorKald tilbage til `_tvingLT` for at genoplive NLLB.
+  const BRUG_LT = true;
+  const engelsk = await daTilEngelsk(tekster, BRUG_LT);
   if (maal === 'en') return engelsk;
-  return motorKald(engelsk, 'en', maal, tvingLT);
+  return motorKald(engelsk, 'en', maal, BRUG_LT);
 }
 
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {
