@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration } from '@/lib/rapport-ordliste';
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
@@ -19,7 +19,11 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // kilde aldrig forveksles i `oversaettelser` - ingen migration nødvendig.
 // BEMÆRK: dette er RAPPORTENS motor. Forum-oversættelsen (senere trin 3) skal blive
 // på LibreTranslate/gist og må IKKE route gennem denne NLLB-vej.
-const MOTOR_ID = NLLB_URL ? 'v2-nllb' : 'v1';
+// v2-nllb-b (bumpet i 2.2+2.3): tvinger gen-oversættelse af HELE cachen gennem det
+// nye degenerations-værn + den rettede ordliste (fjernet bare 'lader', tilføjet
+// 'bakke'->reverse) - ellers serveres de cachede fejl videre. Hash dækker fortsat
+// HELE meldingen (titel+beskrivelse), ingen migration.
+const MOTOR_ID = NLLB_URL ? 'v2-nllb-b' : 'v1';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -155,18 +159,25 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
       continue;
     }
 
-    // Trin 2.1 længde-vagt: NLLB (grådig) kan droppe en hel sætning i lange
-    // meldinger. Sammenlign per MELDING (titel+beskrivelse) mod den danske
-    // kilde; ligner output indholdstab, så genoversæt NETOP den melding med
-    // LibreTranslate (samme graceful mønster). Kun når NLLB er aktiv OG der er
-    // en LibreTranslate at falde tilbage til. Sætnings-splittet ovenfor er
-    // første værn; dette fanger de drastiske tab som splittet ikke dækker.
+    // Trin 2.1 længde-vagt + trin 2.2 degenerations-værn: NLLB (grådig) kan enten
+    // DROPPE en hel sætning i lange meldinger (`erIndholdstab`, pr. melding) ELLER
+    // hallucinere en kort TITEL til looping-boilerplate (`erDegeneration`, pr. felt
+    // - degenerationen rammer det korte felt og ville udvandes i en kombineret
+    // titel+beskrivelse-sammenligning). Begge genoversættes NETOP den melding med
+    // LibreTranslate (samme graceful `tvingLT`-mønster). Kun når NLLB er aktiv OG
+    // der er en LibreTranslate at falde tilbage til.
     if (NLLB_URL && LT_URL) {
       const tabt: number[] = []; // indeks ind i gruppe
       gruppe.forEach((i, j) => {
         const kilde = `${fejl[i].title}\n${fejl[i].description}`;
         const ud = `${oversat[j * 2] ?? ''}\n${oversat[j * 2 + 1] ?? ''}`;
-        if (erIndholdstab(kilde, ud)) tabt.push(j);
+        const titelUd = oversat[j * 2] ?? '';
+        const beskUd = oversat[j * 2 + 1] ?? '';
+        if (
+          erIndholdstab(kilde, ud) ||
+          erDegeneration(fejl[i].title, titelUd) ||
+          erDegeneration(fejl[i].description, beskUd)
+        ) tabt.push(j);
       });
       if (tabt.length > 0) {
         const ltTekster: string[] = [];
@@ -263,11 +274,13 @@ export async function oversaetTekster(tekster: string[], sprog: RapportSprog): P
       continue;
     }
 
-    // Trin 2.1 længde-vagt pr. kommentar (samme mønster som oversaetFejl).
+    // Trin 2.1 længde-vagt + trin 2.2 degenerations-værn pr. kommentar (samme
+    // mønster som oversaetFejl; kommentaren er ét felt, så begge tjek kører på den).
     if (NLLB_URL && LT_URL) {
       const tabt: number[] = []; // index ind i gruppe
       gruppe.forEach((i, j) => {
-        if (erIndholdstab(tekster[i], oversat[j] ?? '')) tabt.push(j);
+        const ud = oversat[j] ?? '';
+        if (erIndholdstab(tekster[i], ud) || erDegeneration(tekster[i], ud)) tabt.push(j);
       });
       if (tabt.length > 0) {
         try {

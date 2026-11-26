@@ -74,7 +74,7 @@ export const ORDLISTE: readonly TermRegel[] = [
 
   // Opladning / rækkevidde (25-11: "lade-punkt")
   { da: ['ladepunkt', 'ladepunktet', 'lade-punkt', 'lade-punktet', 'ladeport', 'ladeporten'], en: 'charging point' },
-  { da: ['ladestander', 'ladestanderen', 'lader', 'laderen'], en: 'charger' },
+  { da: ['ladestander', 'ladestanderen', 'laderen'], en: 'charger' }, // 'lader' bevidst UDE: oftest udsagnsordet (lader bilen/lader være), ikke 'charger' (2.3)
   { da: ['ladekabel', 'ladekablet', 'ladekabler'], en: 'charging cable' },
   { da: ['ladeeffekt', 'ladeeffekten', 'ladehastighed', 'ladehastigheden'], en: 'charging power' },
   { da: ['opladning', 'opladningen', 'ladning'], en: 'charging' },
@@ -89,6 +89,7 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['håndbremse', 'håndbremsen', 'parkeringsbremse', 'parkeringsbremsen'], en: 'parking brake' },
   { da: ['gearvælger', 'gearvælgeren', 'gearvælgeren'], en: 'gear selector' },
   { da: ['bakgear', 'bakgearet'], en: 'reverse gear' },
+  { da: ['bakke', 'bakker', 'bakkede'], en: 'reverse' }, // bil-bak dominerer domænet (NLLB gætter "turn"); "bakke" er også "hill", bevidst tradeoff (2.3). Ordgrænser => rammer ikke "bakkamera"/"bakgear"
   { da: ['affjedring', 'affjedringen', 'understel', 'understellet'], en: 'suspension' },
   { da: ['bremselængde', 'bremselængden'], en: 'braking distance' },
   { da: ['regenerering', 'rekuperation', 'motorbremsning'], en: 'regenerative braking' },
@@ -373,5 +374,50 @@ export function erIndholdstab(kilde: string, oversat: string): boolean {
   if (o.length < k.length * 0.5) return true;
   const ks = antalSaetninger(k);
   if (ks >= 2 && antalSaetninger(o) < ks * 0.5) return true;
+  return false;
+}
+
+// --- Degenerations-værn (trin 2.2) -------------------------------------------
+// NLLB (distilleret, grådig beam=1) hallucinerer lejlighedsvis en KORT titel til
+// looping-boilerplate ("The following is the list of the list of ...") - set live
+// 26-11 (ADAS-meldinger #1/#4/#8). Det er IKKE et drop (outputtet er lige langt
+// eller LÆNGERE end kilden), så længde-vagten `erIndholdstab` fanger det ikke.
+// Dette er modstykket: fanger output der er degenereret snarere end tabt. Routes
+// til SAMME `tvingLT`->LibreTranslate-fallback pr. melding i oversaet.ts.
+//
+// To sprog-AGNOSTISKE signaler (ingen hardcodede engelske fraser - sv dækkes med):
+//  A) længde-blowup: en KORT kilde (<=40 tegn) hvis output er drastisk længere
+//     (>=2,5x tegn OG mindst 30 tegn ekstra) - en looping-titel bliver mange
+//     gange længere, mens en normal kort da->en/sv-oversættelse aldrig er det.
+//  B) intern gentagelse: outputtet har både lav unik-ord-ratio OG et bigram der
+//     gentages >=3 gange (looping gentager de samme par ord). Konjunktion, så en
+//     normal tekst med ét tilfældigt gentaget bigram ikke flagges.
+// Konservativ: begge veje kræver et tydeligt afvigende mønster; en normal kort
+// titel ("Bakkamera fryser på motorvej") eller en normal lang melding lades være.
+export function erDegeneration(kilde: string, oversat: string): boolean {
+  const k = kilde.trim();
+  const o = oversat.trim();
+  if (!o) return false; // tomt output er et DROP (erIndholdstab), ikke degeneration
+
+  // A) Kort kilde eksploderet i længde.
+  const kLen = k.length;
+  const oLen = o.length;
+  if (kLen > 0 && kLen <= 40 && oLen >= kLen * 2.5 && oLen - kLen >= 30) return true;
+
+  // B) Høj intern gentagelse (sprog-agnostisk ord-tælling, ingen faste fraser).
+  const ord = (o.toLowerCase().match(/\p{L}+/gu) ?? []);
+  if (ord.length >= 6) {
+    const unikRatio = new Set(ord).size / ord.length;
+    const bigrams = new Map<string, number>();
+    let maksBigram = 0;
+    for (let i = 0; i < ord.length - 1; i++) {
+      const bg = ord[i] + ' ' + ord[i + 1];
+      const n = (bigrams.get(bg) ?? 0) + 1;
+      bigrams.set(bg, n);
+      if (n > maksBigram) maksBigram = n;
+    }
+    if (unikRatio < 0.5 && maksBigram >= 3) return true;
+  }
+
   return false;
 }
