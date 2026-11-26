@@ -289,3 +289,89 @@ export function forberedKilde(kilde: string): BeskyttetKilde {
     return { tekst: kilde, erstatninger: [] };
   }
 }
+
+// --- Sætnings-split + indholdstab-værn (trin 2.1) ----------------------------
+// NLLB (distilleret, grådig beam=1) kan lejlighedsvis droppe en HEL sætning i
+// lange/rodede meldinger (set live 26-11: rapportens #7 tabte førstesætningen).
+// To lag imod det, begge motor-agnostiske og rene (ingen HTTP her):
+//  1) oversæt sætning-for-sætning - split den RENSEDE kilde på sætningsgrænser,
+//     beskyt termerne om HVER sætning, oversæt hver som sin egen enhed, saml
+//     igen med samme skilletegn. Så rammer et drop højst én sætning, og korte
+//     input droppes stort set aldrig.
+//  2) en indholdstab-heuristik (`erIndholdstab`) som længde-vagt i oversaet.ts.
+
+// Splitter en RENSET kilde i sætninger ved tegnsætning+whitespace-grænser.
+// Kræver whitespace EFTER tegnsætningen, så decimaler (3.0), versioner (3.0.4)
+// og tidspunkter (15:30) ikke knækkes - kun ægte sætningsgrænser (som rensKilde
+// netop normaliserer: "ord.Næste" -> "ord. Næste", linjeskift -> ". "). Bevarer
+// skilletegnene, så en reassemble er byte-eksakt: dele[i] + (skilletegn[i] ?? '').
+export function splitSaetninger(renset: string): { dele: string[]; skilletegn: string[] } {
+  const dele: string[] = [];
+  const skilletegn: string[] = [];
+  const re = /[^.!?:;]*[.!?:;]+(\s+)/g;
+  let sidst = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(renset)) !== null) {
+    dele.push(renset.slice(sidst, re.lastIndex - m[1].length));
+    skilletegn.push(m[1]);
+    sidst = re.lastIndex;
+  }
+  const rest = renset.slice(sidst);
+  if (rest.length > 0) dele.push(rest);
+  if (dele.length === 0) dele.push(renset); // tom/kun-whitespace -> én (tom) del
+  return { dele, skilletegn };
+}
+
+// Modstykket til splitSaetninger: sæt delene sammen igen med deres skilletegn.
+export function samlSaetninger(dele: string[], skilletegn: string[]): string {
+  return dele.map((d, i) => d + (skilletegn[i] ?? '')).join('');
+}
+
+// Én melding forberedt til sætnings-for-sætnings-oversættelse: dens beskyttede
+// sætninger (hver med egne term-erstatninger) + skilletegnene imellem.
+export type ForberedtMelding = { dele: BeskyttetKilde[]; skilletegn: string[] };
+
+// Rens + split i sætninger + beskyt termer om HVER sætning. Defensiv som
+// forberedKilde: kaster aldrig (en fejl -> hele teksten som én ubeskyttet del).
+export function forberedSaetninger(kilde: string): ForberedtMelding {
+  try {
+    const { dele, skilletegn } = splitSaetninger(rensKilde(kilde));
+    return { dele: dele.map(beskytTermer), skilletegn };
+  } catch {
+    return { dele: [{ tekst: kilde, erstatninger: [] }], skilletegn: [] };
+  }
+}
+
+// Genindsæt termerne pr. oversat sætning og saml meldingen igen. Robust: mapper
+// over forb.dele (det autoritative antal), så en motor der taber et listeelement
+// (sætnings-drop -> tom/manglende plads) kun efterlader dén sætning tom og
+// beholder resten - netop trin 2.1-pointen.
+export function samlOversatteSaetninger(oversatteDele: string[], forb: ForberedtMelding): string {
+  const dele = forb.dele.map((d, i) => genindsaetTermer(oversatteDele[i] ?? '', d.erstatninger));
+  return samlSaetninger(dele, forb.skilletegn);
+}
+
+// Groft sætnings-antal til indholdstab-heuristikken (tæller terminal-tegnsætning
+// efterfulgt af whitespace eller tekst-slut). Mindst 1 hvis der er indhold.
+export function antalSaetninger(s: string): number {
+  const t = s.trim();
+  if (!t) return 0;
+  const m = t.match(/[.!?:;]+(?:\s+|$)/g);
+  return Math.max(m ? m.length : 0, 1);
+}
+
+// Content-loss-heuristik (trin 2.1 længde-vagt): ser oversættelsen drastisk
+// kortere ud end kilden -> sandsynligt at motoren tabte indhold (en hel sætning).
+// "Drastisk" = under halvdelen af kildens tegn ELLER under halvdelen af dens
+// sætninger. Konservativt: en legitim da->en/sv-oversættelse ligger aldrig under
+// det (skandinavisk<->engelsk er ~samme længde), så kun et reelt tab udløser den.
+export function erIndholdstab(kilde: string, oversat: string): boolean {
+  const k = kilde.trim();
+  if (!k) return false;
+  const o = oversat.trim();
+  if (!o) return true;
+  if (o.length < k.length * 0.5) return true;
+  const ks = antalSaetninger(k);
+  if (ks >= 2 && antalSaetninger(o) < ks * 0.5) return true;
+  return false;
+}

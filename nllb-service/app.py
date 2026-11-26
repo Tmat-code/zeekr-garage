@@ -27,6 +27,12 @@ THREADS = int(os.environ.get("NLLB_THREADS", "2"))
 IDLE_UNLOAD_S = int(os.environ.get("NLLB_IDLE_UNLOAD_S", "600"))
 BATCH = int(os.environ.get("NLLB_BATCH", "8"))
 MAX_LEN = int(os.environ.get("NLLB_MAX_LEN", "512"))
+# Beam-search-bredde (trin 2.1, valgfrit). Default 1 = grådig (uaendret adfaerd,
+# letteste paa CPU). NLLB_BEAMS=2 giver faerre drops/bedre kvalitet, men ~2x CPU
+# pr. inferens - afvej mod CPU-loftet (containeren er begraenset til 2 kerner, og
+# en stor "alle"-rapport har timet Cloudflare ud foer). Saet env'en i Coolify for
+# at proeve beam=2; app-siden har allerede saetnings-split + laengde-vaern uanset.
+BEAMS = max(1, int(os.environ.get("NLLB_BEAMS", "1")))
 
 app = Flask(__name__)
 
@@ -115,7 +121,7 @@ def translate():
                 chunk = tekster[i : i + BATCH]
                 enc = tok(chunk, return_tensors="pt", padding=True, truncation=True, max_length=MAX_LEN)
                 with torch.no_grad():
-                    gen = model.generate(**enc, forced_bos_token_id=bos, max_length=MAX_LEN, num_beams=1)
+                    gen = model.generate(**enc, forced_bos_token_id=bos, max_length=MAX_LEN, num_beams=BEAMS)
                 ud.extend(tok.batch_decode(gen, skip_special_tokens=True))
             global _last_used
             _last_used = time.time()

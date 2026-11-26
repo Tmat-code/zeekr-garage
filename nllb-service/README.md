@@ -47,7 +47,14 @@ GET /health -> { "status": "ok", "model": "...", "indlaest": true|false }
 | `NLLB_IDLE_UNLOAD_S` | `600` | sekunder idle foer RAM-frigivelse (0 = aldrig) |
 | `NLLB_BATCH` | `8` | tekster pr. generate-batch |
 | `NLLB_MAX_LEN` | `512` | max tokens ind/ud |
+| `NLLB_BEAMS` | `1` | beam-bredde (1 = graadig, letteste paa CPU; 2 = faerre drops/bedre kvalitet, ~2x CPU - afvej mod CPU-loftet) |
 | `PORT` | `8000` | lyt-port |
+
+Trin 2.1: app-siden (`lib/oversaet.ts`) oversaetter nu **saetning-for-saetning** og
+har en **laengde-vagt** der falder tilbage til LibreTranslate hvis en melding ser ud
+til at have tabt indhold - saa et saetnings-drop i NLLB rammer hoejst én saetning
+uanset beam-bredde. `NLLB_BEAMS=2` er en valgfri ekstra sikkerhed mod drops, men
+koster CPU; proev den kun hvis live-kvaliteten kraever det.
 
 ## Lokal test
 

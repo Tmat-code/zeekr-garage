@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedKilde, genindsaetTermer } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab } from '@/lib/rapport-ordliste';
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
@@ -62,11 +62,13 @@ async function nllbKald(tekster: string[], kilde: string, maal: string): Promise
 
 // Motor-agnostisk rå-kald. NLLB når NLLB_URL er sat, med GRACEFUL FALLBACK til
 // LibreTranslate hvis NLLB-kaldet fejler (samme try/catch-ånd som resten af filen);
-// ellers LibreTranslate direkte. Term-laget (forberedKilde/genindsaetTermer i
-// daTilEngelsk) ligger UÆNDRET uden om dette kald - det var hele pointen med at
-// bygge laget motor-agnostisk i trin 1.
-async function motorKald(tekster: string[], kilde: string, maal: string): Promise<string[]> {
-  if (!NLLB_URL) return ltKald(tekster, kilde, maal);
+// ellers LibreTranslate direkte. `tvingLT` springer NLLB helt over og bruger
+// LibreTranslate direkte - bruges af trin 2.1-længde-vagten til at genoversætte en
+// melding hvor NLLB ser ud til at have tabt indhold. Term-laget (forberedSaetninger/
+// samlOversatteSaetninger i daTilEngelsk) ligger UÆNDRET uden om dette kald - det
+// var hele pointen med at bygge laget motor-agnostisk i trin 1.
+async function motorKald(tekster: string[], kilde: string, maal: string, tvingLT = false): Promise<string[]> {
+  if (tvingLT || !NLLB_URL) return ltKald(tekster, kilde, maal);
   try {
     return await nllbKald(tekster, kilde, maal);
   } catch (e) {
@@ -76,24 +78,37 @@ async function motorKald(tekster: string[], kilde: string, maal: string): Promis
   }
 }
 
-// da->en med term-beskyttelse + kilde-rensning (trin 1, nordisk i18n): rens +
-// beskyt den danske kilde FØR oversættelse, og genindsæt de korrekte engelske
-// termer EFTER. Fanger de tilbagevendende fagtermer (modkørende, vognbaneskift,
-// lade-punkt, ACC/LCC/OTA ...) som motoren ellers vender om eller æder. Laget er
-// motor-agnostisk: kun selve da->en-kaldet (motorKald) skifter mellem NLLB og LT.
-async function daTilEngelsk(tekster: string[]): Promise<string[]> {
-  const forberedt = tekster.map(forberedKilde);
-  const raa = await motorKald(forberedt.map((f) => f.tekst), 'da', 'en');
-  return raa.map((t, i) => genindsaetTermer(t, forberedt[i].erstatninger));
+// da->en med term-beskyttelse + kilde-rensning (trin 1) + sætnings-for-sætnings-
+// oversættelse (trin 2.1, content-loss-værn): rens + split den danske kilde på
+// sætningsgrænser, beskyt termerne om HVER sætning, oversæt hver sætning som sin
+// egen enhed, genindsæt termerne og saml igen. ALLE sætninger på tværs af
+// meldingerne sendes i ÉT motorKald (ingen ekstra HTTP-kald - presser ikke
+// Cloudflare-timeouten), så et NLLB-sætnings-drop højst rammer én sætning og
+// korte input stort set aldrig droppes. Laget er motor-agnostisk: kun selve
+// da->en-kaldet (motorKald) skifter mellem NLLB og LT.
+async function daTilEngelsk(tekster: string[], tvingLT = false): Promise<string[]> {
+  const forb = tekster.map(forberedSaetninger);
+  // Flad liste af ALLE sætninger på tværs af meldingerne -> ét motorKald.
+  const flade: string[] = [];
+  const spaend: Array<{ start: number; antal: number }> = [];
+  for (const f of forb) {
+    spaend.push({ start: flade.length, antal: f.dele.length });
+    for (const d of f.dele) flade.push(d.tekst);
+  }
+  const raa = await motorKald(flade, 'da', 'en', tvingLT);
+  return forb.map((f, i) => {
+    const { start, antal } = spaend[i];
+    return samlOversatteSaetninger(raa.slice(start, start + antal), f);
+  });
 }
 
 // da->en direkte; da->andet pivoterer via den RENSEDE/BESKYTTEDE engelske (hverken
 // Argos eller vores NLLB-brug laver direkte da->sv her - pivoten holder term-laget
 // om da->en-trinnet uændret og lader de engelske termer følge med til sv).
-async function motorOversaet(tekster: string[], maal: string): Promise<string[]> {
-  const engelsk = await daTilEngelsk(tekster);
+async function motorOversaet(tekster: string[], maal: string, tvingLT = false): Promise<string[]> {
+  const engelsk = await daTilEngelsk(tekster, tvingLT);
   if (maal === 'en') return engelsk;
-  return motorKald(engelsk, 'en', maal);
+  return motorKald(engelsk, 'en', maal, tvingLT);
 }
 
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {
@@ -138,6 +153,34 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
     } catch (e) {
       console.error('[oversaet] klump fejlede, beholder dansk:', e);
       continue;
+    }
+
+    // Trin 2.1 længde-vagt: NLLB (grådig) kan droppe en hel sætning i lange
+    // meldinger. Sammenlign per MELDING (titel+beskrivelse) mod den danske
+    // kilde; ligner output indholdstab, så genoversæt NETOP den melding med
+    // LibreTranslate (samme graceful mønster). Kun når NLLB er aktiv OG der er
+    // en LibreTranslate at falde tilbage til. Sætnings-splittet ovenfor er
+    // første værn; dette fanger de drastiske tab som splittet ikke dækker.
+    if (NLLB_URL && LT_URL) {
+      const tabt: number[] = []; // indeks ind i gruppe
+      gruppe.forEach((i, j) => {
+        const kilde = `${fejl[i].title}\n${fejl[i].description}`;
+        const ud = `${oversat[j * 2] ?? ''}\n${oversat[j * 2 + 1] ?? ''}`;
+        if (erIndholdstab(kilde, ud)) tabt.push(j);
+      });
+      if (tabt.length > 0) {
+        const ltTekster: string[] = [];
+        tabt.forEach((j) => ltTekster.push(fejl[gruppe[j]].title, fejl[gruppe[j]].description));
+        try {
+          const ltUd = await motorOversaet(ltTekster, maal, true); // tving LibreTranslate
+          tabt.forEach((j, k) => {
+            if (ltUd[k * 2] != null) oversat[j * 2] = ltUd[k * 2];
+            if (ltUd[k * 2 + 1] != null) oversat[j * 2 + 1] = ltUd[k * 2 + 1];
+          });
+        } catch (e) {
+          console.error('[oversaet] længde-vagt: LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
+        }
+      }
     }
 
     const upserts: any[] = [];
