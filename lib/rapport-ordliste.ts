@@ -189,7 +189,8 @@ export function rensKilde(raw: string): string {
   let s = raw;
 
   // 1) Fjern usynlige/kontroltegn (zero-width, BOM, soft hyphen) der kan trigge
-  //    MT-støj ("PACKAGE LEAFLET"-fænomenet rammer ofte odd/empty input).
+  //    MT-støj. (Selve "PACKAGE LEAFLET"-fænomenet skyldtes IKKE kontroltegn, men
+  //    sprog-løse stumper efter split/beskyttelse - se harSprogIndhold, trin 2.9.)
   s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F­​-‍﻿]/g, '');
 
   // 2) Hård linjeombrydning -> sætningsgrænse. En linje der IKKE ender på
@@ -413,6 +414,49 @@ export function ryddLoeseSmaaord(oversat: string): string {
       .replace(new RegExp(`(?<=^\\s{0,3})${da}(?=\\s{0,3}\\[\\[)`, 'g'), en);
   }
   return s;
+}
+
+// --- Sprog-løse stumper sendes aldrig til motoren (trin 2.9) -----------------
+// "PACKAGE LEAFLET" (live 27-11, Other #1): sætnings-splittet + term-beskyttelsen
+// kan efterlade enheder UDEN ét eneste bogstav - fx et listenummer "1." (fra
+// "1. Åbn appen"), en løs punkt-linje "-." / "***.", en titel der er HELT
+// beskyttet ("Fartpilot" -> "[[0]].") eller en tom streng. Sendt alene til
+// LibreTranslate/Argos (eller NLLB) har modellen intet sprog at oversætte og
+// hallucinerer træningsdata - Argos' da->en-korpus rummer EU-medicin-indlægssedler
+// ("1. NAME OF THE MEDICINAL PRODUCT", "PACKAGE LEAFLET"), så en nummer-/tegn-
+// stump kan komme ud som "PACKAGE LEAFLET". Det er et pipeline-artefakt, ikke
+// kildeteksten, og det rammer enhver motor.
+//
+// Fix: en enhed uden bogstaver (når vores [[n]]-tokens er trukket fra) har intet
+// at oversætte - cifre, tegnsætning, emoji og tokens er sprog-neutrale. Den sendes
+// ikke til motoren men går UÆNDRET videre (genindsætningen gør "[[0]]." til
+// "Cruise control."). Normal tekst røres aldrig: alt med mindst ét bogstav sendes
+// præcis som før.
+const TOKEN_RE = /\[+\s*\d+\s*\]+/g;
+
+export function harSprogIndhold(tekst: string): boolean {
+  if (!tekst) return false;
+  return /\p{L}/u.test(tekst.replace(TOKEN_RE, ''));
+}
+
+// Kalder motoren KUN med enhederne der har sprog-indhold; sprog-løse enheder
+// returneres ordret på deres plads. Rækkefølge og længde bevares 1:1. Ingen
+// enheder med indhold -> intet motor-kald overhovedet. Ren (motoren injiceres).
+export async function oversaetKunSprog(
+  tekster: string[],
+  kald: (udvalg: string[]) => Promise<string[]>,
+): Promise<string[]> {
+  const idx: number[] = [];
+  tekster.forEach((t, i) => {
+    if (harSprogIndhold(t)) idx.push(i);
+  });
+  const ud = [...tekster];
+  if (idx.length === 0) return ud;
+  const raa = await kald(idx.map((i) => tekster[i]));
+  idx.forEach((i, k) => {
+    ud[i] = raa[k] ?? '';
+  });
+  return ud;
 }
 
 // Genindsæt termerne pr. oversat sætning og saml meldingen igen. Robust: mapper

@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog } from '@/lib/rapport-ordliste';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -39,7 +39,10 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // v3-lt-b (trin 2.8): bumpet så HELE rapporten gen-oversættes gennem ordliste-runde 3
 // (hakket/overhaling/striber/indre baner) + løse-småord-fixet ("i"-levnet). Buster
 // både DB-cachen `oversaettelser` og `kommentar_oversaettelser`. Ingen migration.
-const MOTOR_ID = 'v3-lt-b';
+// v3-lt-c (trin 2.9): bumpet så cachede "PACKAGE LEAFLET"-hallucinationer (sprog-løse
+// stumper som "1."/"-."/"[[0]]." sendt alene til motoren) bustes - de stumper sendes
+// nu aldrig til motoren (oversaetKunSprog). Ingen migration.
+const MOTOR_ID = 'v3-lt-c';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -115,7 +118,9 @@ async function daTilEngelsk(tekster: string[], tvingLT = false): Promise<string[
     spaend.push({ start: flade.length, antal: f.dele.length });
     for (const d of f.dele) flade.push(d.tekst);
   }
-  const raa = await motorKald(flade, 'da', 'en', tvingLT);
+  // Trin 2.9: sprog-løse stumper ("1.", "-.", "[[0]].", "") sendes ALDRIG til
+  // motoren (de hallucinerede fx "PACKAGE LEAFLET") - de går ordret videre.
+  const raa = await oversaetKunSprog(flade, (u) => motorKald(u, 'da', 'en', tvingLT));
   return forb.map((f, i) => {
     const { start, antal } = spaend[i];
     return samlOversatteSaetninger(raa.slice(start, start + antal), f);
@@ -133,7 +138,8 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
   const BRUG_LT = true;
   const engelsk = await daTilEngelsk(tekster, BRUG_LT);
   if (maal === 'en') return engelsk;
-  return motorKald(engelsk, 'en', maal, BRUG_LT);
+  // Samme værn på pivoten (fx en tom beskrivelse ville ellers gå alene til en->sv).
+  return oversaetKunSprog(engelsk, (u) => motorKald(u, 'en', maal, BRUG_LT));
 }
 
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {
