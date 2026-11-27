@@ -15,7 +15,7 @@ import {
 } from '@/lib/rapport-i18n';
 import { getRapportFejl, getRapportKommentarer, getRapportBilleder, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
-import { forberedPdfFont, PDF_FONT, PDF_FONT_FED, PDF_FONT_KURSIV } from '@/lib/pdf-font';
+import { forberedPdfFont, saniterPdfTekst, PDF_FONT, PDF_FONT_FED, PDF_FONT_KURSIV } from '@/lib/pdf-font';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // pdfkit kræver Node + filsystem til font-data.
@@ -170,7 +170,24 @@ export async function GET(req: Request) {
       const komm = kommMap[f.id] ?? [];
       if (medKommentarer && komm.length > 0) {
         doc.moveDown(0.5);
-        doc.fontSize(9).font(PDF_FONT_FED).fillColor(GRAA).text(`${t.kommentarerOverskrift}:`, 58, doc.y, { width: sideBredde });
+        // P41: sidebryd-guard - overskriften må ikke stå alene nederst på en
+        // side. Mål overskrift + mellemrum + FØRSTE kommentar (samme font,
+        // størrelse og bredde som de tegnes med, saniteret som doc.text gør) og
+        // tag en ny side hvis de ikke kan være der sammen. Grænsen er pdfkits
+        // egen auto-sidebryd-grænse (page.maxY()).
+        const overskrift = `${t.kommentarerOverskrift}:`;
+        doc.fontSize(9).font(PDF_FONT_FED);
+        const overskriftH = doc.heightOfString(saniterPdfTekst(overskrift), { width: sideBredde });
+        const mellemrumH = 0.2 * doc.currentLineHeight(true);
+        doc.font(PDF_FONT);
+        const foersteH = doc.heightOfString(saniterPdfTekst(`•  ${komm[0].navn}: ${komm[0].tekst}`), {
+          width: sideBredde - 8,
+        });
+        if (doc.y + overskriftH + mellemrumH + foersteH > doc.page.maxY()) {
+          doc.addPage();
+          doc.y = 50;
+        }
+        doc.fontSize(9).font(PDF_FONT_FED).fillColor(GRAA).text(overskrift, 58, doc.y, { width: sideBredde });
         doc.moveDown(0.2);
         for (const k of komm) {
           doc
