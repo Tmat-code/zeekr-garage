@@ -8,6 +8,9 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
 import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration } from '@/lib/rapport-ordliste';
+import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
+
+export type { KommentarInput };
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
@@ -121,7 +124,7 @@ async function daTilEngelsk(tekster: string[], tvingLT = false): Promise<string[
 // om da->en-trinnet uændret og lader de engelske termer følge med til sv).
 async function motorOversaet(tekster: string[], maal: string, _tvingLT = false): Promise<string[]> {
   // Trin 2.5: rapporten kører på LibreTranslate - tving det her i ÉT choke-point
-  // (både oversaetFejl og oversaetTekster går gennem motorOversaet), så NLLB aldrig
+  // (både oversaetFejl og oversaetKommentarer går gennem motorOversaet), så NLLB aldrig
   // kaldes uanset NLLB_URL. Se MOTOR_ID-noten for hvorfor. nllbKald m.m. beholdes
   // dvalende; sæt daTilEngelsk/motorKald tilbage til `_tvingLT` for at genoplive NLLB.
   const BRUG_LT = true;
@@ -235,89 +238,77 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
   return resultat;
 }
 
-// In-memory cache for kommentar-oversættelser. Kommentarerne har ingen DB-cache
-// (modsat meldingernes `oversaettelser`-tabel), så UDEN dette genoversatte en hård
-// rapport ALLE kommentarer forfra ved hvert forsøg - ét kæmpe NLLB-kald der sprang
-// Cloudflare-timeouten (524) og aldrig konvergerede. Cachen lever i server-processen:
-// en generering der timer ud kører videre server-side og fylder cachen pr. klump, så
-// NÆSTE forsøg springer det gjorte over og konvergerer - samme konvergens som
-// meldingernes DB-cache giver. Tabes ved redeploy/genstart (acceptabelt: rapporten
-// regenereres sjældent og varmer selv op igen). INGEN migration.
-const kommentarCache = new Map<string, string>();
-const KOMMENTAR_CACHE_MAKS = 50000;
-
-// Cache-nøgle: hash() prefixer MOTOR_ID (v1/v2-nllb), så motor-skift aldrig
-// forveksles; sprog foldes ind så en/sv ikke kolliderer.
-function kommentarNoegle(sprog: string, tekst: string): string {
-  return hash(`kommentar\n${sprog}\n${tekst}`);
+// kilde_hash af en kommentar-body. hash() prefixer MOTOR_ID (v3-lt), så et
+// motor-skift giver hash-mismatch -> cache-miss -> gen-oversættelse (præcis som
+// meldingernes `oversaettelser`). Sprog ligger i PK'en (comment_id, sprog), ikke i
+// hash'et - samme opdeling som meldingerne.
+function kommentarKildeHash(tekst: string): string {
+  return hash(tekst);
 }
 
-// Oversætter en simpel liste af tekster (fx kommentarer). In-memory cache (ovenfor)
-// + småklumper, PRÆCIS som oversaetFejl for meldingerne, så en hård rapport
-// konvergerer på genforsøg i stedet for at time ud forfra hver gang. Får samme trin
-// 2.1-værn: sætnings-split (lag 1, inde i motorOversaet) + længde-vagt (lag 2) - en
-// kommentar hvis NLLB-output ser ud til at have tabt indhold genoversættes med
-// LibreTranslate. Graceful: en fejlet klump beholder dansk (og caches IKKE, så et
-// genforsøg prøver igen).
-export async function oversaetTekster(tekster: string[], sprog: RapportSprog): Promise<string[]> {
-  const maal = MAALSPROG[sprog];
-  if (!maal || (!LT_URL && !NLLB_URL) || tekster.length === 0) return tekster;
-
-  // 1) Cache-opslag; saml de manglende.
-  const ud: string[] = new Array(tekster.length);
-  const mangler: number[] = [];
-  tekster.forEach((t, i) => {
-    const c = kommentarCache.get(kommentarNoegle(sprog, t));
-    if (c != null) ud[i] = c;
-    else mangler.push(i);
-  });
-  if (mangler.length === 0) return ud;
-
-  // 2) Oversæt kun de manglende, i småklumper. Hvert klump-kald når at blive færdigt
-  //    under NLLB-abort/Cloudflare-timeouten, og hvert gennemført klump caches, så et
-  //    genforsøg springer det over.
-  const KLUMP = 5;
-  for (let start = 0; start < mangler.length; start += KLUMP) {
-    const gruppe = mangler.slice(start, start + KLUMP);
-    const kilder = gruppe.map((i) => tekster[i]);
-
-    let oversat: string[];
-    try {
-      oversat = await motorOversaet(kilder, maal);
-    } catch (e) {
-      console.error('[oversaet] kommentar-klump fejlede, beholder dansk:', e);
-      gruppe.forEach((i) => { ud[i] = tekster[i]; }); // graceful dansk, IKKE cachet
-      continue;
-    }
-
-    // Trin 2.1 længde-vagt + trin 2.2 degenerations-værn pr. kommentar (samme
-    // mønster som oversaetFejl; kommentaren er ét felt, så begge tjek kører på den).
-    if (NLLB_URL && LT_URL) {
-      const tabt: number[] = []; // index ind i gruppe
-      gruppe.forEach((i, j) => {
-        const ud = oversat[j] ?? '';
-        if (erIndholdstab(tekster[i], ud) || erDegeneration(tekster[i], ud)) tabt.push(j);
-      });
-      if (tabt.length > 0) {
-        try {
-          const ltUd = await motorOversaet(tabt.map((j) => tekster[gruppe[j]]), maal, true);
-          tabt.forEach((j, k) => { if (ltUd[k] != null) oversat[j] = ltUd[k]; });
-        } catch (e) {
-          console.error('[oversaet] længde-vagt (kommentarer): LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
-        }
+// Motor + trin 2.1-længde-vagt + trin 2.2-degenerations-værn for en liste tekster
+// (kun aktivt på NLLB-stien; på v3-lt tvinger motorOversaet LT, så værnet er en
+// no-op-backup). Samme mønster som oversaetFejl - hver kommentar er ét felt, så
+// begge tjek kører på den. Kaster videre hvis motoren fejler helt, så kernens
+// klump-try/catch beholder dansk (ikke cachet) og et genforsøg prøver igen.
+async function oversaetMedVaern(tekster: string[], maal: string): Promise<string[]> {
+  const oversat = await motorOversaet(tekster, maal);
+  if (NLLB_URL && LT_URL) {
+    const tabt: number[] = [];
+    tekster.forEach((t, j) => {
+      const u = oversat[j] ?? '';
+      if (erIndholdstab(t, u) || erDegeneration(t, u)) tabt.push(j);
+    });
+    if (tabt.length > 0) {
+      try {
+        const ltUd = await motorOversaet(tabt.map((j) => tekster[j]), maal, true);
+        tabt.forEach((j, k) => { if (ltUd[k] != null) oversat[j] = ltUd[k]; });
+      } catch (e) {
+        console.error('[oversaet] kommentar-værn: LibreTranslate-fallback fejlede, beholder forsøg:', e);
       }
     }
-
-    // Skriv resultat + cache de gennemførte.
-    if (kommentarCache.size > KOMMENTAR_CACHE_MAKS) kommentarCache.clear();
-    gruppe.forEach((i, j) => {
-      const t = oversat[j] ?? tekster[i];
-      ud[i] = t;
-      kommentarCache.set(kommentarNoegle(sprog, tekster[i]), t);
-    });
   }
+  return oversat;
+}
 
-  return ud;
+// Oversætter rapportens kommentarer med HOLDBAR DB-cache `kommentar_oversaettelser`
+// (trin 2.6) - præcis som meldingernes `oversaettelser`. Erstatter den tidligere
+// in-memory cache, der tømtes ved hvert deploy og tvang den hårde rapport kold
+// forfra. Kernen (lib/rapport-kommentar-cache.ts) håndterer hit/miss/hash-mismatch +
+// dedupe af identiske bodies + klump-konvergens; her wires den mod Supabase + motor.
+// En redigeret kommentar ændrer body -> kilde_hash-mismatch -> gen-oversættes. Et
+// deploy nulstiller ikke længere fremgangen; et timeout midt i en generering gemmer
+// de færdige klumper i DB'en, så næste forsøg læser cache og konvergerer.
+export async function oversaetKommentarer(komm: KommentarInput[], sprog: RapportSprog): Promise<string[]> {
+  const maal = MAALSPROG[sprog];
+  if (!maal || (!LT_URL && !NLLB_URL) || komm.length === 0) return komm.map((k) => k.tekst);
+
+  const sb = supabaseServer();
+  return oversaetKommentarerKerne(komm, {
+    noegle: kommentarKildeHash,
+    hentCache: async (ids) => {
+      const { data } = await sb
+        .from('kommentar_oversaettelser')
+        .select('comment_id, kilde_hash, oversat')
+        .in('comment_id', ids)
+        .eq('sprog', sprog);
+      return (data ?? []) as { comment_id: string; kilde_hash: string; oversat: string }[];
+    },
+    skrivCache: async (raekker) => {
+      if (raekker.length === 0) return;
+      await sb.from('kommentar_oversaettelser').upsert(
+        raekker.map((r) => ({
+          comment_id: r.comment_id,
+          sprog,
+          kilde_hash: r.kilde_hash,
+          oversat: r.oversat,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: 'comment_id,sprog' },
+      );
+    },
+    oversaet: (unikke) => oversaetMedVaern(unikke, maal),
+  });
 }
 
 export type OversaetStatus = {

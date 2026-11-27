@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import type { RapportType, RapportSprog } from '@/lib/rapport-i18n';
-import { oversaetTekster } from '@/lib/oversaet';
+import { oversaetKommentarer } from '@/lib/oversaet';
 import { ISSUE_CATEGORIES } from '@/lib/config';
 import { meldBilledeUrl, MELD_MAKS_BILLEDER } from '@/lib/billeder';
 
@@ -151,14 +151,16 @@ export async function getRapportKommentarer(
   const sb = supabaseServer();
   const { data } = await sb
     .from('comments')
-    .select('issue_id, body, author_navn, profiles ( display_name )')
+    .select('id, issue_id, body, author_navn, profiles ( display_name )')
     .in('issue_id', issueIds)
     .eq('is_solution', false)
     .order('created_at', { ascending: true });
 
   const rows = (data ?? []) as any[];
-  const tekster = rows.map((r) => r.body as string);
-  const oversatte = await oversaetTekster(tekster, sprog);
+  // comment-id med videre til den holdbare DB-cache (PK comment_id), så en redigeret
+  // kommentar giver cache-miss og et slet cascader rækken væk.
+  const komm = rows.map((r) => ({ id: r.id as string, tekst: r.body as string }));
+  const oversatte = await oversaetKommentarer(komm, sprog);
 
   const map: Record<string, { navn: string; tekst: string }[]> = {};
   rows.forEach((r, i) => {
