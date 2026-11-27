@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import type { OtaModelHistorik, SoftwareUpdate } from '@/lib/types';
 
-// Record<->snak: OTA-historikken er record'en; selve diskussionen bor uroert i
-// forummets Software & OTA-kategori. Follow-up-beslutning (Torben 24-11): linket
-// peger bare paa kategorien (ingen auto-oprettet traad pr. version, ingen DB-
-// kobling at vedligeholde ved ret/slet).
-const FORUM_OTA = '/forum/software-ota';
+// Record<->snak: OTA-historikken her er record'en; selve diskussionen bor i det
+// relevante MODEL-forum (beslutning 27-11: den tvaergaaende Software & OTA-kategori
+// fjernet - en OTA-snak er alligevel model-specifik, og /software daekker "hvad
+// aendrede sig"). Hver version-blok linker derfor til dens models eget forum
+// (/forum/<slug>; en models forum-kategori-slug == model-slug, jf. forum-seed/P17).
 
 // Kort model-label til chip: "Zeekr 7GT" -> "7GT".
 function kort(navn: string): string {
@@ -28,7 +28,19 @@ function datoKort(iso: string): string {
   }
 }
 
-function VersionBlok({ u, aaben, toggle }: { u: SoftwareUpdate; aaben: boolean; toggle: () => void }) {
+function VersionBlok({
+  u,
+  aaben,
+  toggle,
+  forumHref,
+  modelLabel,
+}: {
+  u: SoftwareUpdate;
+  aaben: boolean;
+  toggle: () => void;
+  forumHref: string;
+  modelLabel: string;
+}) {
   return (
     <div className="overflow-hidden">
       <button
@@ -77,10 +89,10 @@ function VersionBlok({ u, aaben, toggle }: { u: SoftwareUpdate; aaben: boolean; 
           )}
           {u.note && <p className="mt-3 text-sm italic text-grafit-500">{u.note}</p>}
           <a
-            href={FORUM_OTA}
+            href={forumHref}
             className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
           >
-            Diskutér i forummet <span aria-hidden="true">→</span>
+            Diskutér i {modelLabel}-forummet <span aria-hidden="true">→</span>
           </a>
         </div>
       )}
@@ -154,7 +166,14 @@ export default function SoftwareHistorik({ modeller }: { modeller: OtaModelHisto
           </div>
           <div className="mt-3 divide-y divide-grafit-100 overflow-hidden rounded-xl border border-grafit-200 bg-white">
             {m.opdateringer.map((u) => (
-              <VersionBlok key={`${m.slug}-${u.id}`} u={u} aaben={aabne.has(u.id)} toggle={() => toggle(u.id)} />
+              <VersionBlok
+                key={`${m.slug}-${u.id}`}
+                u={u}
+                aaben={aabne.has(u.id)}
+                toggle={() => toggle(u.id)}
+                forumHref={`/forum/${m.slug}`}
+                modelLabel={kort(m.name)}
+              />
             ))}
           </div>
         </section>

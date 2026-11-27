@@ -24,12 +24,12 @@ export default async function SoftwareSide() {
       <p className="mt-2 text-sm text-grafit-400">
         Vedligeholdt af os ejere. Vil du diskutere en opdatering, så tag den i{' '}
         <a
-          href="/forum/software-ota"
+          href="/forum"
           className="font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
         >
-          Software &amp; OTA
+          dit model-forum
         </a>{' '}
-        på forummet.
+        - hver version nedenfor linker direkte derhen.
       </p>
 
       <SoftwareHistorik modeller={modeller} />
