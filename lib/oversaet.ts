@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytBevar, genindsaetTermer } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytBevar, genindsaetTermer, erTokenSkadet } from '@/lib/rapport-ordliste';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -50,7 +50,9 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // akronymer og funktionsnavne overlever nu også vejen til svensk). Buster rapportens
 // caches (`oversaettelser`, `kommentar_oversaettelser`) og OTA-cachen. Ingen migration
 // for selve bumpet.
-const MOTOR_ID = 'v3-lt-e';
+// v3-lt-f (U1b live-runde): token-fletning (parentes/anførselstegn/"/"), bestemte
+// former -> "the X", flere OTA-termer, token-skade-værn på pivoten.
+const MOTOR_ID = 'v3-lt-f';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -153,7 +155,20 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
     beskyttet.map((b) => b.tekst),
     (u) => motorKald(u, 'en', maal, BRUG_LT),
   );
-  return raa.map((r, i) => genindsaetTermer(r, beskyttet[i].erstatninger));
+  const ud = raa.map((r, i) => genindsaetTermer(r, beskyttet[i].erstatninger));
+  // Har en->sv-motoren forvansket et token (live 27-11: "ACC / [[2]]"), oversættes den
+  // enhed igen UDEN bevar-tokens (som før U1b) - hellere et oversat funktionsnavn
+  // end en synlig klamme-rest.
+  const skadet = ud.map((u, i) => (erTokenSkadet(u, beskyttet[i].erstatninger) ? i : -1)).filter((i) => i >= 0);
+  if (skadet.length > 0) {
+    try {
+      const igen = await oversaetKunSprog(skadet.map((i) => engelsk[i]), (u) => motorKald(u, 'en', maal, BRUG_LT));
+      skadet.forEach((i, k) => { ud[i] = igen[k] ?? ud[i]; });
+    } catch (e) {
+      console.error('[oversaet] pivot-genforsøg uden tokens fejlede:', e);
+    }
+  }
+  return ud;
 }
 
 // U1b: rapportens da->en/sv-pipeline (rensning, term-beskyttelse, ordliste/BEVAR,

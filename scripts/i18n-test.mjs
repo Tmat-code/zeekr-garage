@@ -288,6 +288,22 @@ const K = [
   lig('ota: tomt opslag -> intet kald', [r.size, s.kald.length], [0, 0]);
 }
 
+// --- U1b live-runde: token-fletning + skade-værn (lib/rapport-ordliste.ts) ---
+const ro = await transpiler('lib/rapport-ordliste.ts', 'rapport-ordliste');
+const bt = (t) => ro.beskytTermer(t);
+lig('flet parentes', bt('Kørselsopsætning (Drive Setup):').tekst, 'Kørselsopsætning [[0]]:');
+lig('flet parentes erstatning', bt('Kørselsopsætning (Drive Setup):').erstatninger, ['(Drive Setup)']);
+lig('flet anførselstegn', bt('hvis "Adapt to Route Ahead" står på "Off".').tekst, 'hvis [[0]] står på [[1]].');
+lig('flet skråstreg', bt('når ACC/LCC er aktiv').erstatninger.filter(Boolean), ['ACC/LCC']);
+lig('flet ikke uparret', bt('(ACC og LCC)').tekst, '([[0]] og [[1]])');
+lig('genindsæt flettet', ro.genindsaetTermer('Driving setup [[0]]:', ['(Drive Setup)']), 'Driving setup (Drive Setup):');
+lig('bestemt form -> the', bt('knap på rattet').erstatninger, ['the steering wheel']);
+lig('the the ryddes', ro.samlOversatteSaetninger(['on the [[0]].'], { dele: [{ tekst: '', erstatninger: ['the steering wheel'] }], skilletegn: [] }), 'on the steering wheel.');
+lig('skadet: klamme-rest', ro.erTokenSkadet('ACC / [[2] är aktiv', ['ACC', 'LCC']), true);
+lig('skadet: erstatning mangler', ro.erTokenSkadet('Bättre beteende', ['ACC/LCC']), true);
+lig('skadet: rent', ro.erTokenSkadet('Bättre ACC/LCC-beteende', ['ACC/LCC', '']), false);
+lig('pivot bevar flettet', ro.beskytBevar('Adds Remote Park Assist (RPA) and "Off".').erstatninger, ['Remote Park Assist', '(RPA)', '"Off"']);
+
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

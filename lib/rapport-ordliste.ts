@@ -86,7 +86,8 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['lynlader', 'lynladning', 'hurtiglader', 'hurtigladning'], en: 'fast charging' },
 
   // Kørsel / bremser / understel
-  { da: ['rattet', 'rat'], en: 'steering wheel' },
+  { da: ['rat'], en: 'steering wheel' },
+  { da: ['rattet'], en: 'the steering wheel' }, // U1b: dansk bestemt form = "the" (live: "button of steering wheel")
   { da: ['speeder', 'speederen', 'speederpedal'], en: 'accelerator pedal' },
   { da: ['bremsepedal', 'bremsepedalen'], en: 'brake pedal' },
   { da: ['håndbremse', 'håndbremsen', 'parkeringsbremse', 'parkeringsbremsen'], en: 'parking brake' },
@@ -108,7 +109,8 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['nøglebrik', 'nøglebrikken'], en: 'key fob' },
 
   // Klima / kabine / hjul
-  { da: ['kabine', 'kabinen'], en: 'cabin' },
+  { da: ['kabine'], en: 'cabin' },
+  { da: ['kabinen'], en: 'the cabin' },
   { da: ['klimaanlæg', 'klimaanlægget'], en: 'climate control' },
   { da: ['sædevarme', 'sædevarmen'], en: 'seat heating' },
   { da: ['sædejustering', 'sædejusteringen', 'sædeindstilling', 'sædeindstillingen'], en: 'seat adjustment' },
@@ -161,10 +163,12 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['hastighedsoverskridelse', 'hastighedsoverskridelser', 'hastighedsoverskridelsen'], en: 'speeding' },
   { da: ['hastighedsadvarsel', 'hastighedsadvarslen'], en: 'speed warning' },
   { da: ['hastighedsadvarsler', 'hastighedsadvarslerne'], en: 'speed warnings' },
-  { da: ['køreovervågning', 'køreovervågningen', 'førerovervågning', 'førerovervågningen'], en: 'driver monitoring' },
+  { da: ['køreovervågning', 'førerovervågning'], en: 'driver monitoring' },
+  { da: ['køreovervågningen', 'førerovervågningen'], en: 'the driver monitoring' },
   { da: ['føreropmærksomhed', 'føreropmærksomheden'], en: 'driver attention' },
   { da: ['trætheds-/opmærksomhedsalarmer', 'trætheds- og opmærksomhedsalarmer'], en: 'fatigue/attention alerts' },
-  { da: ['regenerativ bremsning', 'regenerative bremsning', 'regenereringen'], en: 'regenerative braking' },
+  { da: ['regenerativ bremsning', 'regenerative bremsning'], en: 'regenerative braking' },
+  { da: ['regenereringen'], en: 'the regenerative braking' },
   { da: ['anhængertræk', 'anhængertrækket'], en: 'tow bar' },
   { da: ['træktilstand', 'træktilstanden'], en: 'towing mode' },
   { da: ['køretilstand', 'køretilstanden'], en: 'drive mode' },
@@ -173,19 +177,24 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['fartkameraer', 'fartkameraerne'], en: 'speed cameras' },
   { da: ['selestatus', 'selestatussen'], en: 'seat belt status' },
   { da: ['bagsæde', 'bagsædet'], en: 'rear seat' },
-  { da: ['bagsæder', 'bagsæderne'], en: 'rear seats' },
+  { da: ['bagsæder'], en: 'rear seats' },
+  { da: ['bagsæderne'], en: 'the rear seats' },
   { da: ['forkonditionering', 'forkonditioneringen'], en: 'preconditioning' },
-  { da: ['højvoltbatteri', 'højvoltbatteriet', 'højvoltsbatteri', 'højvoltsbatteriet'], en: 'high-voltage battery' },
+  { da: ['højvoltbatteri', 'højvoltsbatteri'], en: 'high-voltage battery' },
+  { da: ['højvoltbatteriet', 'højvoltsbatteriet'], en: 'the high-voltage battery' },
   { da: ['luftfordeling', 'luftfordelingen'], en: 'air distribution' },
-  { da: ['startskærm', 'startskærmen'], en: 'home screen' },
-  { da: ['kørebog', 'kørebogen', 'kørselslog', 'kørselsloggen'], en: 'driving log' },
-  { da: ['kurve-farttilpasning', 'kurve-farttilpasningen', 'kurvefarttilpasning'], en: 'curve speed adaptation' },
+  { da: ['startskærm'], en: 'home screen' },
+  { da: ['startskærmen'], en: 'the home screen' },
+  { da: ['kørebog', 'kørselslog'], en: 'trip log' }, // 'trip log' (ikke 'driving log': sv-pivoten gav "kör logga")
+  { da: ['kørebogen', 'kørselsloggen'], en: 'the trip log' },
+  { da: ['kurve-farttilpasning', 'kurve-farttilpasningen', 'kurvefarttilpasning'], en: 'speed adaptation in curves' }, // sv-pivoten lod "Curve" stå
   { da: ['farttilpasning', 'farttilpasningen'], en: 'speed adaptation' },
   { da: ['navigations-markør', 'navigations-markøren', 'navigationsmarkør', 'navigationsmarkøren'], en: 'navigation marker' },
-  { da: ['rattevarme', 'rattevarmen', 'rattevarmer'], en: 'steering wheel heating' },
+  { da: ['rattevarme', 'rattevarmer'], en: 'steering wheel heating' },
+  { da: ['rattevarmen'], en: 'the steering wheel heating' },
   { da: ['regndråbe-registrering', 'regndråbe-registreringen', 'regndråberegistrering'], en: 'raindrop detection' },
   { da: ['autovarme', 'autovarmen'], en: 'automatic heating' },
-  { da: ['sidespejlene'], en: 'side mirrors' },
+  { da: ['sidespejlene'], en: 'the side mirrors' },
   { da: ['vaskehal', 'vaskehallen'], en: 'car wash' },
   { da: ['kørestilling', 'kørestillingen'], en: 'Drive' }, // "i kørestilling (D)" = gearstillingen D
   { da: ['hurtigmenu', 'hurtigmenuen'], en: 'quick menu' },
@@ -195,9 +204,24 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['AC-opladning', 'AC-opladningen', 'AC-ladning'], en: 'AC charging' },
   { da: ['lokationssporing', 'lokationssporingen'], en: 'location tracking' },
   { da: ['digital nøgle', 'digitale nøgle', 'digitale nøgler'], en: 'digital key' },
-  { da: ['går i dvale'], en: 'goes to sleep' },
+  { da: ['går i dvale'], en: 'enters sleep mode' }, // 'goes to sleep' -> sv "går och lägger sig"
   { da: ['brugerdefinerbar', 'brugerdefinerbare'], en: 'customisable' },
   { da: ['brugervenlighed', 'brugervenligheden'], en: 'usability' },
+  // Live-runde (U1b, 27-11 efter deploy): fejl set i den engelske/svenske /software.
+  { da: ['Zeekr-appen'], en: 'the Zeekr app', foerst: true }, // ellers "Zeekr the app"
+  { da: ['Zeekr-app'], en: 'Zeekr app', foerst: true },
+  { da: ['ACC/LCC-opførsel', 'ACC/LCC-opførslen'], en: 'ACC/LCC behaviour', foerst: true },
+  { da: ['opførsel', 'opførslen'], en: 'behaviour' },
+  { da: ['forbedrer'], en: 'improves' }, // verbum forrest: LT gjorde "Forbedrer information om" til en if-sætning
+  { da: ['optimerer'], en: 'optimises' },
+  { da: ['skærpet', 'skærpede'], en: 'stricter' }, // LT: "Skipped"
+  { da: ['finjusteret', 'finjusterede'], en: 'fine-tuned' },
+  { da: ['mindre hakken og ryk'], en: 'less stuttering and jerking' }, // LT: "smaller pick and roll"
+  { da: ['hakken og ryk'], en: 'stuttering and jerking' },
+  { da: ['hakken'], en: 'stuttering' },
+  { da: ['rulles ud gradvis', 'rulles gradvis ud'], en: 'rolling out gradually' },
+  { da: ['som udgangspunkt'], en: 'by default' },
+  { da: ['flere trin til'], en: 'more levels of' },
 ];
 
 // --- Bevar urørt (akronymer, modelnavne, reference-numre, versioner) ---------
@@ -286,6 +310,34 @@ export function rensKilde(raw: string): string {
 
 // --- Term-beskyttelse --------------------------------------------------------
 
+// U1b (live 27-11): LibreTranslate taber/forvansker tegn der står TÆT om et token -
+// "Kørselsopsætning ([[0]]):" -> "Driving setup (Drive Setup:" (slut-parentes væk),
+// "\"[[0]]\" står på \"[[1]]\"" -> "\"Adapt to Route Ahead 'is\" Off'", og "[[0]]/[[1]]"
+// -> "ACC / LCC". Fix: flet parentes/anførselstegn tæt om ét token, og tokens
+// sammenkædet med "/", ind i SELVE erstatningen, så motoren kun ser ét token.
+// Et flettet-væk index får erstatning '' (findes ikke længere i teksten).
+const PAR: Readonly<Record<string, string>> = { '(': ')', '"': '"', '“': '”', '«': '»' };
+
+export function fletTokens(b: BeskyttetKilde): BeskyttetKilde {
+  const e = [...b.erstatninger];
+  let tekst = b.tekst;
+  let foer = '';
+  while (foer !== tekst) {
+    foer = tekst;
+    tekst = tekst.replace(/\[\[(\d+)\]\]\/\[\[(\d+)\]\]/, (_m, a: string, c: string) => {
+      e[+a] = `${e[+a]}/${e[+c]}`;
+      e[+c] = '';
+      return token(+a);
+    });
+  }
+  tekst = tekst.replace(/([("“«])\[\[(\d+)\]\]([)"”»])/g, (m, o: string, n: string, c: string) => {
+    if (PAR[o] !== c) return m;
+    e[+n] = `${o}${e[+n]}${c}`;
+    return token(+n);
+  });
+  return { tekst, erstatninger: e };
+}
+
 function escReg(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -370,7 +422,7 @@ export function beskytTermer(kilde: string): BeskyttetKilde {
     });
   }
 
-  return { tekst, erstatninger };
+  return fletTokens({ tekst, erstatninger });
 }
 
 // Genindsætter de engelske termer EFTER oversættelse. Tolerant: tåler at motoren
@@ -398,7 +450,15 @@ export function beskytBevar(tekst: string): BeskyttetKilde {
       return token(erstatninger.length - 1);
     });
   }
-  return { tekst: ud, erstatninger };
+  return fletTokens({ tekst: ud, erstatninger });
+}
+
+// U1b (live 27-11): har motoren forvansket et token ("[[2]" eller et index der ikke
+// findes), står der klamme-rester tilbage efter genindsætningen, eller en erstatning
+// mangler. Så må den enhed ikke vises - kalderen oversætter den igen uden tokens.
+export function erTokenSkadet(resultat: string, erstatninger: string[]): boolean {
+  if (/\[\s*\d+\s*\]|\[\[|\]\]/.test(resultat)) return true;
+  return erstatninger.some((x) => x && !resultat.includes(x));
 }
 
 // Hvor mange af vores tokens overlevede IKKE genindsætningen (diagnostik/test).
@@ -559,7 +619,10 @@ export async function oversaetKunSprog(
 // beholder resten - netop trin 2.1-pointen. Løse småord ryddes (trin 2.8) på den
 // rå MT-output FØR termerne sættes ind igen.
 export function samlOversatteSaetninger(oversatteDele: string[], forb: ForberedtMelding): string {
-  const dele = forb.dele.map((d, i) => genindsaetTermer(ryddLoeseSmaaord(oversatteDele[i] ?? ''), d.erstatninger));
+  const dele = forb.dele.map((d, i) =>
+    // U1b: bestemte former giver nu "the X"; har motoren selv sat et "the" foran, ryddes dubletten.
+    genindsaetTermer(ryddLoeseSmaaord(oversatteDele[i] ?? ''), d.erstatninger).replace(/\b(the)\s+the\b/gi, '$1'),
+  );
   return samlSaetninger(dele, forb.skilletegn);
 }
 
