@@ -36,7 +36,10 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // titel-rutning + erDegeneration-værn) beholdes dvalende til evt. genoplivning med
 // bedre hardware / fikset batching. Frisk id, så ingen gammel v1/v2-cache serveres
 // (den gamle v1 havde fx det rettede `lader`-ordliste-bug). Ingen migration.
-const MOTOR_ID = 'v3-lt';
+// v3-lt-b (trin 2.8): bumpet så HELE rapporten gen-oversættes gennem ordliste-runde 3
+// (hakket/overhaling/striber/indre baner) + løse-småord-fixet ("i"-levnet). Buster
+// både DB-cachen `oversaettelser` og `kommentar_oversaettelser`. Ingen migration.
+const MOTOR_ID = 'v3-lt-b';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');

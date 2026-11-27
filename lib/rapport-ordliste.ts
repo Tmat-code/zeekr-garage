@@ -115,6 +115,41 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['dæktryk', 'dæktrykket'], en: 'tyre pressure' },
   { da: ['fælg', 'fælgen', 'fælge', 'fælgene'], en: 'wheel rim' },
   { da: ['sommerdæk', 'vinterdæk', 'dæk', 'dækkene'], en: 'tyre' },
+
+  // --- Runde 3 (2.8): fund i den LIVE engelske rapport 27-11 ------------------
+  // Fire faste fagtermer LibreTranslate ramte forkert. Samme bare-ord-disciplin
+  // som runde 2: hvert bare-ord auditeret for farlig hverdagsbetydning - kan en
+  // term ikke mappes sikkert, mappes KUN de entydige komposita/fraser, og det bare
+  // ord lades til review-gaten (Torben læser den engelske rapport før afsendelse).
+
+  // "hakker"/"hakket" om en bil = rykvis/stammende gang (motor, acceleration,
+  // skærm), 27-11: -> "minced" (hakket kød). Bil-domænet dominerer her (ingen
+  // melder hakkekød som bil-fejl), som dæk/rat/visker i runde 2. Ordgrænser;
+  // present/datid/participium. "stuttering" dækker både drivlinje og skærm.
+  { da: ['hakker', 'hakkede', 'hakket'], en: 'stuttering' },
+
+  // "overhaling" = at køre forbi. 27-11: -> "overhaul" (engelsk falsk ven = service).
+  // KUN substantiv + kompositum (entydige). Verbalformerne (overhale/overhalet kan
+  // også betyde "efterset/serviceret" på dansk) bevidst UDE - tvetydige som 'lader'
+  // i runde 2; review-gaten dækker dem. Kompositum står før den korte form.
+  { da: ['overhalingsbane', 'overhalingsbanen'], en: 'overtaking lane' },
+  { da: ['overhaling', 'overhalingen'], en: 'overtaking' },
+
+  // "striber" = vejstriber/kørebaneafmærkning. 27-11: -> "road strips". MEN bart
+  // 'stribe'/'striber' er FARLIGT (striber på skærmen/i lakken/på sædet = stripes),
+  // så KUN de entydige komposita mappes; bart 'striber' lades BEVIDST til review-
+  // gaten (kan ikke mappes sikkert - se bare-ord-reglen ovenfor).
+  { da: ['vejstriber', 'vejstriberne', 'vejstribe', 'vejstriben', 'kørebanestriber', 'kørebanestribe', 'vognbanestriber', 'vognbanestribe', 'vejafmærkning', 'vejafmærkningen', 'vejmarkering', 'vejmarkeringen'], en: 'lane markings' },
+  { da: ['midterstribe', 'midterstriben'], en: 'centre line' },
+
+  // "indre baner" = inner lanes. 27-11: -> "inner tracks". Bart 'bane'/'baner' er
+  // FARLIGT (bane = track/court/orbit/field), så KUN adjektiv+bane-FRASER mappes
+  // (entydige i kørsels-kontekst); bart 'baner' lades til review-gaten. Fraserne
+  // (med mellemrum) er længere end 'vognbane', så længste-match tager dem først.
+  { da: ['indre baner', 'indre banerne', 'inderste baner'], en: 'inner lanes' },
+  { da: ['indre bane', 'indre banen', 'inderste bane', 'inderste banen'], en: 'inner lane' },
+  { da: ['ydre baner', 'ydre banerne', 'yderste baner'], en: 'outer lanes' },
+  { da: ['ydre bane', 'ydre banen', 'yderste bane', 'yderste banen'], en: 'outer lane' },
 ];
 
 // --- Bevar urørt (akronymer, modelnavne, reference-numre, versioner) ---------
@@ -343,12 +378,50 @@ export function forberedSaetninger(kilde: string): ForberedtMelding {
   }
 }
 
+// --- Løse småord ved siden af en beskyttet term (trin 2.8) -------------------
+// Beskyttelses-tokens kan isolere et kort dansk funktionsord, så MT'en mister den
+// kontekst, den skal bruge for at oversætte det, og lader det stå dansk. Set LIVE
+// 27-11: titlen "Nødbremsning i bakgear" koger efter beskyttelsen ned til
+// "[[0]] i [[1]]" -> LibreTranslate oversatte ikke det isolerede "i" -> "...braking
+// i reverse gear". GENERELT MØNSTER: når en kort melding/titel reduceres til tokens
+// + ét løst småord, har MT'en intet at læne sig op ad. Lange beskrivelser rammes
+// stort set ikke (rigeligt dansk omkring ordet til at oversætte det).
+//
+// Fix: et lille, KOLLISIONS-frit da->en-kort for de hyppigste funktionsord, kun
+// anvendt når ordet står KLEMT op ad en af VORES placeholder-tokens ([[n]]) - dvs.
+// netop den isolerede situation. Ordene er ikke gyldige engelske ord, så en
+// overlevende lowercase-forekomst ER et uoversat levn; token-naboskabet gør det
+// ekstra snævert, så en ægte oversættelse aldrig røres. "i" matches KUN lowercase
+// (engelsk "I" er pronomen); de øvrige er alligevel ikke engelske ord. Kører på den
+// rå MT-output FØR genindsaetTermer, mens tokens stadig er [[n]].
+const LOESE_SMAAORD: Readonly<Record<string, string>> = {
+  i: 'in', 'på': 'on', og: 'and', af: 'of', til: 'to',
+  med: 'with', uden: 'without', fra: 'from', ved: 'at',
+};
+
+export function ryddLoeseSmaaord(oversat: string): string {
+  if (!oversat || !oversat.includes('[[')) return oversat;
+  let s = oversat;
+  for (const da in LOESE_SMAAORD) {
+    const en = LOESE_SMAAORD[da];
+    // Lookbehind/lookahead forbruger ikke token-klammerne, så nabo-ord kan overlappe
+    // (fx "[[0]] på [[1]] og [[2]]" - både "på" og "og" fanges). Tre naboskaber:
+    // mellem to tokens, token+ord+slut, start+ord+token. Case-sensitivt (lowercase).
+    s = s
+      .replace(new RegExp(`(?<=\\]\\]\\s{0,3})${da}(?=\\s{0,3}\\[\\[)`, 'g'), en)
+      .replace(new RegExp(`(?<=\\]\\]\\s{0,3})${da}(?=\\s*$)`, 'g'), en)
+      .replace(new RegExp(`(?<=^\\s{0,3})${da}(?=\\s{0,3}\\[\\[)`, 'g'), en);
+  }
+  return s;
+}
+
 // Genindsæt termerne pr. oversat sætning og saml meldingen igen. Robust: mapper
 // over forb.dele (det autoritative antal), så en motor der taber et listeelement
 // (sætnings-drop -> tom/manglende plads) kun efterlader dén sætning tom og
-// beholder resten - netop trin 2.1-pointen.
+// beholder resten - netop trin 2.1-pointen. Løse småord ryddes (trin 2.8) på den
+// rå MT-output FØR termerne sættes ind igen.
 export function samlOversatteSaetninger(oversatteDele: string[], forb: ForberedtMelding): string {
-  const dele = forb.dele.map((d, i) => genindsaetTermer(oversatteDele[i] ?? '', d.erstatninger));
+  const dele = forb.dele.map((d, i) => genindsaetTermer(ryddLoeseSmaaord(oversatteDele[i] ?? ''), d.erstatninger));
   return samlSaetninger(dele, forb.skilletegn);
 }
 
