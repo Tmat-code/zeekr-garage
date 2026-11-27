@@ -342,6 +342,47 @@ export async function getForumRapporter(
 }
 
 // =========================================================================
+// Kontakt-beskeder (privat bagdoer til staben). Laeses af HELE staben
+// (RPC'en gater paa er_moderator). Defensivt loft som rapport-koeen (P24):
+// p_limit/p_offset + total via window-count. Ubehandlede foerst, nyeste foerst.
+// =========================================================================
+export type KontaktBesked = {
+  id: string;
+  userId: string | null;
+  navn: string;
+  svarMail: string | null;
+  emne: string;
+  besked: string;
+  behandlet: boolean;
+  createdAt: string;
+};
+
+export type KontaktFiltre = { limit?: number; offset?: number };
+export type KontaktSide = { beskeder: KontaktBesked[]; total: number };
+
+export async function getKontaktBeskeder(f: KontaktFiltre = {}): Promise<KontaktSide> {
+  const sb = supabaseServer();
+  const { data } = await sb.rpc('kontakt_beskeder_liste', {
+    p_limit: f.limit ?? 20,
+    p_offset: f.offset ?? 0,
+  });
+  const rows = (data ?? []) as any[];
+  return {
+    beskeder: rows.map((r) => ({
+      id: r.id,
+      userId: r.user_id ?? null,
+      navn: r.navn ?? 'Ejer',
+      svarMail: r.svar_mail ?? null,
+      emne: r.emne ?? '',
+      besked: r.besked ?? '',
+      behandlet: r.behandlet ?? false,
+      createdAt: r.created_at,
+    })),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+  };
+}
+
+// =========================================================================
 // Aktivitet - vaekst/engagement (P28): unikke aktive brugere pr. dag + nye
 // brugere pr. dag, sidste 30 dage, i dansk tid. "Aktiv" = distinkt bruger der
 // gjorde noget den dag: stemte (confirmations) / meldte (issues) / skrev en

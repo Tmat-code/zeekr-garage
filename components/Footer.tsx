@@ -14,6 +14,7 @@ export default function Footer() {
           <Link href="/software" className="hover:text-kobber-700">OTA</Link>
           <Link href="/links" className="hover:text-kobber-700">Links</Link>
           <Link href="/om" className="hover:text-kobber-700">Om</Link>
+          <Link href="/kontakt" className="hover:text-kobber-700">Kontakt</Link>
         </div>
       </div>
     </footer>
