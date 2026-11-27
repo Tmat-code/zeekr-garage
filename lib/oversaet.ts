@@ -311,6 +311,13 @@ export async function oversaetKommentarer(komm: KommentarInput[], sprog: Rapport
   });
 }
 
+// Er der overhovedet en oversætter-motor konfigureret (NLLB eller LibreTranslate)?
+// Bruges af opvarmningen (trin 2.7) til straks at svare "intet at forberede" uden at
+// hente udvalget, når rapporten alligevel kun kan være dansk.
+export function oversaetterKonfigureret(): boolean {
+  return Boolean(LT_URL || NLLB_URL);
+}
+
 export type OversaetStatus = {
   konfigureret: boolean;
   motor: 'nllb' | 'libretranslate' | null;

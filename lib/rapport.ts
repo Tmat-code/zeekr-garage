@@ -1,6 +1,7 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import type { RapportType, RapportSprog } from '@/lib/rapport-i18n';
 import { oversaetKommentarer } from '@/lib/oversaet';
+import type { KommentarInput } from '@/lib/rapport-kommentar-cache';
 import { ISSUE_CATEGORIES } from '@/lib/config';
 import { meldBilledeUrl, MELD_MAKS_BILLEDER } from '@/lib/billeder';
 
@@ -170,6 +171,27 @@ export async function getRapportKommentarer(
     });
   });
   return map;
+}
+
+// Rå kommentar-udvalg til opvarmningen (trin 2.7): PRÆCIS samme kommentarer som
+// getRapportKommentarer fodrer oversaetKommentarer med (ejernes kommentarer pr.
+// melding, UDEN den markerede løsning), men UOVERSAT og flad - så opvarmningen kan
+// skære udvalget i bundne vinduer og fylde `kommentar_oversaettelser`-cachen klump
+// for klump. Ordenen er fuldt deterministisk (created_at, så comment-id som
+// tie-break), så den globale offset peger på de SAMME kommentarer mellem genforsøg
+// og intet springes over ved et afbrudt forsøg.
+export async function getRapportKommentarRaa(issueIds: string[]): Promise<KommentarInput[]> {
+  if (issueIds.length === 0) return [];
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from('comments')
+    .select('id, body')
+    .in('issue_id', issueIds)
+    .eq('is_solution', false)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+
+  return ((data ?? []) as any[]).map((r) => ({ id: r.id as string, tekst: r.body as string }));
 }
 
 // Foto-bevis pr. melding (P37): de OFFENTLIGE billed-URL'er pr. issue, så de kan

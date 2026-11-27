@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { danRapport, fortrydMarkering, testOversaettelse } from '@/app/admin/rapport/actions';
+import {
+  danRapport,
+  fortrydMarkering,
+  testOversaettelse,
+  forberedOversaettelse,
+} from '@/app/admin/rapport/actions';
 import type { OversaetStatus } from '@/lib/oversaet';
 
 function motorNavn(motor: OversaetStatus['motor']): string {
@@ -18,6 +23,7 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
   const [besked, setBesked] = useState<string | null>(null);
   const [fejl, setFejl] = useState<string | null>(null);
   const [oversat, setOversat] = useState<OversaetStatus | null>(null);
+  const [forb, setForb] = useState<{ gjort: number; total: number } | null>(null);
   const [pending, start] = useTransition();
 
   function eksportUrl(format: 'pdf' | 'csv'): string {
@@ -40,6 +46,24 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
         await fn();
       } catch (e: any) {
         setFejl(e?.message ?? 'Noget gik galt.');
+      }
+    });
+  }
+
+  // Opvarmning (trin 2.7): kald server-action'en i en løkke, ét bundet vindue ad
+  // gangen, og vis den globale fremgang undervejs. Hvert kald afsluttes under
+  // Cloudflares 100s; løkken stopper når gjort >= total (eller defensivt hvis et kald
+  // ikke rykker). Et afbrud (luk fanen) mister kun det igangværende vindue - cachen
+  // bærer resten, så en ny kørsel samler op hvor den slap.
+  function forberedOpvarmning() {
+    koer(async () => {
+      setForb({ gjort: 0, total: 0 });
+      let offset = 0;
+      for (let vagt = 0; vagt < 100000; vagt++) {
+        const r = await forberedOversaettelse(type, kunAendrede, top, sprog, offset, kommentarer);
+        setForb({ gjort: r.gjort, total: r.total });
+        if (r.gjort >= r.total || r.gjort <= offset) break;
+        offset = r.gjort;
       }
     });
   }
@@ -118,6 +142,50 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
             </span>
           </span>
         </label>
+      </div>
+
+      {/* Forbered oversættelse (opvarmning, trin 2.7) - moderator + admin */}
+      <div className="mt-5 rounded-xl border border-grafit-200 bg-grafit-50 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            className="btn-secondary !py-2 text-sm"
+            disabled={pending || sprog === 'da'}
+            onClick={forberedOpvarmning}
+          >
+            🔥 Forbered oversættelse
+          </button>
+          <p className="min-w-[14rem] flex-1 text-xs text-grafit-500">
+            Varmer oversættelses-cachen for det valgte udvalg i baggrunden, så en stor rapport (fx
+            første gang efter et deploy) ikke rammer eksport-timeouten. Kør den før du henter
+            rapporten.
+          </p>
+        </div>
+
+        {sprog === 'da' ? (
+          <p className="mt-2 text-xs text-grafit-400">
+            Dansk rapport bruger originalteksten - ingen opvarmning nødvendig.
+          </p>
+        ) : forb ? (
+          forb.total === 0 ? (
+            <p className="mt-2 text-sm text-grafit-500">Intet at forberede i det valgte udvalg.</p>
+          ) : forb.gjort >= forb.total ? (
+            <p className="mt-2 text-sm text-loest">
+              Oversættelse forberedt - {forb.total}/{forb.total} klar. Rapporten henter nu fra cache.
+            </p>
+          ) : (
+            <div className="mt-2">
+              <p className="text-sm text-grafit-700">
+                Forbereder oversættelse... {forb.gjort}/{forb.total}
+              </p>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-grafit-100">
+                <div
+                  className="h-full bg-kobber-500 transition-all"
+                  style={{ width: `${Math.round((forb.gjort / forb.total) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )
+        ) : null}
       </div>
 
       {/* Officiel rapport (kun admin) */}
