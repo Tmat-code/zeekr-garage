@@ -122,7 +122,7 @@ export const en: Ordbog = {
     vaerMed: 'Join in',
     aabnForum: 'Open the forum',
     heroNote: 'Unofficial owner community · not affiliated with or sponsored by Zeekr.',
-    talMeldinger: 'Reports',
+    talMeldinger: 'Issues',
     talBekraeftelser: 'Confirmations',
     talModeller: 'Models',
     talSendt: 'Sent to Zeekr',
@@ -136,7 +136,7 @@ export const en: Ordbog = {
     aabnFeedback: 'Open feedback',
     feedbackTekst:
       'Already up and running: report bugs and wishes, confirm them together and vote up the most important ones. We collect them in constructive reports to Zeekr.',
-    ingenMeldinger: 'No reports yet - be the first to report something.',
+    ingenMeldinger: 'Nothing reported yet - be the first to report something.',
     trinSoeg: 'Search first',
     trinBekraeft: 'Confirm together',
     trinSend: 'Send to Zeekr',

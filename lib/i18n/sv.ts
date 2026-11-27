@@ -123,10 +123,10 @@ export const sv: Ordbog = {
     vaerMed: 'Var med',
     aabnForum: 'Öppna forumet',
     heroNote: 'Inofficiell ägargemenskap · inte ansluten till eller sponsrad av Zeekr.',
-    talMeldinger: 'Rapporter',
+    talMeldinger: 'Ärenden',
     talBekraeftelser: 'Bekräftelser',
     talModeller: 'Modeller',
-    talSendt: 'Skickat till Zeekr',
+    talSendt: 'Skickade till Zeekr',
     forumTitel: 'Forumet',
     liveNu: 'Live nu',
     forumTekst:
@@ -137,7 +137,7 @@ export const sv: Ordbog = {
     aabnFeedback: 'Öppna feedback',
     feedbackTekst:
       'Är redan igång: rapportera fel och önskemål, bekräfta dem tillsammans och rösta upp de viktigaste. Vi samlar dem i konstruktiva rapporter till Zeekr.',
-    ingenMeldinger: 'Inga rapporter än - bli den första att rapportera något.',
+    ingenMeldinger: 'Inga ärenden än - bli den första att rapportera något.',
     trinSoeg: 'Sök först',
     trinBekraeft: 'Bekräfta tillsammans',
     trinSend: 'Skicka till Zeekr',
