@@ -4,11 +4,12 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     // pdfkit er et server-only modul der ikke maa bundles af webpack.
-    serverComponentsExternalPackages: ['pdfkit'],
+    serverComponentsExternalPackages: ['pdfkit', 'fontkit'],
     // pdfkit har AFM-font-filer der skal med i standalone-outputtet, ellers
-    // fejler PDF-genereringen i Docker.
+    // fejler PDF-genereringen i Docker. P40: det samme for den indlejrede
+    // Unicode-font (Liberation Sans) i assets/fonts.
     outputFileTracingIncludes: {
-      '/api/admin/rapport/pdf': ['./node_modules/pdfkit/js/data/**/*'],
+      '/api/admin/rapport/pdf': ['./node_modules/pdfkit/js/data/**/*', './assets/fonts/**/*'],
     },
   },
 };

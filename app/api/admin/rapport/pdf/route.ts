@@ -15,6 +15,7 @@ import {
 } from '@/lib/rapport-i18n';
 import { getRapportFejl, getRapportKommentarer, getRapportBilleder, grupperEfterKategori } from '@/lib/rapport';
 import { oversaetFejl } from '@/lib/oversaet';
+import { forberedPdfFont, PDF_FONT, PDF_FONT_FED, PDF_FONT_KURSIV } from '@/lib/pdf-font';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // pdfkit kræver Node + filsystem til font-data.
@@ -86,6 +87,9 @@ export async function GET(req: Request) {
     doc.on('data', (c) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
+    // P40: Unicode-font (Liberation Sans, metrisk = Helvetica) + sanitering af
+    // tegn fonten ikke kan tegne (emoji), så intet bliver til skrald.
+    forberedPdfFont(doc);
 
     const sideBredde = doc.page.width - 100;
     const dato = new Date().toLocaleDateString(DATO_LOCALE[sprog], {
@@ -97,15 +101,15 @@ export async function GET(req: Request) {
     // Header
     doc.rect(0, 0, doc.page.width, 110).fill(GRAFIT);
     for (let x = 0; x < doc.page.width; x += 40) doc.rect(x, 110, 20, 6).fill(KOBBER);
-    doc.fillColor(KOBBER).fontSize(20).font('Helvetica-Bold').text(ramme.titel, 50, 36);
-    doc.fillColor('#ffffff').fontSize(11).font('Helvetica').text(t.undertitel, 50, 66);
+    doc.fillColor(KOBBER).fontSize(20).font(PDF_FONT_FED).text(ramme.titel, 50, 36);
+    doc.fillColor('#ffffff').fontSize(11).font(PDF_FONT).text(t.undertitel, 50, 66);
     doc.fillColor('#a3a3ac').fontSize(9).text(t.genereret(dato, fejl.length), 50, 84);
 
     doc.y = 140;
     doc.x = 50;
-    doc.fillColor(GRAFIT).fontSize(10).font('Helvetica').text(ramme.intro, { width: sideBredde });
+    doc.fillColor(GRAFIT).fontSize(10).font(PDF_FONT).text(ramme.intro, { width: sideBredde });
     doc.moveDown(0.4);
-    doc.fillColor(GRAA).fontSize(9).font('Helvetica-Oblique').text(t.grupperetNote, { width: sideBredde });
+    doc.fillColor(GRAA).fontSize(9).font(PDF_FONT_KURSIV).text(t.grupperetNote, { width: sideBredde });
     doc.moveDown(1);
 
     const grupper = grupperEfterKategori(fejl);
@@ -118,11 +122,11 @@ export async function GET(req: Request) {
       const startY = doc.y;
 
       doc.rect(50, startY, sideBredde, 26).fill('#f6f6f7');
-      doc.fillColor(GRAFIT).fontSize(12).font('Helvetica-Bold').text(`#${i + 1}`, 58, startY + 7);
+      doc.fillColor(GRAFIT).fontSize(12).font(PDF_FONT_FED).text(`#${i + 1}`, 58, startY + 7);
       doc
         .fillColor(GRAA)
         .fontSize(9)
-        .font('Helvetica-Bold')
+        .font(PDF_FONT_FED)
         .text(`${f.stemmer} ${f.stemmer === 1 ? t.stemme : t.stemmer}`, doc.page.width - 150, startY + 8, {
           width: 92,
           align: 'right',
@@ -130,13 +134,13 @@ export async function GET(req: Request) {
       doc
         .fillColor(GRAFIT)
         .fontSize(13)
-        .font('Helvetica-Bold')
+        .font(PDF_FONT_FED)
         .text(f.title, 90, startY + 4, { width: doc.page.width - 260 });
       doc.y = Math.max(doc.y, startY + 30);
 
       const delta = deltaTekst(f, sprog);
       if (delta) {
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#8a4028').text(`>> ${delta}`, 58, doc.y + 2, { width: sideBredde });
+        doc.fontSize(9).font(PDF_FONT_FED).fillColor('#8a4028').text(`>> ${delta}`, 58, doc.y + 2, { width: sideBredde });
         doc.moveDown(0.2);
       }
 
@@ -145,7 +149,7 @@ export async function GET(req: Request) {
         const br = f.variant_fordeling.map((r) => `${r.n}× ${r.variant}`).join(', ');
         doc
           .fontSize(10)
-          .font('Helvetica-Bold')
+          .font(PDF_FONT_FED)
           .fillColor(GROEN)
           .text(`${t.metaLabels.bilBekraeftet}: ${bilBekr}  -  ${br}`, 58, doc.y + 2, { width: sideBredde });
         doc.moveDown(0.2);
@@ -158,23 +162,23 @@ export async function GET(req: Request) {
       }
       if (f.antal_svar > 0) metaDele.push(`${f.antal_svar} ${t.svar}`);
       metaDele.push(`${t.metaLabels.status}: ${oversaetStatus(f.status, sprog)}`);
-      doc.fontSize(9).font('Helvetica-Bold').fillColor(GRAA).text(metaDele.join('    |    '), 58, doc.y + 2, { width: sideBredde });
+      doc.fontSize(9).font(PDF_FONT_FED).fillColor(GRAA).text(metaDele.join('    |    '), 58, doc.y + 2, { width: sideBredde });
       doc.moveDown(0.5);
 
-      doc.fontSize(10).font('Helvetica').fillColor('#2a2a2e').text(f.description, 58, doc.y, { width: sideBredde });
+      doc.fontSize(10).font(PDF_FONT).fillColor('#2a2a2e').text(f.description, 58, doc.y, { width: sideBredde });
 
       const komm = kommMap[f.id] ?? [];
       if (medKommentarer && komm.length > 0) {
         doc.moveDown(0.5);
-        doc.fontSize(9).font('Helvetica-Bold').fillColor(GRAA).text(`${t.kommentarerOverskrift}:`, 58, doc.y, { width: sideBredde });
+        doc.fontSize(9).font(PDF_FONT_FED).fillColor(GRAA).text(`${t.kommentarerOverskrift}:`, 58, doc.y, { width: sideBredde });
         doc.moveDown(0.2);
         for (const k of komm) {
           doc
             .fontSize(9)
-            .font('Helvetica-Oblique')
+            .font(PDF_FONT_KURSIV)
             .fillColor('#555')
             .text(`•  ${k.navn}: `, 66, doc.y, { width: sideBredde - 8, continued: true })
-            .font('Helvetica')
+            .font(PDF_FONT)
             .fillColor('#2a2a2e')
             .text(k.tekst);
           doc.moveDown(0.15);
@@ -231,12 +235,12 @@ export async function GET(req: Request) {
       doc
         .fillColor('#ffffff')
         .fontSize(13)
-        .font('Helvetica-Bold')
+        .font(PDF_FONT_FED)
         .text(rapportKategoriLabel(g.slug, sprog), 64, gy + 6, { width: sideBredde - 200, lineBreak: false });
       doc
         .fillColor(KOBBER)
         .fontSize(9)
-        .font('Helvetica-Bold')
+        .font(PDF_FONT_FED)
         .text(aggr, doc.page.width - 250, gy + 10, { width: 192, align: 'right', lineBreak: false });
       doc.y = gy + 40;
 
@@ -254,9 +258,9 @@ export async function GET(req: Request) {
       doc
         .fontSize(8)
         .fillColor(GRAFIT)
-        .font('Helvetica-Bold')
+        .font(PDF_FONT_FED)
         .text(t.sideAf(i + 1, range.count), doc.page.width - 150, bundY + 6, { width: 100, align: 'right', lineBreak: false });
-      doc.fillColor(GRAA).fontSize(7).font('Helvetica').text(t.disclaimer, 50, bundY + 6, { width: sideBredde - 110, height: 44 });
+      doc.fillColor(GRAA).fontSize(7).font(PDF_FONT).text(t.disclaimer, 50, bundY + 6, { width: sideBredde - 110, height: 44 });
       doc.page.margins.bottom = gemtBottom;
     }
 
