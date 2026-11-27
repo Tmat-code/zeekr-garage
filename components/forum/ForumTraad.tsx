@@ -10,12 +10,20 @@ import Avatar from '@/components/forum/Avatar';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import BilledeGalleri from '@/components/BilledeGalleri';
 import { MAKS_ANTAL, forumBilledeUrl } from '@/lib/billeder';
-import { svar, retIndlaeg, fjernIndlaeg, modFjernIndlaeg, modFjernAvatar } from '@/app/forum/actions';
+import {
+  svar,
+  retIndlaeg,
+  fjernIndlaeg,
+  modFjernIndlaeg,
+  modFjernAvatar,
+  oversaetForumIndlaeg,
+} from '@/app/forum/actions';
 import { startSamtaleMedBruger } from '@/app/beskeder/actions';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import RapporterKnap from '@/components/forum/RapporterKnap';
 import AutolinkTekst from '@/components/forum/AutolinkTekst';
 import LinkPreviewKort from '@/components/forum/LinkPreviewKort';
+import { gaetSprog, sprogNavn, type ForumSprog } from '@/lib/forum-sprog';
 
 function IndlaegKort({
   p,
@@ -30,6 +38,7 @@ function IndlaegKort({
   onSvar,
   pending,
   fremhaevet,
+  minSprog,
 }: {
   p: ForumIndlaeg;
   kategoriSlug: string;
@@ -43,11 +52,18 @@ function IndlaegKort({
   onSvar: () => void;
   pending: boolean;
   fremhaevet: boolean;
+  minSprog: ForumSprog;
 }) {
   const [redigerer, setRedigerer] = useState(false);
   const [modFjerner, setModFjerner] = useState(false);
   const [modFjernerAvatar, setModFjernerAvatar] = useState(false);
   const [tekst, setTekst] = useState(p.body);
+  // Trin 3 (nordisk i18n): on-demand oversaettelse til laeserens sprog.
+  const [oversat, setOversat] = useState<string | null>(null);
+  const [oversatKilde, setOversatKilde] = useState<string | null>(null);
+  const [visOversat, setVisOversat] = useState(false);
+  const [oversaetter, setOversaetter] = useState(false);
+  const [oversaetFejl, setOversaetFejl] = useState(false);
   // Billed-redigering: paths markeret til fjernelse + netop uploadede nye paths.
   const [fjernede, setFjernede] = useState<string[]>([]);
   const [nyeBilleder, setNyeBilleder] = useState<string[]>([]);
@@ -79,6 +95,47 @@ function IndlaegKort({
   // P38 (FB-stil): er indlægget KUN linket (intet andet), skjul URL-teksten og
   // vis bare kortet. Er der også tekst, beholdes den (med linket klikbart) + kort.
   const kunLink = !!p.linkPreview && p.body.trim() === p.linkPreview.url;
+
+  // Trin 3 (FB-stil "Oversæt"): vis knappen når indlægget har tekst der IKKE ser
+  // ud til at være på læserens sprog (billigt gæt - LT afgør det autoritativt ved
+  // klik). Ikke på fjernede/kun-link-indlæg (intet prosa at oversætte).
+  const harProsa = !!p.body && p.body.trim().length > 0 && !kunLink;
+  const kanOversaette =
+    harProsa && !p.isRemoved && gaetSprog(p.body) !== minSprog;
+  // Hvilken krop renderes: den oversatte (når slået til) ellers originalen.
+  const visBody = visOversat && oversat != null ? oversat : p.body;
+
+  function haandterOversaet() {
+    // Toggle tilbage til original uden nyt kald, hvis vi allerede har oversat.
+    if (visOversat) {
+      setVisOversat(false);
+      return;
+    }
+    if (oversat != null) {
+      setVisOversat(true);
+      return;
+    }
+    setOversaetFejl(false);
+    setOversaetter(true);
+    // Eget kald (ikke `koer`): oversættelse er læse-only og må ikke blokere/forstyrre
+    // trådens skrive-pending. Virker også for en anonym læser.
+    oversaetForumIndlaeg(p.id, minSprog)
+      .then((r) => {
+        if (!r.oversat || r.uaendret) {
+          // Intet reelt at oversætte (allerede på læserens sprog / tomt) - vis original.
+          setOversaetFejl(!r.oversat);
+          setVisOversat(false);
+          setOversat(r.oversat || p.body);
+          setOversatKilde(r.kildesprog);
+          return;
+        }
+        setOversat(r.oversat);
+        setOversatKilde(r.kildesprog);
+        setVisOversat(true);
+      })
+      .catch(() => setOversaetFejl(true))
+      .finally(() => setOversaetter(false));
+  }
 
   function nulstilRedigering() {
     setTekst(p.body);
@@ -199,8 +256,29 @@ function IndlaegKort({
         <>
           {p.body && !kunLink && (
             <p className="mt-2 whitespace-pre-line break-words text-grafit-800">
-              <AutolinkTekst text={p.body} />
+              <AutolinkTekst text={visBody} />
             </p>
+          )}
+          {/* Trin 3 (FB-stil): on-demand "Oversæt" til læserens sprog. Vises også
+              for anonyme læsere (oversæt-arbejdet sker server-side). */}
+          {kanOversaette && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+              <button
+                className="font-medium text-kobber-700 hover:text-kobber-800 disabled:opacity-60"
+                disabled={oversaetter}
+                onClick={haandterOversaet}
+              >
+                {oversaetter ? 'Oversætter…' : visOversat ? 'Vis original' : '🌐 Oversæt'}
+              </button>
+              {visOversat && oversatKilde && (
+                <span className="text-grafit-400">
+                  Oversat fra {sprogNavn(oversatKilde)} · maskinoversat
+                </span>
+              )}
+              {oversaetFejl && !visOversat && (
+                <span className="text-grafit-400">Kunne ikke oversætte lige nu</span>
+              )}
+            </div>
           )}
           {/* P38: ét link-preview-kort pr. indlæg (første URL i body). Er indlægget
               kun linket, står kortet alene (URL-teksten skjult, FB-stil). */}
@@ -325,6 +403,7 @@ export default function ForumTraad({
   isLoggedIn,
   isLocked,
   naeste,
+  minSprog,
 }: {
   threadId: string;
   kategoriSlug: string;
@@ -335,6 +414,7 @@ export default function ForumTraad({
   isLoggedIn: boolean;
   isLocked: boolean;
   naeste: string;
+  minSprog: ForumSprog;
 }) {
   const [ny, setNy] = useState('');
   const [svarBilleder, setSvarBilleder] = useState<string[]>([]);
@@ -455,6 +535,7 @@ export default function ForumTraad({
       onSvar={() => startSvar(p.id, p.forfatter || 'Ejer', p.parentId ?? p.id)}
       pending={pending}
       fremhaevet={fremhaev === p.id}
+      minSprog={minSprog}
     />
   );
 

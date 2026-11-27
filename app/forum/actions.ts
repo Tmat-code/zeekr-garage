@@ -7,6 +7,23 @@ import { MAKS_ANTAL, FORUM_BUCKET } from '@/lib/billeder';
 import { MOD_GRUND_VALUES } from '@/lib/moderering';
 import { foersteUrl, normaliserUrl } from '@/lib/forum-links';
 import { hentLinkPreview } from '@/lib/link-preview';
+import {
+  oversaetIndlaeg as _oversaetIndlaeg,
+  sletIndlaegOversaettelser,
+  type ForumOversaettelse,
+} from '@/lib/forum-oversaet';
+
+// Trin 3 (nordisk i18n): on-demand GIST-oversaettelse af ÉT forum-indlaeg til
+// laeserens sprog (FB-stil "Oversaet"-knap). Kaldes fra ForumTraad ved klik.
+// Virker ogsaa for en ANONYM laeser - selve oversaet/cache-arbejdet sker
+// server-side med service-role (se lib/forum-oversaet.ts). Best-effort: fejler
+// det, faar klienten originalen tilbage (uaendret), aldrig en crash.
+export async function oversaetForumIndlaeg(
+  postId: string,
+  maalsprog: string,
+): Promise<ForumOversaettelse> {
+  return _oversaetIndlaeg(postId, maalsprog);
+}
 
 // P38: detektér FØRSTE http(s)-URL i et indlægs body, hent sidens Open Graph-
 // snapshot (SSRF-sikkert) og cache det via RPC'en, keyet på den NORMALISEREDE
@@ -282,6 +299,8 @@ export async function fjernIndlaeg(
   const sb = supabaseServer();
   const { error } = await sb.from('forum_posts').update({ is_removed: true }).eq('id', postId);
   if (error) throw new Error(error.message);
+  // Slet-ved-fjern: ryd evt. cachede oversaettelser af indlaegget (best-effort).
+  await sletIndlaegOversaettelser(postId);
   revalider(kategoriSlug, traadSlug);
 }
 
@@ -381,6 +400,8 @@ export async function modFjernIndlaeg(
     p_report_id: reportId ?? null,
   });
   if (error) throw new Error(error.message);
+  // Slet-ved-fjern: ryd evt. cachede oversaettelser af indlaegget (best-effort).
+  await sletIndlaegOversaettelser(postId);
   revalider(kategoriSlug, traadSlug);
 }
 
