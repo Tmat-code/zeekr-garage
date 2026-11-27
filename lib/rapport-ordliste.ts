@@ -159,7 +159,13 @@ export const BEVAR: readonly BevarRegel[] = [
   // Reference-numre (fx "#10") og versioner (fx "3.0.4", "OS 3.0.4") - ellers
   // æder MT dem eller vender dem om.
   { soeg: /#\d+[a-zæøå]*/gi },
-  { soeg: /(?<![\w.])\d+\.\d+(?:\.\d+)?(?![\w.])/g },
+  // P39: lookahead tillader et AFSLUTTENDE punktum (efterfulgt af whitespace eller
+  // streng-slut), så en version sidst på en linje/sætning/titel ("3.0.3" + linjeskift
+  // -> rensKilde "3.0.3.", "på 3.0.4.", titel "Fejl efter 3.0.3") også beskyttes.
+  // Punktummet er ikke en del af matchet og bliver stående uden for tokenet.
+  // Et punktum efterfulgt af andet (".4", ".x", "..") blokerer stadig, så
+  // "3.0.3.4" ikke dobbelt-/del-matches.
+  { soeg: /(?<![\w.])\d+\.\d+(?:\.\d+)?(?!\w|\.(?!\s|$))/g },
 
   // ADAS-/bil-akronymer (versaler, case-sensitivt)
   { ord: 'ACC' }, { ord: 'LCC' }, { ord: 'LKA' }, { ord: 'LDW' }, { ord: 'AEB' },

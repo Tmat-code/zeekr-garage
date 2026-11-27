@@ -42,7 +42,10 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // v3-lt-c (trin 2.9): bumpet så cachede "PACKAGE LEAFLET"-hallucinationer (sprog-løse
 // stumper som "1."/"-."/"[[0]]." sendt alene til motoren) bustes - de stumper sendes
 // nu aldrig til motoren (oversaetKunSprog). Ingen migration.
-const MOTOR_ID = 'v3-lt-c';
+// v3-lt-d (P39): bumpet fordi BEVAR-versions-regexen nu også beskytter en version
+// sidst på en linje/sætning/titel ("3.0.3." -> "[[0]]."); cachede oversættelser hvor
+// versionen gik rå gennem motoren bustes. Ingen migration.
+const MOTOR_ID = 'v3-lt-d';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
