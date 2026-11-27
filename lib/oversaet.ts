@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytBevar, genindsaetTermer, erTokenSkadet } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytTilSvensk, genindsaetTermer, erTokenSkadet } from '@/lib/rapport-ordliste';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -52,7 +52,8 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // for selve bumpet.
 // v3-lt-f (U1b live-runde): token-fletning (parentes/anførselstegn/"/"), bestemte
 // former -> "the X", flere OTA-termer, token-skade-værn på pivoten.
-const MOTOR_ID = 'v3-lt-f';
+// v3-lt-g (U1b): svensk ordliste (EN_SV) på en->sv-pivoten.
+const MOTOR_ID = 'v3-lt-g';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -150,7 +151,8 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
   if (maal === 'en') return engelsk;
   // Samme værn på pivoten (fx en tom beskrivelse ville ellers gå alene til en->sv).
   // U1b: bevar-ordene (versioner, ACC, "Pet Mode" ...) beskyttes også på en->sv.
-  const beskyttet = engelsk.map(beskytBevar);
+  // + (27-11) faste svenske fagtermer (EN_SV) i stedet for at lade LT gætte dem.
+  const beskyttet = engelsk.map(beskytTilSvensk);
   const raa = await oversaetKunSprog(
     beskyttet.map((b) => b.tekst),
     (u) => motorKald(u, 'en', maal, BRUG_LT),

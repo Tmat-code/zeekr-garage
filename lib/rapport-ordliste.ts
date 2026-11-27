@@ -224,6 +224,126 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['flere trin til'], en: 'more levels of' },
 ];
 
+// --- Svenske fagtermer på en->sv-pivoten (U1b, 27-11) -------------------------
+// sv laves via engelsk (da->en->sv). LibreTranslates en->sv-model lader enkelte
+// engelske ord stå ("Fine-tuned", "jerking") og rammer termer skævt ("bogsfältet"
+// for tow bar). Den engelske mellemtekst er VORES (ORDLISTE-termerne står ordret),
+// så de kendte termer kan erstattes direkte med faste svenske termer, før en->sv-
+// kaldet. Kun flerords-/entydige fagtermer: generiske ord (range, charging, lane,
+// seat, cabin ...) er bevidst UDE, da de også kan stå i fri MT-tekst med anden
+// betydning. Bestemte former ("the X") har egen svensk bestemt form og står først.
+// Ingen ordliste fanger alt - resten maskinoversættes, originalen er ét klik væk.
+export const EN_SV: Readonly<Record<string, string>> = {
+  // OTA-noter (runde 4 + live-runder)
+  'Drive Setup shortcut': 'Drive Setup-genväg',
+  'driving setup': 'körinställningar',
+  'ACC/LCC behaviour': 'ACC/LCC-beteende',
+  'the Zeekr app': 'Zeekr-appen',
+  'Zeekr app': 'Zeekr-appen',
+  'the steering wheel heating': 'rattvärmen',
+  'steering wheel heating': 'rattvärme',
+  'the steering wheel': 'ratten',
+  'the regenerative braking': 'den regenerativa bromsningen',
+  'regenerative braking': 'regenerativ bromsning',
+  'the driver monitoring': 'förarövervakningen',
+  'driver monitoring': 'förarövervakning',
+  'driver attention': 'föraruppmärksamhet',
+  'fatigue/attention alerts': 'trötthets-/uppmärksamhetsvarningar',
+  'speed warnings': 'hastighetsvarningar',
+  'speed warning': 'hastighetsvarning',
+  speeding: 'fortkörning',
+  'speed cameras': 'fartkameror',
+  'speed camera': 'fartkamera',
+  'speed adaptation in curves': 'hastighetsanpassning i kurvor',
+  'speed adaptation': 'hastighetsanpassning',
+  'tow bar': 'dragkrok',
+  'towing mode': 'dragläge',
+  'drive modes': 'körlägen',
+  'drive mode': 'körläge',
+  'seat belt status': 'bältesstatus',
+  'the rear seats': 'baksätena',
+  'rear seats': 'baksäten',
+  'rear seat': 'baksäte',
+  preconditioning: 'förkonditionering',
+  'the high-voltage battery': 'högvoltsbatteriet',
+  'high-voltage battery': 'högvoltsbatteri',
+  'air distribution': 'luftfördelning',
+  'the home screen': 'hemskärmen',
+  'home screen': 'hemskärm',
+  'the trip log': 'körjournalen',
+  'trip log': 'körjournal',
+  'navigation marker': 'navigationsmarkör',
+  'raindrop detection': 'regndroppsavkänning',
+  'automatic heating': 'automatisk uppvärmning',
+  'the side mirrors': 'sidospeglarna',
+  'car wash': 'biltvätt',
+  'quick menu': 'snabbmeny',
+  'charging settings': 'laddningsinställningar',
+  'charging setting': 'laddningsinställning',
+  'charging light': 'laddningslampa',
+  'AC charging': 'AC-laddning',
+  'location tracking': 'platsspårning',
+  'digital key': 'digital nyckel',
+  'enters sleep mode': 'går i viloläge',
+  'rolling out gradually': 'rullas ut gradvis',
+  'less stuttering and jerking': 'mindre hackighet och ryck',
+  'stuttering and jerking': 'hackighet och ryck',
+  'fine-tuned': 'finjusterad',
+  // Rapportens faste termer (ORDLISTE-runde 1-3)
+  'adaptive cruise control': 'adaptiv farthållare',
+  'cruise control': 'farthållare',
+  'lane change': 'filbyte',
+  'turn lane': 'svängfil',
+  'lane assist': 'filhållningsassistans',
+  'automatic emergency braking': 'automatisk nödbromsning',
+  'emergency brake': 'nödbroms',
+  'driver assistance': 'förarassistans',
+  'distance sensor': 'avståndssensor',
+  'parking sensor': 'parkeringssensor',
+  'reversing camera': 'backkamera',
+  'traffic sign recognition': 'trafikskyltsavläsning',
+  'oncoming traffic': 'mötande trafik',
+  'automatic high beam': 'automatiskt helljus',
+  'high-beam dimming': 'helljusavbländning',
+  'high beam': 'helljus',
+  'low beam': 'halvljus',
+  'turn signal': 'körriktningsvisare',
+  'daytime running light': 'varselljus',
+  'rear-view mirror': 'backspegel',
+  'windscreen wiper': 'vindrutetorkare',
+  'charging point': 'laddpunkt',
+  'charging cable': 'laddkabel',
+  'charging power': 'laddeffekt',
+  'fast charging': 'snabbladdning',
+  'battery level': 'batterinivå',
+  'accelerator pedal': 'gaspedal',
+  'brake pedal': 'bromspedal',
+  'parking brake': 'parkeringsbroms',
+  'gear selector': 'växelväljare',
+  'reverse gear': 'backväxel',
+  'braking distance': 'bromssträcka',
+  'center screen': 'mittskärm',
+  'voice control': 'röststyrning',
+  'software update': 'programuppdatering',
+  'remote lock': 'fjärrlåsning',
+  'key card': 'nyckelkort',
+  'key fob': 'nyckelbricka',
+  'climate control': 'klimatanläggning',
+  'seat heating': 'stolsvärme',
+  'seat adjustment': 'stolsinställning',
+  'seat belt': 'säkerhetsbälte',
+  'heat pump': 'värmepump',
+  'tyre pressure': 'däcktryck',
+  'wheel rim': 'fälg',
+  'overtaking lane': 'omkörningsfil',
+  'lane markings': 'vägmarkeringar',
+  'centre line': 'mittlinje',
+  'inner lanes': 'inre filer',
+  'inner lane': 'inre fil',
+  'outer lanes': 'yttre filer',
+  'outer lane': 'yttre fil',
+};
+
 // --- Bevar urørt (akronymer, modelnavne, reference-numre, versioner) ---------
 // Disse SKAL overleve oversættelsen ordret. Akronymer matches case-sensitivt
 // (versaler i kilden), så danske småord ("os", "ev") ikke rammes.
@@ -441,6 +561,34 @@ export function genindsaetTermer(oversat: string, erstatninger: string[]): strin
 // navne) - til en->sv-pivoten. Den engelske mellemtekst har ingen danske termer
 // tilbage, men "Pet Mode", "ACC", "3.0.4" o.l. skal heller ikke ændres på vej til
 // svensk. Samme token-format, så genindsaetTermer genbruges.
+// Appliers til en->sv: svenske termer FØR bevar (så "Drive Setup shortcut" og
+// "the Zeekr app" fanges hele), længste først, case-insensitivt med ordgrænser.
+const EN_SV_APPLIERS: Applier[] = Object.entries(EN_SV)
+  .sort((a, b) => b[0].length - a[0].length)
+  .map(([en, sv]) => ({
+    soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(en)}(?![\\p{L}\\p{N}])`, 'giu'),
+    en: sv,
+  }));
+
+// U1b: beskyt den engelske mellemtekst før en->sv: kendte fagtermer -> fast svensk
+// term (stort forbogstav ved sætningsstart), derefter bevar-ordene. Samme
+// token-format, så genindsaetTermer + erTokenSkadet genbruges på pivoten.
+export function beskytTilSvensk(tekst: string): BeskyttetKilde {
+  const erstatninger: string[] = [];
+  let ud = tekst;
+  for (const a of [...EN_SV_APPLIERS, ...BEVAR_APPLIERS]) {
+    ud = ud.replace(a.soeg, (match: string, ...rest: unknown[]) => {
+      const hel = rest[rest.length - 1] as string;
+      const offset = rest[rest.length - 2] as number;
+      let v = a.bevar ? match : (a.en as string);
+      if (!a.bevar && erSaetningsstart(hel.slice(0, offset))) v = storForbogstav(v);
+      erstatninger.push(v);
+      return token(erstatninger.length - 1);
+    });
+  }
+  return fletTokens({ tekst: ud, erstatninger });
+}
+
 export function beskytBevar(tekst: string): BeskyttetKilde {
   const erstatninger: string[] = [];
   let ud = tekst;

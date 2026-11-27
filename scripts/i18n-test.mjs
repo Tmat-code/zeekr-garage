@@ -313,6 +313,15 @@ lig('skadet: erstatning mangler', ro.erTokenSkadet('Bättre beteende', ['ACC/LCC
 lig('skadet: rent', ro.erTokenSkadet('Bättre ACC/LCC-beteende', ['ACC/LCC', '']), false);
 lig('pivot bevar flettet', ro.beskytBevar('Adds Remote Park Assist (RPA) and "Off".').erstatninger, ['Remote Park Assist', '(RPA)', '"Off"']);
 
+// --- U1b: svenske fagtermer på pivoten (EN_SV) ---
+const bs = (t) => ro.beskytTilSvensk(t);
+lig('sv: term + sætningsstart', bs('Fine-tuned speed adaptation in curves.').erstatninger, ['hastighetsanpassning i kurvor', 'Finjusterad']);
+lig('sv: bestemt form først', bs('a button of the steering wheel').erstatninger, ['ratten']);
+lig('sv: indeholder bevar-ord', bs('Drive Setup shortcut: Quick menu').erstatninger, ['Drive Setup-genväg', 'Snabbmeny']);
+lig('sv: bevar stadig', bs('ACC on Zeekr OS 3.0.4').erstatninger.sort(), ['3.0.4', 'ACC', 'OS', 'Zeekr'].sort());
+lig('sv: generiske ord urørt', bs('A wide range of options for the cabin.').erstatninger, []);
+lig('sv: ingen lange tankestreger', Object.values(ro.EN_SV).filter((t) => /[\u2013\u2014]/.test(t)), []);
+
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);
