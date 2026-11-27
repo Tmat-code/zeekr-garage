@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytTilSvensk, genindsaetTermer, erTokenSkadet } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytTilSvensk, beskytBevar, genindsaetTermer, erTokenSkadet, splitSaetninger, samlSaetninger, type BeskyttetKilde } from '@/lib/rapport-ordliste';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -53,7 +53,8 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // v3-lt-f (U1b live-runde): token-fletning (parentes/anførselstegn/"/"), bestemte
 // former -> "the X", flere OTA-termer, token-skade-værn på pivoten.
 // v3-lt-g (U1b): svensk ordliste (EN_SV) på en->sv-pivoten.
-const MOTOR_ID = 'v3-lt-g';
+// v3-lt-h (U1b): pivoten sætning-for-sætning med trinvis fallback (A/B/C).
+const MOTOR_ID = 'v3-lt-h';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -149,28 +150,49 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
   const BRUG_LT = true;
   const engelsk = await daTilEngelsk(tekster, BRUG_LT);
   if (maal === 'en') return engelsk;
-  // Samme værn på pivoten (fx en tom beskrivelse ville ellers gå alene til en->sv).
-  // U1b: bevar-ordene (versioner, ACC, "Pet Mode" ...) beskyttes også på en->sv.
-  // + (27-11) faste svenske fagtermer (EN_SV) i stedet for at lade LT gætte dem.
-  const beskyttet = engelsk.map(beskytTilSvensk);
-  const raa = await oversaetKunSprog(
-    beskyttet.map((b) => b.tekst),
-    (u) => motorKald(u, 'en', maal, BRUG_LT),
-  );
-  const ud = raa.map((r, i) => genindsaetTermer(r, beskyttet[i].erstatninger));
-  // Har en->sv-motoren forvansket et token (live 27-11: "ACC / [[2]]"), oversættes den
-  // enhed igen UDEN bevar-tokens (som før U1b) - hellere et oversat funktionsnavn
-  // end en synlig klamme-rest.
-  const skadet = ud.map((u, i) => (erTokenSkadet(u, beskyttet[i].erstatninger) ? i : -1)).filter((i) => i >= 0);
-  if (skadet.length > 0) {
-    try {
-      const igen = await oversaetKunSprog(skadet.map((i) => engelsk[i]), (u) => motorKald(u, 'en', maal, BRUG_LT));
-      skadet.forEach((i, k) => { ud[i] = igen[k] ?? ud[i]; });
-    } catch (e) {
-      console.error('[oversaet] pivot-genforsøg uden tokens fejlede:', e);
-    }
+  return pivotTilSvensk(engelsk, maal, BRUG_LT);
+}
+
+// en->sv-pivoten (U1b, live 27-11). Sætning for sætning (en forvansket token
+// rammer kun dén sætning) og i TRIN, så en sætning aldrig ender dårligere end før:
+//   A) faste svenske fagtermer (EN_SV) + bevar-ord som tokens  (bedst)
+//   B) kun bevar-ord som tokens                                   (som v3-lt-f)
+//   C) uden tokens                                                (som før U1b)
+// En sætning går videre til næste trin kun hvis motoren forvanskede et token
+// (erTokenSkadet). Hvert trin er ÉT motorkald for alle de sætninger, der er
+// tilbage. Sprog-løse enheder sendes aldrig (oversaetKunSprog). Fejler et kald,
+// kastes der videre, så kalderen beholder originalen.
+async function pivotTilSvensk(engelsk: string[], maal: string, brugLT: boolean): Promise<string[]> {
+  const delt = engelsk.map((e) => splitSaetninger(e));
+  const flade: string[] = delt.flatMap((d) => d.dele);
+  const ud: string[] = new Array(flade.length).fill('');
+  const kald = (u: string[]) => motorKald(u, 'en', maal, brugLT);
+
+  const trin: ((s: string) => BeskyttetKilde)[] = [
+    beskytTilSvensk,
+    beskytBevar,
+    (s) => ({ tekst: s, erstatninger: [] }),
+  ];
+  let tilbage = flade.map((_, i) => i);
+  for (const beskyt of trin) {
+    if (tilbage.length === 0) break;
+    const b = tilbage.map((i) => beskyt(flade[i]));
+    const raa = await oversaetKunSprog(b.map((x) => x.tekst), kald);
+    const naeste: number[] = [];
+    tilbage.forEach((i, k) => {
+      const r = genindsaetTermer(raa[k] ?? '', b[k].erstatninger);
+      ud[i] = r;
+      if (b[k].erstatninger.length > 0 && erTokenSkadet(r, b[k].erstatninger)) naeste.push(i);
+    });
+    tilbage = naeste;
   }
-  return ud;
+
+  let pos = 0;
+  return delt.map((d) => {
+    const dele = ud.slice(pos, pos + d.dele.length);
+    pos += d.dele.length;
+    return samlSaetninger(dele, d.skilletegn);
+  });
 }
 
 // U1b: rapportens da->en/sv-pipeline (rensning, term-beskyttelse, ordliste/BEVAR,

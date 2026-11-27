@@ -319,6 +319,8 @@ lig('sv: term + sætningsstart', bs('Fine-tuned speed adaptation in curves.').er
 lig('sv: bestemt form først', bs('a button of the steering wheel').erstatninger, ['ratten']);
 lig('sv: indeholder bevar-ord', bs('Drive Setup shortcut: Quick menu').erstatninger, ['Drive Setup-genväg', 'Snabbmeny']);
 lig('sv: bevar stadig', bs('ACC on Zeekr OS 3.0.4').erstatninger.sort(), ['3.0.4', 'ACC', 'OS', 'Zeekr'].sort());
+lig('sv: bevar-funktionsnavn vinder over kort term', bs('turns off in Car Wash Mode and the car wash').erstatninger, ['Car Wash Mode', 'biltvätt']);
+lig('sv: term med bevar-ord først', bs('Use the Zeekr app').erstatninger, ['Zeekr-appen']);
 lig('sv: generiske ord urørt', bs('A wide range of options for the cabin.').erstatninger, []);
 lig('sv: ingen lange tankestreger', Object.values(ro.EN_SV).filter((t) => /[\u2013\u2014]/.test(t)), []);
 

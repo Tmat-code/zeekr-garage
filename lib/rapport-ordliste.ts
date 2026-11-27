@@ -289,6 +289,9 @@ export const EN_SV: Readonly<Record<string, string>> = {
   'less stuttering and jerking': 'mindre hackighet och ryck',
   'stuttering and jerking': 'hackighet och ryck',
   'fine-tuned': 'finjusterad',
+  optimises: 'optimerar', // fra ORDLISTE 'optimerer' (LT lod "Optimises" stå)
+  improves: 'förbättrar',
+  stricter: 'strängare',
   // Rapportens faste termer (ORDLISTE-runde 1-3)
   'adaptive cruise control': 'adaptiv farthållare',
   'cruise control': 'farthållare',
@@ -563,12 +566,19 @@ export function genindsaetTermer(oversat: string, erstatninger: string[]): strin
 // svensk. Samme token-format, så genindsaetTermer genbruges.
 // Appliers til en->sv: svenske termer FØR bevar (så "Drive Setup shortcut" og
 // "the Zeekr app" fanges hele), længste først, case-insensitivt med ordgrænser.
-const EN_SV_APPLIERS: Applier[] = Object.entries(EN_SV)
-  .sort((a, b) => b[0].length - a[0].length)
-  .map(([en, sv]) => ({
-    soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(en)}(?![\\p{L}\\p{N}])`, 'giu'),
-    en: sv,
-  }));
+const EN_SV_SORTERET = Object.entries(EN_SV).sort((a, b) => b[0].length - a[0].length);
+const tilApplier = ([en, sv]: [string, string]): Applier => ({
+  soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(en)}(?![\\p{L}\\p{N}])`, 'giu'),
+  en: sv,
+});
+
+// Rækkefølge: EN_SV-termer der INDEHOLDER et bevar-ord ("Drive Setup shortcut",
+// "the Zeekr app") før bevar; alle andre EFTER bevar, så fx "car wash" ikke river
+// "Car Wash" ud af funktionsnavnet "Car Wash Mode".
+const indeholderBevar = (en: string) =>
+  BEVAR_APPLIERS.some((b) => new RegExp(b.soeg.source, b.soeg.flags.replace('g', '')).test(en));
+const EN_SV_FOERST = EN_SV_SORTERET.filter(([en]) => indeholderBevar(en)).map(tilApplier);
+const EN_SV_EFTER = EN_SV_SORTERET.filter(([en]) => !indeholderBevar(en)).map(tilApplier);
 
 // U1b: beskyt den engelske mellemtekst før en->sv: kendte fagtermer -> fast svensk
 // term (stort forbogstav ved sætningsstart), derefter bevar-ordene. Samme
@@ -576,7 +586,7 @@ const EN_SV_APPLIERS: Applier[] = Object.entries(EN_SV)
 export function beskytTilSvensk(tekst: string): BeskyttetKilde {
   const erstatninger: string[] = [];
   let ud = tekst;
-  for (const a of [...EN_SV_APPLIERS, ...BEVAR_APPLIERS]) {
+  for (const a of [...EN_SV_FOERST, ...BEVAR_APPLIERS, ...EN_SV_EFTER]) {
     ud = ud.replace(a.soeg, (match: string, ...rest: unknown[]) => {
       const hel = rest[rest.length - 1] as string;
       const offset = rest[rest.length - 2] as number;
