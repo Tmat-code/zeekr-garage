@@ -288,6 +288,15 @@ const K = [
   lig('ota: tomt opslag -> intet kald', [r.size, s.kald.length], [0, 0]);
 }
 
+{
+  const s = stubDeps();
+  s.deps.maksNye = 0;
+  const hashB = 'H:' + ok_.otaKildeTekst(K[1]);
+  s.deps.hentCache = async () => [{ update_id: 'b', kilde_hash: hashB, punkter: ['B!'], note: null }];
+  const r = await ok_.oversaetOtaKerne(K, s.deps);
+  lig('ota: maksNye 0 = kun cache, intet motorkald', [s.kald.length, [...r.keys()]], [0, ['b']]);
+}
+
 // --- U1b live-runde: token-fletning + skade-værn (lib/rapport-ordliste.ts) ---
 const ro = await transpiler('lib/rapport-ordliste.ts', 'rapport-ordliste');
 const bt = (t) => ro.beskytTermer(t);

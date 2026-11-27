@@ -73,6 +73,7 @@ export async function oversaetOtaKerne(kilder: OtaKilde[], deps: OtaDeps): Promi
 
   // 2) Oversæt de manglende (højst maksNye) i ÉT kald: alle punkter + noter fladt.
   const udvalg = mangler.slice(0, deps.maksNye ?? 8);
+  if (udvalg.length === 0) return ud; // maksNye 0 = kun cache (læseren venter aldrig)
   const flade: string[] = [];
   const spaend: { start: number; punkter: number; harNote: boolean }[] = [];
   for (const k of udvalg) {

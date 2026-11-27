@@ -3,8 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erAdmin } from '@/lib/admin';
-import { getAlleSoftwareUpdates } from '@/lib/ota';
-import { forvarmOtaOversaettelser } from '@/lib/ota-oversaet';
+import { planlaegOtaOversaettelse } from '@/lib/ota-oversaet';
 
 // OTA-opslag er admin-only (som P17/P18/P19). RPC'erne er selv er_admin()-gatede;
 // vi dobbelt-gater her, saa en ikke-admin faar en ren fejl uden et RPC-kald.
@@ -17,13 +16,11 @@ function revalider() {
   revalidatePath('/admin/ota');
 }
 
-// U1b: varm sv/en-oversættelserne af OTA-noterne efter et gem, så læserne på
-// /software får dem fra cachen. Fire-and-forget (Node-processen på Pixa lever
-// videre): gemmet venter ikke på LibreTranslate, og en fejl rører ikke gemmet.
+// U1b: læg sv/en-oversættelserne af OTA-noterne i baggrunds-køen efter et gem,
+// så læserne på /software får dem fra cachen. Gemmet venter ikke på LibreTranslate,
+// og køen kører én oversættelse ad gangen (samme kø som /software bruger).
 function forvarm() {
-  void getAlleSoftwareUpdates()
-    .then((alle) => forvarmOtaOversaettelser(alle))
-    .catch((e) => console.error('[ota-actions] forvarm fejlede:', e));
+  planlaegOtaOversaettelse(['en', 'sv']);
 }
 
 // Normalisér changelog: een linje pr. punkt, trimmet, tomme linjer fjernet.

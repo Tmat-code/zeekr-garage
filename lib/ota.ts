@@ -18,7 +18,7 @@ export function splitChangelog(changelog: string): string[] {
 
 // Raa raekke -> SoftwareUpdate. modelFilter: hvis sat, beholdes kun modeller der
 // passerer (bruges til at filtrere arkiverede fra i den offentlige visning).
-function tilUpdate(
+export function tilUpdate(
   r: any,
   modelFilter?: (m: any) => boolean,
 ): SoftwareUpdate {
@@ -47,7 +47,7 @@ function nyesteFoerst(a: SoftwareUpdate, b: SoftwareUpdate): number {
   return 0;
 }
 
-const SELECT =
+export const OTA_SELECT =
   'id, version, released_at, changelog, note, created_at, ' +
   'software_update_models ( model:models ( id, slug, name, display_order, archived ) )';
 
@@ -57,7 +57,7 @@ const SELECT =
 // men bevares i basen. Kun modeller med >= 1 opslag faar en blok.
 export async function getSoftwareHistorikPerModel(): Promise<OtaModelHistorik[]> {
   const sb = supabaseServer();
-  const { data, error } = await sb.from('software_updates').select(SELECT);
+  const { data, error } = await sb.from('software_updates').select(OTA_SELECT);
   if (error || !data) return [];
 
   // Byg map: model-slug -> { meta, opdateringer }. Et opslag med flere modeller
@@ -105,7 +105,7 @@ export async function getSoftwareHistorikPerModel(): Promise<OtaModelHistorik[]>
 // (ogsaa arkiverede - admin skal kunne se/rette dem). Degraderer til tom liste.
 export async function getAlleSoftwareUpdates(): Promise<SoftwareUpdate[]> {
   const sb = supabaseServer();
-  const { data, error } = await sb.from('software_updates').select(SELECT);
+  const { data, error } = await sb.from('software_updates').select(OTA_SELECT);
   if (error || !data) return [];
   return (data as any[]).map((r) => tilUpdate(r)).sort(nyesteFoerst);
 }
