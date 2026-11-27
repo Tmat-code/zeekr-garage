@@ -191,5 +191,8 @@ export const sv: Ordbog = {
     tomTitel: 'Inga OTA-uppdateringar har loggats ännu.',
     tomTekst: 'Historiken fylls på i takt med att modellerna får uppdateringar.',
     nyeste: 'Senaste:',
+    oversatFraDansk: 'Översatt från danska · maskinöversatt',
+    visOriginal: 'Visa original',
+    visOversaettelse: 'Visa översättning',
   },
 };

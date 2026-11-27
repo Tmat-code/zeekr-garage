@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erAdmin } from '@/lib/admin';
+import { getAlleSoftwareUpdates } from '@/lib/ota';
+import { forvarmOtaOversaettelser } from '@/lib/ota-oversaet';
 
 // OTA-opslag er admin-only (som P17/P18/P19). RPC'erne er selv er_admin()-gatede;
 // vi dobbelt-gater her, saa en ikke-admin faar en ren fejl uden et RPC-kald.
@@ -13,6 +15,15 @@ async function kraevAdmin() {
 function revalider() {
   revalidatePath('/software');
   revalidatePath('/admin/ota');
+}
+
+// U1b: varm sv/en-oversættelserne af OTA-noterne efter et gem, så læserne på
+// /software får dem fra cachen. Fire-and-forget (Node-processen på Pixa lever
+// videre): gemmet venter ikke på LibreTranslate, og en fejl rører ikke gemmet.
+function forvarm() {
+  void getAlleSoftwareUpdates()
+    .then((alle) => forvarmOtaOversaettelser(alle))
+    .catch((e) => console.error('[ota-actions] forvarm fejlede:', e));
 }
 
 // Normalisér changelog: een linje pr. punkt, trimmet, tomme linjer fjernet.
@@ -55,6 +66,7 @@ export async function opretOta(input: OtaInput): Promise<void> {
   });
   if (error) throw new Error(error.message);
   revalider();
+  forvarm();
 }
 
 export async function retOta(id: string, input: OtaInput): Promise<void> {
@@ -71,6 +83,7 @@ export async function retOta(id: string, input: OtaInput): Promise<void> {
   });
   if (error) throw new Error(error.message);
   revalider();
+  forvarm();
 }
 
 export async function sletOta(id: string): Promise<void> {

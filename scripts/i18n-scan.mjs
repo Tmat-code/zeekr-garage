@@ -45,6 +45,18 @@ const SKIVER = {
     'lib/i18n/format.ts',
     'lib/i18n/index.ts',
   ],
+  // U1b: DB-indhold paa /links + /software. Bevidst UDE: lib/links.ts +
+  // lib/links-oversaettelser.ts (data - danske kilde-tekster med sv/en ved siden
+  // af), links-editoren i Vaerkstedet (admin-kun = dansk, design valg 2).
+  U1b: [
+    'app/links/page.tsx',
+    'app/software/page.tsx',
+    'components/LinksVisning.tsx',
+    'components/SoftwareHistorik.tsx',
+    'lib/i18n/indhold.ts',
+    'lib/ota-oversaet.ts',
+    'lib/ota-oversaet-kerne.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

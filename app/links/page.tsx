@@ -1,7 +1,7 @@
-import { getLinkGrupper } from '@/lib/links';
+import { getLinkGrupper, lokaliserLinkGrupper } from '@/lib/links';
 import { getModels } from '@/lib/queries';
 import LinksVisning from '@/components/LinksVisning';
-import { hentOrdbog } from '@/lib/i18n/server';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +11,15 @@ export async function generateMetadata() {
 }
 
 export default async function LinksSide() {
-  // Gruppe-titler og link-navne er DB-indhold og forbliver danske (design 27-11).
-  const [grupper, modeller, t] = await Promise.all([getLinkGrupper(), getModels(), hentOrdbog()]);
+  // U1b: gruppe-titler og link-navne/-kilder vises paa laeserens sprog fra de
+  // manuelle felter pr. sprog (tomt felt = dansk).
+  const [raa, modeller, t, sprog] = await Promise.all([
+    getLinkGrupper(),
+    getModels(),
+    hentOrdbog(),
+    hentSprog(),
+  ]);
+  const grupper = lokaliserLinkGrupper(raa, sprog);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">

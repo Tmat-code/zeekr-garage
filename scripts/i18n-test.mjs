@@ -144,6 +144,150 @@ lig('sv flertal 1', sv.tid.uger(1), '1 vecka sedan');
 lig('en flertal 3', en.tid.uger(3), '3 weeks ago');
 lig('en aabneRapporter 1', en.nav.aabneRapporter(1), '1 open forum report');
 
+// --- U1b: DB-indhold (lib/i18n/indhold.ts + lib/links-oversaettelser.ts) ---
+function transpiler(rel, navn) {
+  const kilde = fs.readFileSync(path.join(ROD, rel), 'utf8');
+  const ud = ts.transpileModule(kilde, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  fs.writeFileSync(path.join(TMP, `${navn}.mjs`), ud);
+  return import(path.join(TMP, `${navn}.mjs`));
+}
+const ind = await transpiler('lib/i18n/indhold.ts', 'indhold');
+const lo = await transpiler('lib/links-oversaettelser.ts', 'links-ov');
+const ok_ = await transpiler('lib/ota-oversaet-kerne.ts', 'ota-kerne');
+
+const R = ind.rensOversaettelser;
+lig('rens null', R(null, ['navn']), {});
+lig('rens streng', R('x', ['navn']), {});
+lig('rens array', R([1], ['navn']), {});
+lig('rens ukendt sprog/felt ud', R({ de: { navn: 'X' }, sv: { navn: ' Ja ', url: 'u' } }, ['navn']), { sv: { navn: 'Ja' } });
+lig('rens tomt felt droppes, tomt sprog ud', R({ sv: { navn: '   ' }, en: { navn: 'Hi' } }, ['navn']), { en: { navn: 'Hi' } });
+lig('rens ikke-streng droppes', R({ sv: { navn: 5, kilde: 'k' } }, ['navn', 'kilde']), { sv: { kilde: 'k' } });
+lig('rens cap 300', R({ en: { navn: 'a'.repeat(400) } }, ['navn']).en.navn.length, 300);
+
+const F = ind.oversatFelt;
+const ov = { sv: { navn: 'Pris & info' }, en: { navn: 'Price & info' } };
+lig('felt da -> dansk', F('Pris & info', ov, 'da', 'navn'), 'Pris & info');
+lig('felt en', F('Pris & info', ov, 'en', 'navn'), 'Price & info');
+lig('felt sv', F('Pris & info', ov, 'sv', 'navn'), 'Pris & info');
+lig('felt mangler -> dansk', F('Fælge & dæk', {}, 'en', 'navn'), 'Fælge & dæk');
+lig('felt tomt -> dansk', F('Fælge & dæk', { en: { navn: '  ' } }, 'en', 'navn'), 'Fælge & dæk');
+lig('felt null dansk -> null', F(null, { en: { kilde: 'x' } }, 'en', 'kilde'), null);
+lig('felt ov null -> dansk', F('A', null, 'sv', 'navn'), 'A');
+
+lig('link ov navn+kilde', lo.linkOversaettelser('Fællesskab & erfaringer', 'Facebook-gruppe'),
+  { sv: { navn: 'Gemenskap & erfarenheter', kilde: 'Facebook-grupp' }, en: { navn: 'Community & experiences', kilde: 'Facebook group' } });
+lig('link ov domæne-kilde urørt', lo.linkOversaettelser('Pris & info', 'viabiler.dk'),
+  { sv: { navn: 'Pris & info' }, en: { navn: 'Price & info' } });
+lig('link ov ukendt', lo.linkOversaettelser('Noget nyt', 'x.dk'), {});
+lig('gruppe ov', lo.gruppeOversaettelser('Tilbehør & dele'), { sv: { titel: 'Tillbehör & delar' }, en: { titel: 'Accessories & parts' } });
+lig('gruppe ov ukendt', lo.gruppeOversaettelser('Leasing'), {});
+
+// Kode-fallback og migrationens seed er SAMME tabel (hver triple står i SQL'en).
+const SQL = fs.readFileSync(path.join(ROD, 'supabase/migrations/20261127130000_u1b_links_ota_i18n.sql'), 'utf8');
+const sqlStr = (x) => `'${x.replace(/'/g, "''")}'`;
+const manglerISql = [];
+for (const tabel of [lo.GRUPPE_TITLER, lo.LINK_NAVNE, lo.LINK_KILDER]) {
+  for (const [daT, { sv: s, en: e }] of Object.entries(tabel)) {
+    const re = new RegExp(`\\(${[daT, s, e].map(sqlStr).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(',\\s*')}\\)`);
+    if (!re.test(SQL)) manglerISql.push(daT);
+  }
+}
+lig('seed i migration == kode-tabel', manglerISql, []);
+// Antal VALUES-rækker i seed == antal i kode-tabellen (ingen ekstra i SQL'en).
+lig('seed antal', (SQL.match(/^\s+\('[^']*(?:''[^']*)*',\s+'/gm) ?? []).length,
+  Object.keys(lo.GRUPPE_TITLER).length + Object.keys(lo.LINK_NAVNE).length + Object.keys(lo.LINK_KILDER).length);
+for (const [navn, tabel] of [['grupper', lo.GRUPPE_TITLER], ['navne', lo.LINK_NAVNE], ['kilder', lo.LINK_KILDER]]) {
+  const tekster = Object.entries(tabel).flatMap(([d, p]) => [d, p.sv, p.en]);
+  lig(`links ${navn}: ingen lange tankestreger`, tekster.filter((t) => /[–—]/.test(t)), []);
+}
+
+// --- U1b: OTA-kerne (stub-motor + stub-cache) ---
+lig('spejl: intet punktum i kilde', ok_.spejlSlut('Rulles ud gradvis', 'Rolled out gradually.'), 'Rolled out gradually');
+lig('spejl: punktum i kilde bevares', ok_.spejlSlut('Bedre ACC.', 'Better ACC.'), 'Better ACC.');
+lig('spejl: ellipse urørt', ok_.spejlSlut('Mere', 'More...'), 'More...');
+lig('spejl: trim', ok_.spejlSlut('  A ', ' B. '), 'B');
+
+function stubDeps({ cache = [], fejl = false, taber = false } = {}) {
+  const skrevet = [];
+  const kald = [];
+  return {
+    skrevet, kald,
+    deps: {
+      noegle: (s) => 'H:' + s,
+      hentCache: async () => cache,
+      skrivCache: async (r) => { skrevet.push(...r); },
+      oversaet: async (t) => {
+        kald.push(t);
+        if (fejl) throw new Error('LT nede');
+        const ud = t.map((x) => 'EN<' + x + '>.');
+        if (taber) ud[0] = '';
+        return ud;
+      },
+      maksNye: 2,
+    },
+  };
+}
+const K = [
+  { id: 'a', punkter: ['Et.', 'To'], note: 'Rulles ud' },
+  { id: 'b', punkter: ['Tre'], note: null },
+  { id: 'c', punkter: ['Fire'], note: null },
+];
+{
+  const s = stubDeps();
+  const r = await ok_.oversaetOtaKerne(K, s.deps);
+  lig('ota: ét motor-kald', s.kald.length, 1);
+  lig('ota: maksNye respekteret (a+b, ikke c)', [...r.keys()], ['a', 'b']);
+  lig('ota: flad rækkefølge punkter+note', s.kald[0], ['Et.', 'To', 'Rulles ud', 'Tre']);
+  lig('ota: a oversat + spejlet slut', r.get('a'), { punkter: ['EN<Et.>.', 'EN<To>'], note: 'EN<Rulles ud>' });
+  lig('ota: b uden note', r.get('b'), { punkter: ['EN<Tre>'], note: null });
+  lig('ota: cachet a+b', s.skrevet.map((x) => x.update_id), ['a', 'b']);
+  lig('ota: hash = noegle(kildeTekst)', s.skrevet[1].kilde_hash, 'H:' + ok_.otaKildeTekst(K[1]));
+}
+{
+  const hashA = 'H:' + ok_.otaKildeTekst(K[0]);
+  const s = stubDeps({ cache: [
+    { update_id: 'a', kilde_hash: hashA, punkter: ['X', 'Y'], note: 'N' },
+    { update_id: 'b', kilde_hash: 'forældet', punkter: ['gammel'], note: null },
+  ] });
+  const r = await ok_.oversaetOtaKerne(K, s.deps);
+  lig('ota cache: hit serveres', r.get('a'), { punkter: ['X', 'Y'], note: 'N' });
+  lig('ota cache: hash-mismatch gen-oversættes', r.get('b'), { punkter: ['EN<Tre>'], note: null });
+  lig('ota cache: kun miss sendt', s.kald[0], ['Tre', 'Fire']);
+}
+{
+  const hashA = 'H:' + ok_.otaKildeTekst(K[0]);
+  const s = stubDeps({ cache: [{ update_id: 'a', kilde_hash: hashA, punkter: ['kun én'], note: null }] });
+  const r = await ok_.oversaetOtaKerne([K[0]], s.deps);
+  lig('ota cache: forkert antal punkter = miss', r.get('a').punkter, ['EN<Et.>.', 'EN<To>']);
+}
+{
+  const s = stubDeps({ fejl: true });
+  const r = await ok_.oversaetOtaKerne(K, s.deps);
+  lig('ota: motor nede -> intet (original vises)', r.size, 0);
+  lig('ota: motor nede -> intet cachet', s.skrevet.length, 0);
+}
+{
+  const s = stubDeps({ taber: true });
+  const r = await ok_.oversaetOtaKerne(K, s.deps);
+  lig('ota: tabt punkt -> det opslag vises på dansk', r.has('a'), false);
+  lig('ota: tabt punkt -> andre opslag fine', r.has('b'), true);
+  lig('ota: tabt punkt -> ikke cachet', s.skrevet.map((x) => x.update_id), ['b']);
+}
+{
+  const s = stubDeps();
+  s.deps.hentCache = async () => { throw new Error('tabel mangler'); };
+  s.deps.skrivCache = async () => { throw new Error('tabel mangler'); };
+  const r = await ok_.oversaetOtaKerne([K[1]], s.deps);
+  lig('ota: cache-fejl (før migration) crasher ikke', r.get('b'), { punkter: ['EN<Tre>'], note: null });
+}
+{
+  const s = stubDeps();
+  const r = await ok_.oversaetOtaKerne([{ id: 'tom', punkter: [], note: '  ' }], s.deps);
+  lig('ota: tomt opslag -> intet kald', [r.size, s.kald.length], [0, 0]);
+}
+
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

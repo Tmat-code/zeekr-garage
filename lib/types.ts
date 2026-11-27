@@ -1,3 +1,4 @@
+import type { Oversaettelser } from '@/lib/i18n/indhold';
 import type { Severity, Status, IssueType } from '@/lib/config';
 
 export type Model = {
@@ -197,6 +198,8 @@ export type LinkPost = {
   // 0..n modeller. Tom => "gaelder alle". Flere => et badge pr. model.
   modeller: LinkModel[];
   displayOrder: number;
+  // U1b: sv/en pr. felt (tomt = dansk fallback). Se lib/i18n/indhold.ts.
+  oversaettelser: Oversaettelser<'navn' | 'kilde'>;
 };
 
 export type LinkGruppe = {
@@ -204,6 +207,8 @@ export type LinkGruppe = {
   titel: string;
   displayOrder: number;
   links: LinkPost[];
+  // U1b: sv/en af titlen (tomt = dansk fallback).
+  oversaettelser: Oversaettelser<'titel'>;
 };
 
 // =========================================================================
@@ -223,6 +228,9 @@ export type SoftwareUpdate = {
   note: string | null;
   modeller: OtaModel[]; // modeller opslaget gaelder (>= 1)
   createdAt: string;
+  // U1b: maskinoversat udgave paa laeserens UI-sprog (kun sat naar sproget ikke er
+  // dansk OG oversaettelsen lykkedes). Originalen (punkter/note) er altid record.
+  oversat?: { punkter: string[]; note: string | null } | null;
 };
 
 // Offentlig visning: een blok pr. model, nyeste version oeverst.

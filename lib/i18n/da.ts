@@ -198,6 +198,10 @@ export const da = {
     tomTitel: 'Der er endnu ikke logget nogen OTA-opdateringer.',
     tomTekst: 'Historikken fyldes efterhånden som der kommer opdateringer til modellerne.',
     nyeste: 'Nyeste:',
+    // U1b: maskinoversatte OTA-noter (kun vist på sv/en; originalen er record).
+    oversatFraDansk: 'Oversat fra dansk · maskinoversat',
+    visOriginal: 'Vis original',
+    visOversaettelse: 'Vis oversættelse',
   },
 };
 

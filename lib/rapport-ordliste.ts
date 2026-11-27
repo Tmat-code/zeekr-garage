@@ -25,7 +25,10 @@
 // Én oversættelses-regel: danske overfladeformer (inkl. bøjninger) -> fast engelsk
 // term. Matches uafhængigt af store/små bogstaver; engelsk indsættes ordret (dog
 // stort forbogstav ved sætningsstart).
-type TermRegel = { da: readonly string[]; en: string };
+// `foerst`: reglen køres FØR BEVAR-reglerne - til termer der INDEHOLDER et
+// bevar-ord (fx "Drive Setup-genvej", hvor "Drive Setup" ellers ville blive pillet
+// ud som bevar-token først og efterlade et løst "-genvej").
+type TermRegel = { da: readonly string[]; en: string; foerst?: boolean };
 
 // En "bevar urørt"-regel: tekst der skal overleve oversættelsen UÆNDRET
 // (akronymer, modelnavne, reference-numre, versioner). 'ord' matches
@@ -150,6 +153,51 @@ export const ORDLISTE: readonly TermRegel[] = [
   { da: ['indre bane', 'indre banen', 'inderste bane', 'inderste banen'], en: 'inner lane' },
   { da: ['ydre baner', 'ydre banerne', 'yderste baner'], en: 'outer lanes' },
   { da: ['ydre bane', 'ydre banen', 'yderste bane', 'yderste banen'], en: 'outer lane' },
+
+  // --- Runde 4 (U1b, 27-11): fagtermer fra OTA-noterne på /software ---------
+  // OTA-noterne er dansk bil-fagtekst skrevet af Torben - præcis hvad laget er
+  // tunet til. Samme bare-ord-disciplin: kun entydige komposita/fraser.
+  { da: ['Drive Setup-genvej', 'Drive Setup-genvejen'], en: 'Drive Setup shortcut', foerst: true },
+  { da: ['hastighedsoverskridelse', 'hastighedsoverskridelser', 'hastighedsoverskridelsen'], en: 'speeding' },
+  { da: ['hastighedsadvarsel', 'hastighedsadvarslen'], en: 'speed warning' },
+  { da: ['hastighedsadvarsler', 'hastighedsadvarslerne'], en: 'speed warnings' },
+  { da: ['køreovervågning', 'køreovervågningen', 'førerovervågning', 'førerovervågningen'], en: 'driver monitoring' },
+  { da: ['føreropmærksomhed', 'føreropmærksomheden'], en: 'driver attention' },
+  { da: ['trætheds-/opmærksomhedsalarmer', 'trætheds- og opmærksomhedsalarmer'], en: 'fatigue/attention alerts' },
+  { da: ['regenerativ bremsning', 'regenerative bremsning', 'regenereringen'], en: 'regenerative braking' },
+  { da: ['anhængertræk', 'anhængertrækket'], en: 'tow bar' },
+  { da: ['træktilstand', 'træktilstanden'], en: 'towing mode' },
+  { da: ['køretilstand', 'køretilstanden'], en: 'drive mode' },
+  { da: ['køretilstande', 'køretilstandene'], en: 'drive modes' },
+  { da: ['fartkamera', 'fartkameraet'], en: 'speed camera' },
+  { da: ['fartkameraer', 'fartkameraerne'], en: 'speed cameras' },
+  { da: ['selestatus', 'selestatussen'], en: 'seat belt status' },
+  { da: ['bagsæde', 'bagsædet'], en: 'rear seat' },
+  { da: ['bagsæder', 'bagsæderne'], en: 'rear seats' },
+  { da: ['forkonditionering', 'forkonditioneringen'], en: 'preconditioning' },
+  { da: ['højvoltbatteri', 'højvoltbatteriet', 'højvoltsbatteri', 'højvoltsbatteriet'], en: 'high-voltage battery' },
+  { da: ['luftfordeling', 'luftfordelingen'], en: 'air distribution' },
+  { da: ['startskærm', 'startskærmen'], en: 'home screen' },
+  { da: ['kørebog', 'kørebogen', 'kørselslog', 'kørselsloggen'], en: 'driving log' },
+  { da: ['kurve-farttilpasning', 'kurve-farttilpasningen', 'kurvefarttilpasning'], en: 'curve speed adaptation' },
+  { da: ['farttilpasning', 'farttilpasningen'], en: 'speed adaptation' },
+  { da: ['navigations-markør', 'navigations-markøren', 'navigationsmarkør', 'navigationsmarkøren'], en: 'navigation marker' },
+  { da: ['rattevarme', 'rattevarmen', 'rattevarmer'], en: 'steering wheel heating' },
+  { da: ['regndråbe-registrering', 'regndråbe-registreringen', 'regndråberegistrering'], en: 'raindrop detection' },
+  { da: ['autovarme', 'autovarmen'], en: 'automatic heating' },
+  { da: ['sidespejlene'], en: 'side mirrors' },
+  { da: ['vaskehal', 'vaskehallen'], en: 'car wash' },
+  { da: ['kørestilling', 'kørestillingen'], en: 'Drive' }, // "i kørestilling (D)" = gearstillingen D
+  { da: ['hurtigmenu', 'hurtigmenuen'], en: 'quick menu' },
+  { da: ['ladeindstilling', 'ladeindstillingen'], en: 'charging setting' },
+  { da: ['ladeindstillinger', 'ladeindstillingerne'], en: 'charging settings' },
+  { da: ['ladelys', 'ladelyset'], en: 'charging light' },
+  { da: ['AC-opladning', 'AC-opladningen', 'AC-ladning'], en: 'AC charging' },
+  { da: ['lokationssporing', 'lokationssporingen'], en: 'location tracking' },
+  { da: ['digital nøgle', 'digitale nøgle', 'digitale nøgler'], en: 'digital key' },
+  { da: ['går i dvale'], en: 'goes to sleep' },
+  { da: ['brugerdefinerbar', 'brugerdefinerbare'], en: 'customisable' },
+  { da: ['brugervenlighed', 'brugervenligheden'], en: 'usability' },
 ];
 
 // --- Bevar urørt (akronymer, modelnavne, reference-numre, versioner) ---------
@@ -172,6 +220,15 @@ export const BEVAR: readonly BevarRegel[] = [
   { ord: 'ADAS' }, { ord: 'TPMS' }, { ord: 'OTA' }, { ord: 'ABS' }, { ord: 'ESP' },
   { ord: 'SOC' }, { ord: 'BMS' }, { ord: 'OBD' }, { ord: 'HUD' }, { ord: 'EV' },
   { ord: 'OS' }, { ord: 'V2L' }, { ord: 'WLTP' }, { ord: 'NEDC' },
+
+  // Engelske Zeekr-funktionsnavne i OTA-noterne (U1b, 27-11): produktnavne som de
+  // står i bilens UI - må ikke oversættes ("Pet Mode" -> "Husdyrstilstand" ville
+  // ikke matche skærmen). Case-sensitivt; længste først (Remote Straight ... før
+  // Remote Park ...) er ligegyldigt, de overlapper ikke.
+  { ord: 'Drive Setup' }, { ord: 'Remote Straight Park Assist' }, { ord: 'Remote Park Assist' },
+  { ord: 'RPA' }, { ord: 'Pet Mode' }, { ord: 'Journey Log' }, { ord: 'Lifeform detection' },
+  { ord: 'Car Wash Mode' }, { ord: 'Adapt to Route Ahead' }, { ord: 'Driver Monitoring' },
+  { ord: 'Connected Services' }, { ord: 'Bluetooth' }, { ord: 'Off' },
 
   // Mærke + modelnavne (case-insensitivt - skrives ofte blandet)
   { ord: 'Zeekr' }, { ord: 'Geely' },
@@ -248,10 +305,18 @@ type Applier = { soeg: RegExp; en?: string; bevar?: boolean };
 // Byg listen af replacers, længste danske match FØRST (så flerords-/sammensatte
 // termer vinder over korte). BEVAR-regler (ref#, version, akronym, model) lægges
 // forrest.
-function byggAppliers(): Applier[] {
-  const ud: Applier[] = [];
+function termAppliers(regler: readonly TermRegel[]): Applier[] {
+  const former: { form: string; en: string }[] = [];
+  for (const r of regler) for (const f of r.da) former.push({ form: f, en: r.en });
+  former.sort((a, b) => b.form.length - a.form.length);
+  return former.map(({ form, en }) => ({
+    soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(form)}(?![\\p{L}\\p{N}])`, 'giu'),
+    en,
+  }));
+}
 
-  // BEVAR: regex-regler som de er; ord-regler case-sensitivt med ord-grænser.
+function bevarAppliers(): Applier[] {
+  const ud: Applier[] = [];
   for (const b of BEVAR) {
     if (b.soeg) {
       ud.push({ soeg: new RegExp(b.soeg.source, b.soeg.flags.includes('g') ? b.soeg.flags : b.soeg.flags + 'g'), bevar: true });
@@ -259,18 +324,25 @@ function byggAppliers(): Applier[] {
       ud.push({ soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(b.ord)}(?![\\p{L}\\p{N}])`, 'gu'), bevar: true });
     }
   }
+  return ud;
+}
 
-  // Term-regler: fladgør til (overfladeform, en), sortér længste form først.
-  const former: { form: string; en: string }[] = [];
-  for (const r of ORDLISTE) for (const f of r.da) former.push({ form: f, en: r.en });
-  former.sort((a, b) => b.form.length - a.form.length);
-  for (const { form, en } of former) {
-    ud.push({ soeg: new RegExp(`(?<![\\p{L}\\p{N}])${escReg(form)}(?![\\p{L}\\p{N}])`, 'giu'), en });
-  }
+function byggAppliers(): Applier[] {
+  const ud: Applier[] = [];
+
+  // U1b: "foerst"-termer (indeholder et bevar-ord) før BEVAR.
+  ud.push(...termAppliers(ORDLISTE.filter((r) => r.foerst)));
+
+  // BEVAR: regex-regler som de er; ord-regler case-sensitivt med ord-grænser.
+  ud.push(...bevarAppliers());
+
+  // Term-regler: længste danske form først (flerords-/sammensatte termer vinder).
+  ud.push(...termAppliers(ORDLISTE.filter((r) => !r.foerst)));
   return ud;
 }
 
 const APPLIERS = byggAppliers();
+const BEVAR_APPLIERS = bevarAppliers();
 
 export type BeskyttetKilde = { tekst: string; erstatninger: string[] };
 
@@ -311,6 +383,22 @@ export function genindsaetTermer(oversat: string, erstatninger: string[]): strin
     s = s.replace(re, () => erstatninger[i]);
   }
   return s;
+}
+
+// U1b: KUN bevar-reglerne (versioner, akronymer, modelnavne, engelske funktions-
+// navne) - til en->sv-pivoten. Den engelske mellemtekst har ingen danske termer
+// tilbage, men "Pet Mode", "ACC", "3.0.4" o.l. skal heller ikke ændres på vej til
+// svensk. Samme token-format, så genindsaetTermer genbruges.
+export function beskytBevar(tekst: string): BeskyttetKilde {
+  const erstatninger: string[] = [];
+  let ud = tekst;
+  for (const a of BEVAR_APPLIERS) {
+    ud = ud.replace(a.soeg, (match: string) => {
+      erstatninger.push(match);
+      return token(erstatninger.length - 1);
+    });
+  }
+  return { tekst: ud, erstatninger };
 }
 
 // Hvor mange af vores tokens overlevede IKKE genindsætningen (diagnostik/test).

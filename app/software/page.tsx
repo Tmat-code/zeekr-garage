@@ -1,6 +1,7 @@
 import { getSoftwareHistorikPerModel } from '@/lib/ota';
 import SoftwareHistorik from '@/components/SoftwareHistorik';
-import { hentOrdbog } from '@/lib/i18n/server';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
+import { oversaetOtaHistorik } from '@/lib/ota-oversaet';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,10 @@ export async function generateMetadata() {
 }
 
 export default async function SoftwareSide() {
-  // Changelog-punkter + noter er admin-skrevet DB-indhold og forbliver danske.
-  const [modeller, t] = await Promise.all([getSoftwareHistorikPerModel(), hentOrdbog()]);
+  // U1b: changelog-punkter + noter er skrevet paa dansk og maskinoversaettes til
+  // laeserens sprog (rapportens pipeline, cachet) - originalen et klik vaek.
+  const [raa, t, sprog] = await Promise.all([getSoftwareHistorikPerModel(), hentOrdbog(), hentSprog()]);
+  const modeller = await oversaetOtaHistorik(raa, sprog);
   const sw = t.software;
 
   return (

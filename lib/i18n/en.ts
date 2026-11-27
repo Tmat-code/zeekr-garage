@@ -190,5 +190,8 @@ export const en: Ordbog = {
     tomTitel: 'No OTA updates have been logged yet.',
     tomTekst: 'The history fills up as the models receive updates.',
     nyeste: 'Latest:',
+    oversatFraDansk: 'Translated from Danish · machine translation',
+    visOriginal: 'Show original',
+    visOversaettelse: 'Show translation',
   },
 };

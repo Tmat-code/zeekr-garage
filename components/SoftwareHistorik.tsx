@@ -31,6 +31,13 @@ function VersionBlok({
 }) {
   const t = useOrdbog();
   const sprog = useSprog();
+  // U1b: maskinoversat udgave (kun sat på sv/en når den lykkedes). Dansk læser og
+  // en fejlet oversættelse viser originalen uden knap.
+  const [visOriginal, setVisOriginal] = useState(false);
+  const oversat = u.oversat ?? null;
+  const brugOversat = !!oversat && !visOriginal;
+  const punkter = brugOversat ? oversat.punkter : u.punkter;
+  const note = brugOversat ? oversat.note : u.note;
   return (
     <div className="overflow-hidden">
       <button
@@ -68,16 +75,35 @@ function VersionBlok({
       </button>
       {aaben && (
         <div className="px-5 pb-4">
-          {u.punkter.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-grafit-700">
-              {u.punkter.map((p, i) => (
+          {punkter.length > 0 ? (
+            <ul
+              className="list-disc space-y-1 pl-5 text-sm text-grafit-700"
+              lang={brugOversat ? sprog : 'da'}
+            >
+              {punkter.map((p, i) => (
                 <li key={i}>{p}</li>
               ))}
             </ul>
           ) : (
             <p className="text-sm text-grafit-400">{t.software.ingenPunkter}</p>
           )}
-          {u.note && <p className="mt-3 text-sm italic text-grafit-500">{u.note}</p>}
+          {note && (
+            <p className="mt-3 text-sm italic text-grafit-500" lang={brugOversat ? sprog : 'da'}>
+              {note}
+            </p>
+          )}
+          {oversat && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-grafit-400">
+              {brugOversat && <span>{t.software.oversatFraDansk}</span>}
+              <button
+                type="button"
+                onClick={() => setVisOriginal(!visOriginal)}
+                className="font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
+              >
+                {visOriginal ? t.software.visOversaettelse : t.software.visOriginal}
+              </button>
+            </div>
+          )}
           <a
             href={forumHref}
             className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-kobber-700 hover:text-kobber-800 hover:underline"

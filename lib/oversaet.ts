@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytBevar, genindsaetTermer } from '@/lib/rapport-ordliste';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -45,7 +45,12 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // v3-lt-d (P39): bumpet fordi BEVAR-versions-regexen nu også beskytter en version
 // sidst på en linje/sætning/titel ("3.0.3." -> "[[0]]."); cachede oversættelser hvor
 // versionen gik rå gennem motoren bustes. Ingen migration.
-const MOTOR_ID = 'v3-lt-d';
+// v3-lt-e (U1b): ordliste-runde 4 (fagtermer fra OTA-noterne + engelske Zeekr-
+// funktionsnavne i BEVAR) og BEVAR-beskyttelse på en->sv-pivoten (versioner,
+// akronymer og funktionsnavne overlever nu også vejen til svensk). Buster rapportens
+// caches (`oversaettelser`, `kommentar_oversaettelser`) og OTA-cachen. Ingen migration
+// for selve bumpet.
+const MOTOR_ID = 'v3-lt-e';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -142,7 +147,27 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
   const engelsk = await daTilEngelsk(tekster, BRUG_LT);
   if (maal === 'en') return engelsk;
   // Samme værn på pivoten (fx en tom beskrivelse ville ellers gå alene til en->sv).
-  return oversaetKunSprog(engelsk, (u) => motorKald(u, 'en', maal, BRUG_LT));
+  // U1b: bevar-ordene (versioner, ACC, "Pet Mode" ...) beskyttes også på en->sv.
+  const beskyttet = engelsk.map(beskytBevar);
+  const raa = await oversaetKunSprog(
+    beskyttet.map((b) => b.tekst),
+    (u) => motorKald(u, 'en', maal, BRUG_LT),
+  );
+  return raa.map((r, i) => genindsaetTermer(r, beskyttet[i].erstatninger));
+}
+
+// U1b: rapportens da->en/sv-pipeline (rensning, term-beskyttelse, ordliste/BEVAR,
+// sætning-for-sætning, sprog-løs-værn, BEVAR på pivoten) til ANDET dansk fagindhold
+// - OTA-noterne på /software. Kaster hvis motoren fejler (kalderen beholder dansk).
+export async function oversaetFraDansk(tekster: string[], maal: 'en' | 'sv'): Promise<string[]> {
+  if (tekster.length === 0) return [];
+  return motorOversaet(tekster, maal);
+}
+
+// Cache-nøgle for oversat indhold: sha1 af MOTOR_ID + kilde, så både en redigering
+// og et motor-/ordliste-skift giver cache-miss.
+export function oversaetKildeHash(kilde: string): string {
+  return hash(kilde);
 }
 
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erAdmin } from '@/lib/admin';
+import { rensOversaettelser, type Oversaettelser } from '@/lib/i18n/indhold';
 
 // Al link-kuratering er admin-only (som P17/P18). RPC'erne er selv er_admin()-
 // gatede; vi dobbelt-gater her, saa en ikke-admin faar en ren fejl uden et
@@ -16,22 +17,34 @@ function revalider() {
 }
 
 // --- Grupper ---
-export async function opretLinkGruppe(titel: string): Promise<void> {
+// U1b: felter pr. sprog renses her OG i RPC'en (public.rens_oversaettelser).
+export async function opretLinkGruppe(titel: string, oversaettelser: Oversaettelser<'titel'> = {}): Promise<void> {
   await kraevAdmin();
   const t = titel.trim();
   if (!t) throw new Error('Giv gruppen en titel.');
   const sb = supabaseServer();
-  const { error } = await sb.rpc('admin_opret_link_gruppe', { p_titel: t });
+  const { error } = await sb.rpc('admin_opret_link_gruppe', {
+    p_titel: t,
+    p_oversaettelser: rensOversaettelser(oversaettelser, ['titel'] as const),
+  });
   if (error) throw new Error(error.message);
   revalider();
 }
 
-export async function redigerLinkGruppe(id: string, titel: string): Promise<void> {
+export async function redigerLinkGruppe(
+  id: string,
+  titel: string,
+  oversaettelser: Oversaettelser<'titel'> = {},
+): Promise<void> {
   await kraevAdmin();
   const t = titel.trim();
   if (!t) throw new Error('Titlen må ikke være tom.');
   const sb = supabaseServer();
-  const { error } = await sb.rpc('admin_rediger_link_gruppe', { p_id: id, p_titel: t });
+  const { error } = await sb.rpc('admin_rediger_link_gruppe', {
+    p_id: id,
+    p_titel: t,
+    p_oversaettelser: rensOversaettelser(oversaettelser, ['titel'] as const),
+  });
   if (error) throw new Error(error.message);
   revalider();
 }
@@ -59,6 +72,7 @@ export async function opretLink(input: {
   kilde: string;
   url: string;
   modelIds: string[];
+  oversaettelser?: Oversaettelser<'navn' | 'kilde'>;
 }): Promise<void> {
   await kraevAdmin();
   if (!input.navn.trim()) throw new Error('Giv linket et navn.');
@@ -70,6 +84,7 @@ export async function opretLink(input: {
     p_kilde: input.kilde.trim(),
     p_url: input.url.trim(),
     p_model_ids: input.modelIds,
+    p_oversaettelser: rensOversaettelser(input.oversaettelser ?? {}, ['navn', 'kilde'] as const),
   });
   if (error) throw new Error(error.message);
   revalider();
@@ -77,7 +92,13 @@ export async function opretLink(input: {
 
 export async function redigerLink(
   id: string,
-  input: { navn: string; kilde: string; url: string; modelIds: string[] },
+  input: {
+    navn: string;
+    kilde: string;
+    url: string;
+    modelIds: string[];
+    oversaettelser?: Oversaettelser<'navn' | 'kilde'>;
+  },
 ): Promise<void> {
   await kraevAdmin();
   if (!input.navn.trim()) throw new Error('Giv linket et navn.');
@@ -89,6 +110,7 @@ export async function redigerLink(
     p_kilde: input.kilde.trim(),
     p_url: input.url.trim(),
     p_model_ids: input.modelIds,
+    p_oversaettelser: rensOversaettelser(input.oversaettelser ?? {}, ['navn', 'kilde'] as const),
   });
   if (error) throw new Error(error.message);
   revalider();

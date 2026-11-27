@@ -13,6 +13,11 @@ import {
   flytLink,
   flytLinkTilGruppe,
 } from '@/app/admin/links-actions';
+import OversaettelsesFelter from '@/components/admin/OversaettelsesFelter';
+import type { Oversaettelser } from '@/lib/i18n/indhold';
+
+type LinkOv = Oversaettelser<'navn' | 'kilde'>;
+type GruppeOv = Oversaettelser<'titel'>;
 
 type ModelOpt = { id: string; slug: string; name: string };
 
@@ -102,6 +107,7 @@ function LinkRaekke({
   const [kilde, setKilde] = useState(l.kilde ?? '');
   const [url, setUrl] = useState(l.url);
   const [valgte, setValgte] = useState<string[]>(idFraSlugs(l, modeller));
+  const [ov, setOv] = useState<LinkOv>(l.oversaettelser);
 
   if (redigerer) {
     return (
@@ -111,13 +117,21 @@ function LinkRaekke({
           <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
           <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
           <ModelVaelger modeller={modeller} valgte={valgte} setValgte={setValgte} />
+          <OversaettelsesFelter
+            felter={[
+              { felt: 'navn', label: 'Navn', dansk: navn },
+              { felt: 'kilde', label: 'Kilde', dansk: kilde },
+            ]}
+            vaerdi={ov}
+            onChange={setOv}
+          />
           <div className="flex gap-2">
             <button
               className="btn-primary !py-1.5 text-sm"
               disabled={pending || !navn.trim() || !url.trim()}
               onClick={() =>
                 koer(async () => {
-                  await redigerLink(l.id, { navn, kilde, url, modelIds: valgte });
+                  await redigerLink(l.id, { navn, kilde, url, modelIds: valgte, oversaettelser: ov });
                   setRedigerer(false);
                 })
               }
@@ -131,6 +145,7 @@ function LinkRaekke({
                 setKilde(l.kilde ?? '');
                 setUrl(l.url);
                 setValgte(idFraSlugs(l, modeller));
+                setOv(l.oversaettelser);
                 setRedigerer(false);
               }}
             >
@@ -162,6 +177,9 @@ function LinkRaekke({
             {l.kilde ? `${l.kilde} · ` : ''}
             {l.url}
           </div>
+          {(!l.oversaettelser.sv?.navn || !l.oversaettelser.en?.navn) && (
+            <div className="text-xs text-kobber-700">Mangler svensk/engelsk navn - vises på dansk</div>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
@@ -247,6 +265,7 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
   const [kilde, setKilde] = useState('');
   const [url, setUrl] = useState('');
   const [valgte, setValgte] = useState<string[]>([]);
+  const [ov, setOv] = useState<LinkOv>({});
 
   if (!aaben) {
     return (
@@ -263,6 +282,14 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
         <input className="input" value={kilde} onChange={(e) => setKilde(e.target.value)} placeholder="Kilde (fx zeekr.eu)" />
         <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
         <ModelVaelger modeller={modeller} valgte={valgte} setValgte={setValgte} />
+        <OversaettelsesFelter
+          felter={[
+            { felt: 'navn', label: 'Navn', dansk: navn },
+            { felt: 'kilde', label: 'Kilde', dansk: kilde },
+          ]}
+          vaerdi={ov}
+          onChange={setOv}
+        />
       </div>
       <div className="mt-2 flex items-center gap-2">
         <button
@@ -270,7 +297,8 @@ function NytLink({ groupId, modeller }: { groupId: string; modeller: ModelOpt[] 
           disabled={pending || !navn.trim() || !url.trim()}
           onClick={() =>
             koer(async () => {
-              await opretLink({ groupId, navn, kilde, url, modelIds: valgte });
+              await opretLink({ groupId, navn, kilde, url, modelIds: valgte, oversaettelser: ov });
+              setOv({});
               setNavn('');
               setKilde('');
               setUrl('');
@@ -307,20 +335,22 @@ function GruppeBlok({
   const [redigerer, setRedigerer] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [titel, setTitel] = useState(g.titel);
+  const [ov, setOv] = useState<GruppeOv>(g.oversaettelser);
   const tom = g.links.length === 0;
 
   return (
     <div>
       <div className="mb-2 flex items-center gap-1">
         {redigerer ? (
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2">
             <input className="input flex-1" value={titel} onChange={(e) => setTitel(e.target.value)} />
             <button
               className="btn-primary !py-1 text-xs"
               disabled={pending || !titel.trim()}
               onClick={() =>
                 koer(async () => {
-                  await redigerLinkGruppe(g.id, titel);
+                  await redigerLinkGruppe(g.id, titel, ov);
                   setRedigerer(false);
                 })
               }
@@ -331,16 +361,27 @@ function GruppeBlok({
               className="btn-ghost !py-1 text-xs"
               onClick={() => {
                 setTitel(g.titel);
+                setOv(g.oversaettelser);
                 setRedigerer(false);
               }}
             >
               Annullér
             </button>
           </div>
+          <OversaettelsesFelter
+            felter={[{ felt: 'titel', label: 'Titel', dansk: titel }]}
+            vaerdi={ov}
+            onChange={setOv}
+            startAaben
+          />
+          </div>
         ) : (
           <>
             <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-grafit-400">
               {g.titel}
+              {(!g.oversaettelser.sv?.titel || !g.oversaettelser.en?.titel) && (
+                <span className="ml-2 normal-case tracking-normal text-kobber-700">mangler sv/en</span>
+              )}
             </h3>
             <button
               className="rounded px-2 py-1 text-xs text-grafit-500 hover:text-kobber-700"
@@ -414,6 +455,7 @@ function NyGruppe() {
   const { pending, fejl, koer } = useKoer();
   const [aaben, setAaben] = useState(false);
   const [titel, setTitel] = useState('');
+  const [ov, setOv] = useState<GruppeOv>({});
 
   if (!aaben) {
     return (
@@ -430,13 +472,21 @@ function NyGruppe() {
         onChange={(e) => setTitel(e.target.value)}
         placeholder="Navn på ny gruppe (fx Leasing)"
       />
+      <div className="mt-2">
+        <OversaettelsesFelter
+          felter={[{ felt: 'titel', label: 'Titel', dansk: titel }]}
+          vaerdi={ov}
+          onChange={setOv}
+        />
+      </div>
       <div className="mt-2 flex items-center gap-2">
         <button
           className="btn-primary !py-1.5 text-sm"
           disabled={pending || !titel.trim()}
           onClick={() =>
             koer(async () => {
-              await opretLinkGruppe(titel);
+              await opretLinkGruppe(titel, ov);
+              setOv({});
               setTitel('');
               setAaben(false);
             })
