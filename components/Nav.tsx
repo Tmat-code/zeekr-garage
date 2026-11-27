@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 type Props = {
   erModerator: boolean;
@@ -19,16 +20,19 @@ function Badge({ antal }: { antal: number }) {
   );
 }
 
-const LINKS = [
-  { href: '/forum', label: 'Forum' },
-  { href: '/feedback', label: 'Feedback' },
-  { href: '/events', label: 'Events' },
-  { href: '/software', label: 'OTA' },
-  { href: '/links', label: 'Links' },
-  { href: '/om', label: 'Om' },
+type NavNoegle = 'forum' | 'feedback' | 'events' | 'ota' | 'links' | 'om';
+
+const LINKS: { href: string; noegle: NavNoegle }[] = [
+  { href: '/forum', noegle: 'forum' },
+  { href: '/feedback', noegle: 'feedback' },
+  { href: '/events', noegle: 'events' },
+  { href: '/software', noegle: 'ota' },
+  { href: '/links', noegle: 'links' },
+  { href: '/om', noegle: 'om' },
 ];
 
 export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Props) {
+  const t = useOrdbog();
   const [open, setOpen] = useState(false);
   const luk = () => setOpen(false);
 
@@ -42,36 +46,36 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
             href={l.href}
             className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100"
           >
-            {l.label}
+            {t.nav[l.noegle]}
           </Link>
         ))}
         {erModerator && (
           <Link
             href="/admin"
             className="inline-flex items-center rounded-lg px-3 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
-            title={aabneRapporter > 0 ? `${aabneRapporter} åbne forum-rapporter` : undefined}
+            title={aabneRapporter > 0 ? t.nav.aabneRapporter(aabneRapporter) : undefined}
           >
-            🔧 Værkstedet
+            🔧 {t.nav.vaerkstedet}
             <Badge antal={aabneRapporter} />
           </Link>
         )}
         {indlogget ? (
           <div className="flex items-center gap-2 pl-1">
             <Link href="/beskeder" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
-              ✉️ Beskeder
+              ✉️ {t.nav.beskeder}
             </Link>
             <Link href="/garage" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
-              🚗 Min garage
+              🚗 {t.nav.minGarage}
             </Link>
             <form action="/logout" method="post">
               <button className="btn-ghost !py-1.5 text-sm" type="submit">
-                Log ud
+                {t.nav.logUd}
               </button>
             </form>
           </div>
         ) : (
           <Link href="/login" className="btn-primary !py-1.5 text-sm">
-            Log ind
+            {t.nav.logInd}
           </Link>
         )}
       </nav>
@@ -80,7 +84,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Luk menu' : 'Åbn menu'}
+        aria-label={open ? t.nav.lukMenu : t.nav.aabnMenu}
         aria-expanded={open}
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-grafit-700 hover:bg-grafit-100 sm:hidden"
       >
@@ -111,7 +115,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
                 onClick={luk}
                 className="rounded-lg px-3 py-2.5 text-grafit-700 hover:bg-grafit-100"
               >
-                {l.label}
+                {t.nav[l.noegle]}
               </Link>
             ))}
             {erModerator && (
@@ -120,7 +124,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
                 onClick={luk}
                 className="inline-flex items-center rounded-lg px-3 py-2.5 font-medium text-kobber-700 hover:bg-kobber-100"
               >
-                🔧 Værkstedet
+                🔧 {t.nav.vaerkstedet}
                 <Badge antal={aabneRapporter} />
               </Link>
             )}
@@ -132,21 +136,21 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
                     onClick={luk}
                     className="rounded-lg px-3 py-2.5 text-grafit-700 hover:bg-grafit-100"
                   >
-                    ✉️ Beskeder
+                    ✉️ {t.nav.beskeder}
                   </Link>
                   <Link
                     href="/garage"
                     onClick={luk}
                     className="rounded-lg px-3 py-2.5 text-grafit-700 hover:bg-grafit-100"
                   >
-                    🚗 Min garage
+                    🚗 {t.nav.minGarage}
                   </Link>
                   <form action="/logout" method="post">
                     <button
                       type="submit"
                       className="w-full rounded-lg px-3 py-2.5 text-left text-grafit-700 hover:bg-grafit-100"
                     >
-                      Log ud
+                      {t.nav.logUd}
                     </button>
                   </form>
                 </div>
@@ -156,7 +160,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
                   onClick={luk}
                   className="block rounded-lg bg-kobber-500 px-3 py-2.5 text-center font-semibold text-white hover:bg-kobber-600"
                 >
-                  Log ind
+                  {t.nav.logInd}
                 </Link>
               )}
             </div>

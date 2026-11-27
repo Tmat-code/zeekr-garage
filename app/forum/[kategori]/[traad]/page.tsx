@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { getTraad, getIndlaeg } from '@/lib/forum';
-import { laeserSprog } from '@/lib/forum-sprog';
+import { hentSprog } from '@/lib/i18n/server';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { modelBadge } from '@/lib/model-badge';
 import ForumTraad from '@/components/forum/ForumTraad';
@@ -41,9 +40,10 @@ export default async function TraadSide({
   const erModerator = rolleErModerator(ctx.rolle);
   const isLoggedIn = !!ctx.user;
   const naeste = `/forum/${params.kategori}/${traad.slug}`;
-  // Trin 3: laeserens maalsprog ud fra browserens Accept-Language (da/en/sv,
-  // alt andet -> en). Styrer hvilke indlaeg der faar en "Oversaet"-knap.
-  const minSprog = laeserSprog(headers().get('accept-language'));
+  // Trin 3 + U1: laeserens maalsprog = UI-sproget (profil > cookie >
+  // Accept-Language > da), saa knap og UI altid er enige. Styrer hvilke indlaeg
+  // der faar en "Oversaet"-knap.
+  const minSprog = await hentSprog();
 
   // Bro til Feedback: prefill /meld med trådens titel + åbnings-indlæg (kortet,
   // så URL'en ikke bliver for lang). Kun relevant for moderatorer (triage).

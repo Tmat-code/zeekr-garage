@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { LinkGruppe } from '@/lib/types';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 // Kort model-label til chip/badge: "Zeekr 7GT" -> "7GT".
 function kort(navn: string): string {
@@ -22,6 +23,7 @@ export default function LinksVisning({
   const chipModeller = modeller.filter((m) => brugte.has(m.slug));
   const visFilter = chipModeller.length >= 2;
 
+  const t = useOrdbog();
   const [valgt, setValgt] = useState<string | null>(null); // null = Alle
 
   // Et link vises, hvis intet er valgt, det er utagget ("gaelder alle"), eller
@@ -37,9 +39,9 @@ export default function LinksVisning({
   return (
     <div>
       {visFilter && (
-        <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Filtrér efter model">
+        <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label={t.faelles.filtrerModel}>
           <button className={chipKlasse(valgt === null)} onClick={() => setValgt(null)}>
-            Alle
+            {t.faelles.alle}
           </button>
           {chipModeller.map((m) => (
             <button

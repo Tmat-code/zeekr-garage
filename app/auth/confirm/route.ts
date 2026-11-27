@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabaseServer } from '@/lib/supabase/server';
 import { publicOrigin, sikkerSti } from '@/lib/url';
+import { synkSprogEfterLogin } from '@/lib/i18n/server';
 
 // Cross-browser-sikker bekraeftelse af email-links (recovery/signup).
 // Bruger token_hash + verifyOtp (server-side) - IKKE PKCE - saa linket virker
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
     const sb = supabaseServer();
     const { error } = await sb.auth.verifyOtp({ type, token_hash });
     if (!error) {
+      // UI-sprog: profil <-> cookie (+ signup-sproget fra user_metadata). Best-effort.
+      await synkSprogEfterLogin(sb);
       return NextResponse.redirect(new URL(next, publicOrigin(request)));
     }
   }

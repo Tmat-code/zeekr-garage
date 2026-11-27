@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import type { Notifikation } from '@/lib/types';
 import type { NotifikationSide } from '@/lib/notifikationer';
 

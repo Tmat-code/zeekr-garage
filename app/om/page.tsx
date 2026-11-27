@@ -1,32 +1,36 @@
-import { SITE, DISCLAIMER } from '@/lib/config';
+import type { Metadata } from 'next';
+import { SITE } from '@/lib/config';
+import { hentOrdbog } from '@/lib/i18n/server';
 
-export const metadata = { title: 'Om' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await hentOrdbog();
+  return { title: t.om.metaTitel };
+}
 
-export default function OmSide() {
+export default async function OmSide() {
+  const t = await hentOrdbog();
+  const o = t.om;
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Om {SITE.name}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">{o.titel(SITE.name)}</h1>
 
       <div className="prose mt-4 space-y-4 text-grafit-700">
+        <p>{o.afsnit1(SITE.name)}</p>
         <p>
-          {SITE.name} er et uofficielt, ikke-kommercielt community af og for Zeekr-ejere
-          i Norden. Ingen annoncer, ingen affiliate - bare ejere der hjælper hinanden.
+          {o.afsnit2Foer}
+          <strong>{o.afsnit2Fed}</strong>
+          {o.afsnit2Efter}
         </p>
         <p>
-          Kernen er et <strong>fejl-board</strong>: meld softwarefejl, bekræft dem sammen,
-          og stem de vigtigste op. Én fejl kan tagges til flere modeller, så vi kan se når
-          noget rammer en hel platform. De bekræftede fejl samles i pæne, offentlige
-          rapporter til Zeekr - som en konstruktiv medspiller, ikke en vred pressgruppe.
-        </p>
-        <p>
-          Senere kommer et rigtigt <strong>forum</strong> med underfora pr. model, tråde og
-          guides - med ét fælles login, så det hele føles som ét site.
+          {o.afsnit3Foer}
+          <strong>{o.afsnit3Fed}</strong>
+          {o.afsnit3Efter}
         </p>
       </div>
 
       <div className="mt-8 rounded-xl border border-grafit-200 bg-white p-5 text-sm text-grafit-500">
-        <p className="font-semibold text-grafit-700">Disclaimer</p>
-        <p className="mt-1">{DISCLAIMER}</p>
+        <p className="font-semibold text-grafit-700">{o.disclaimerTitel}</p>
+        <p className="mt-1">{t.ramme.disclaimer(SITE.domain)}</p>
       </div>
     </div>
   );

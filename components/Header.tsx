@@ -3,11 +3,12 @@ import { SITE } from '@/lib/config';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { getUlaestAntal } from '@/lib/notifikationer';
 import { getAabneRapporterAntal } from '@/lib/queries-admin';
+import { hentOrdbog } from '@/lib/i18n/server';
 import Nav from './Nav';
 import NotifBell from './NotifBell';
 
 export default async function Header() {
-  const { user, rolle } = await adminKontekst();
+  const [{ user, rolle }, t] = await Promise.all([adminKontekst(), hentOrdbog()]);
   const erModerator = rolleErModerator(rolle);
   // Klokke kun for indloggede; start-tal fra serveren (ingen tom-blink).
   const ulaest = user ? await getUlaestAntal() : 0;
@@ -22,7 +23,7 @@ export default async function Header() {
             {SITE.name}
           </span>
           <span className="hidden whitespace-nowrap text-xs text-grafit-400 lg:inline">
-            uofficielt ejer-community
+            {t.ramme.tagline}
           </span>
         </Link>
 

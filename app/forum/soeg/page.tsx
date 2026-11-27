@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getForumSoeg, getKategoriListe } from '@/lib/forum';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import { modelBadge } from '@/lib/model-badge';
 import GarageBadge from '@/components/forum/GarageBadge';
 import TraadSoegeForm from '@/components/forum/TraadSoegeForm';

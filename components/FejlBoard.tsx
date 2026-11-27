@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IssueRow, Model, GarageBil } from '@/lib/types';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import { TYPE_META, ISSUE_CATEGORIES, kategoriLabel, type Status } from '@/lib/config';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';

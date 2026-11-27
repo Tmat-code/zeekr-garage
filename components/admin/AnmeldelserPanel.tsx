@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import type { BeskedAnmeldelse } from '@/lib/queries-admin';
 import { saetAnmeldelseHaandteret, sletAnmeldtBesked } from '@/app/admin/beskeder-actions';
 

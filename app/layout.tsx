@@ -8,61 +8,71 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { SITE } from '@/lib/config';
+import { hentSprog } from '@/lib/i18n/server';
+import { ordbog } from '@/lib/i18n';
+import { SprogProvider } from '@/lib/i18n/klient';
 
-const BESKRIVELSE =
-  'Uofficielt, uafhængigt community for Zeekr-ejere i Norden. Meld, bekræft og stem på softwarefejl på tværs af modeller - og saml dem i rapporter til Zeekr.';
-
-export const metadata: Metadata = {
-  metadataBase: new URL(`https://${SITE.domain}`),
-  title: {
-    default: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
-    template: `%s - ${SITE.name}`,
-  },
-  description: BESKRIVELSE,
-  robots: { index: true, follow: true },
-  openGraph: {
-    type: 'website',
-    locale: 'da_DK',
-    siteName: SITE.name,
-    title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
-    description: BESKRIVELSE,
-    // Delings-/preview-billede (grafit+kobber-banner). metadataBase gør den absolut,
-    // så Facebook/Messenger + vores egne forum-link-kort (P38) viser et billede.
-    images: [
-      {
-        url: '/og-default.png',
-        width: 1200,
-        height: 630,
-        alt: 'Zeekr Garage - uofficielt community for Zeekr-ejere i Norden',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${SITE.name} - Uofficielt community for Zeekr-ejere`,
-    description: BESKRIVELSE,
-    images: ['/og-default.png'],
-  },
-};
+// Metadata på læserens UI-sprog (U1). Stierne er de samme på alle sprog (intet
+// URL-præfiks), så søgemaskiner (tom Accept-Language -> dansk) ser den danske.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = ordbog(await hentSprog());
+  const titel = t.meta.titelStandard(SITE.name);
+  return {
+    metadataBase: new URL(`https://${SITE.domain}`),
+    title: {
+      default: titel,
+      template: `%s - ${SITE.name}`,
+    },
+    description: t.meta.beskrivelse,
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: 'website',
+      locale: t.meta.ogLocale,
+      siteName: SITE.name,
+      title: titel,
+      description: t.meta.beskrivelse,
+      // Delings-/preview-billede (grafit+kobber-banner). metadataBase gør den absolut,
+      // så Facebook/Messenger + vores egne forum-link-kort (P38) viser et billede.
+      images: [
+        {
+          url: '/og-default.png',
+          width: 1200,
+          height: 630,
+          alt: t.meta.ogAlt(SITE.name),
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: titel,
+      description: t.meta.beskrivelse,
+      images: ['/og-default.png'],
+    },
+  };
+}
 
 // Grafit tema-farve (browser-UI/adresselinje + app-splash). Matcher ikonet.
 export const viewport: Viewport = {
   themeColor: '#17191d',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sprog = await hentSprog();
+  const t = ordbog(sprog);
   return (
-    <html lang="da">
+    <html lang={sprog}>
       <body className="flex min-h-screen flex-col">
-        <div className="bg-grafit-900 text-grafit-300">
-          <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-4 py-1.5 text-center text-xs">
-            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-kobber-500" aria-hidden="true" />
-            <span>Zeekr Garage er under opbygning - nyt indhold og funktioner kommer løbende.</span>
+        <SprogProvider sprog={sprog}>
+          <div className="bg-grafit-900 text-grafit-300">
+            <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-4 py-1.5 text-center text-xs">
+              <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-kobber-500" aria-hidden="true" />
+              <span>{t.ramme.underOpbygning(SITE.name)}</span>
+            </div>
           </div>
-        </div>
-        <Header />
-        <main className="flex-1 overflow-x-clip">{children}</main>
-        <Footer />
+          <Header />
+          <main className="flex-1 overflow-x-clip">{children}</main>
+          <Footer />
+        </SprogProvider>
       </body>
     </html>
   );

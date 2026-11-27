@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { gemForumRegler } from '@/app/admin/forum-actions';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 
 export default function ForumReglerEditor({
   initial,

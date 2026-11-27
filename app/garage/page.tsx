@@ -11,6 +11,8 @@ import MinGarageForm from '@/components/MinGarageForm';
 import VisningsnavnForm from '@/components/VisningsnavnForm';
 import AvatarUpload from '@/components/AvatarUpload';
 import SkiftMailForm from '@/components/SkiftMailForm';
+import SprogFelt from '@/components/SprogFelt';
+import { hentProfilSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Min garage' };
@@ -19,12 +21,13 @@ export default async function GarageSide() {
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/garage');
 
-  const [models, varianter, biler, mitNavn, mitAvatar] = await Promise.all([
+  const [models, varianter, biler, mitNavn, mitAvatar, profilSprog] = await Promise.all([
     getModels(),
     getVarianter(),
     getMyCars(),
     getMitNavn(),
     getMitAvatar(),
+    hentProfilSprog(),
   ]);
 
   // Layout: på mobil én kolonne (kortene stakker i rækkefølgen avatar -> navn
@@ -45,6 +48,7 @@ export default async function GarageSide() {
         <div>
           <AvatarUpload initialPath={mitAvatar} navn={mitNavn} />
           <VisningsnavnForm initial={mitNavn} />
+          <SprogFelt gemtSprog={profilSprog} />
         </div>
         <div>
           <MinGarageForm models={models} varianter={varianter} initialCars={biler} />

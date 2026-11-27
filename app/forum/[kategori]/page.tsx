@@ -4,7 +4,7 @@ import { getKategori, getTraade, getModelEjerTal } from '@/lib/forum';
 import { getSoftwareHistorikPerModel } from '@/lib/ota';
 import type { ModelEjerTal, OtaModelHistorik } from '@/lib/types';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import ModelBadge from '@/components/forum/ModelBadge';
 import GarageBadge from '@/components/forum/GarageBadge';
 import Avatar from '@/components/forum/Avatar';

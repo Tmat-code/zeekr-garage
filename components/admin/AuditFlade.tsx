@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { datoTid, relativTid } from '@/lib/tid';
+import { datoTid, relativTid } from '@/lib/i18n/format';
 import type { AuditAktoer, AuditHaendelse, AuditSide } from '@/lib/queries-admin';
 import { hentAuditSpor, hentAuditSeneste, fortrydHaendelse } from '@/app/admin/audit-actions';
 

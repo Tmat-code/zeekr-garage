@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { adminKontekst } from '@/lib/admin';
 import { getSamtaler } from '@/lib/beskeder';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import GarageBadge from '@/components/forum/GarageBadge';
 import Avatar from '@/components/forum/Avatar';
 import IndbakkeSletKnap from '@/components/beskeder/IndbakkeSletKnap';

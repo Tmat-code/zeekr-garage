@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getForumRegler } from '@/lib/forum-regler';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import ReglerIndhold from '@/components/forum/ReglerIndhold';
 
 export const metadata = {

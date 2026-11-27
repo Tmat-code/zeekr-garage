@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import type { KontaktBesked, KontaktSide } from '@/lib/queries-admin';
 import { saetKontaktBehandlet, hentKontaktBeskeder } from '@/app/admin/kontakt-actions';
 

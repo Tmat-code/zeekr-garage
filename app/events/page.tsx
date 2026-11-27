@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getEvents } from '@/lib/events';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
-import { datoTid } from '@/lib/tid';
+import { datoTid } from '@/lib/i18n/format';
 import type { EventRow } from '@/lib/types';
 
 export const metadata = {

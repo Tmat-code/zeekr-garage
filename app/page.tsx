@@ -6,6 +6,7 @@ import {
   getForsideBesked,
 } from '@/lib/queries';
 import { TYPE_META } from '@/lib/config';
+import { hentOrdbog } from '@/lib/i18n/server';
 
 // Altid frisk fra databasen (offentlig læsning, ingen statisk caching).
 export const dynamic = 'force-dynamic';
@@ -15,12 +16,14 @@ function kortModel(navn: string) {
 }
 
 export default async function Forside() {
-  const [models, issues, user, besked] = await Promise.all([
+  const [models, issues, user, besked, t] = await Promise.all([
     getModels(),
     getIssues(),
     getCurrentUser(),
     getForsideBesked(),
+    hentOrdbog(),
   ]);
+  const f = t.forside;
 
   const tal = {
     meldinger: issues.length,
@@ -86,46 +89,44 @@ export default async function Forside() {
 
           <div className="max-w-2xl">
             <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-              Garagen for
+              {f.heroLinje1}
               <br />
-              Zeekr-ejere i Norden
+              {f.heroLinje2}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-grafit-300">
-              Et uofficielt fællesskab, hvor ejere mødes, deler erfaringer og hjælper hinanden.
-              Vi samler fejl og ønsker som konstruktiv feedback til Zeekr - fordi vi vil se gode
-              biler blive endnu bedre.
+              {f.heroTekst}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 href={user ? '/feedback' : '/login'}
                 className="inline-flex items-center justify-center rounded-lg bg-kobber-500 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-kobber-600"
               >
-                Vær med
+                {f.vaerMed}
               </Link>
               <Link
                 href="/forum"
                 className="inline-flex items-center justify-center rounded-lg border border-grafit-600 px-5 py-2.5 font-semibold text-grafit-100 transition-colors hover:border-kobber-500 hover:text-white"
               >
-                Åbn forummet
+                {f.aabnForum}
               </Link>
             </div>
             <p className="mt-5 text-sm text-grafit-500">
-              Uofficielt ejer-community · ikke tilknyttet eller sponsoreret af Zeekr.
+              {f.heroNote}
             </p>
           </div>
 
           {/* INSTRUMENT-STRIBE */}
           <div className="relative mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-t-xl border border-b-0 border-grafit-800 bg-grafit-800 sm:grid-cols-4">
             {[
-              { v: tal.meldinger, l: 'Meldinger' },
-              { v: tal.bekraeftelser, l: 'Bekræftelser' },
-              { v: tal.modeller, l: 'Modeller' },
-              { v: tal.sendt, l: 'Sendt til Zeekr' },
-            ].map((t) => (
-              <div key={t.l} className="bg-grafit-950 px-5 py-5">
-                <div className="font-mono text-3xl font-bold tabular-nums text-kobber-400">{t.v}</div>
+              { v: tal.meldinger, l: f.talMeldinger },
+              { v: tal.bekraeftelser, l: f.talBekraeftelser },
+              { v: tal.modeller, l: f.talModeller },
+              { v: tal.sendt, l: f.talSendt },
+            ].map((x) => (
+              <div key={x.l} className="bg-grafit-950 px-5 py-5">
+                <div className="font-mono text-3xl font-bold tabular-nums text-kobber-400">{x.v}</div>
                 <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-grafit-400">
-                  {t.l}
+                  {x.l}
                 </div>
               </div>
             ))}
@@ -143,15 +144,13 @@ export default async function Forside() {
           />
           <div className="relative">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="font-display text-2xl font-bold tracking-tight">Forummet</h2>
+              <h2 className="font-display text-2xl font-bold tracking-tight">{f.forumTitel}</h2>
               <span className="chip bg-loest/20 text-grafit-50 ring-1 ring-inset ring-loest/50">
-                <span className="text-[#8fd48a]" aria-hidden="true">●</span> Live nu
+                <span className="text-[#8fd48a]" aria-hidden="true">●</span> {f.liveNu}
               </span>
             </div>
             <p className="mt-3 max-w-xl text-grafit-300">
-              Fællesskabets hjerte: hverdagssnak, spørgsmål og guides - med et eget forum for
-              hver model, plus opladning, software, tilbehør og livet som ejer. Samme login som
-              resten af siden.
+              {f.forumTekst}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -168,7 +167,7 @@ export default async function Forside() {
                 href="/forum"
                 className="rounded-lg bg-grafit-800 px-3 py-1.5 text-sm text-kobber-300 transition-colors hover:bg-grafit-700 hover:text-kobber-200"
               >
-                + flere rum →
+                {f.flereRum}
               </Link>
             </div>
 
@@ -177,11 +176,11 @@ export default async function Forside() {
                 href="/forum"
                 className="inline-flex items-center justify-center rounded-lg bg-kobber-500 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-kobber-600"
               >
-                Åbn forummet
+                {f.aabnForum}
               </Link>
               {!user && (
                 <Link href="/login" className="text-sm font-semibold text-grafit-200 hover:text-white">
-                  Opret profil for at skrive med →
+                  {f.opretProfil}
                 </Link>
               )}
             </div>
@@ -195,18 +194,17 @@ export default async function Forside() {
           <div className="min-w-0 rounded-2xl border border-grafit-200 bg-white p-6 sm:p-7 lg:col-span-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2.5">
-                <h2 className="font-display text-xl font-bold tracking-tight text-grafit-900">Feedback</h2>
+                <h2 className="font-display text-xl font-bold tracking-tight text-grafit-900">{f.feedbackTitel}</h2>
                 <span className="chip shrink-0 bg-loest/10 text-loest ring-1 ring-inset ring-loest/25">
-                  ● Live nu
+                  ● {f.liveNu}
                 </span>
               </div>
               <Link href="/feedback" className="shrink-0 whitespace-nowrap text-sm font-semibold text-kobber-700 hover:text-kobber-600">
-                Åbn feedback
+                {f.aabnFeedback}
               </Link>
             </div>
             <p className="mt-2 text-grafit-600">
-              Kører allerede: meld fejl og ønsker, bekræft dem sammen, og stem de vigtigste op.
-              Vi samler dem i konstruktive rapporter til Zeekr.
+              {f.feedbackTekst}
             </p>
 
             {seneste.length > 0 ? (
@@ -220,7 +218,7 @@ export default async function Forside() {
                       href={`/melding/${i.id}`}
                       className="flex items-center gap-3 py-3 hover:bg-grafit-50"
                     >
-                      <span className={`chip ${meta.chip}`}>{meta.badge}</span>
+                      <span className={`chip ${meta.chip}`}>{t.config.type[i.type].badge}</span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-grafit-800">
                         {i.title}
                       </span>
@@ -239,44 +237,43 @@ export default async function Forside() {
               </div>
             ) : (
               <p className="mt-5 border-t border-grafit-100 pt-4 text-sm text-grafit-400">
-                Ingen meldinger endnu - vær den første til at melde noget ind.
+                {f.ingenMeldinger}
               </p>
             )}
 
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1 border-t border-grafit-100 pt-4 text-xs text-grafit-500">
               <span>
-                <span className="font-mono font-bold text-kobber-600">01</span> Søg først
+                <span className="font-mono font-bold text-kobber-600">01</span> {f.trinSoeg}
               </span>
               <span>
-                <span className="font-mono font-bold text-kobber-600">02</span> Bekræft sammen
+                <span className="font-mono font-bold text-kobber-600">02</span> {f.trinBekraeft}
               </span>
               <span>
-                <span className="font-mono font-bold text-kobber-600">03</span> Send til Zeekr
+                <span className="font-mono font-bold text-kobber-600">03</span> {f.trinSend}
               </span>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
-              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Min garage</h3>
+              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">{f.garageTitel}</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Registrér din Zeekr, så dine indlæg i forummet viser den rigtige bil - og dine
-                stemmer tæller for den rigtige model.
+                {f.garageTekst}
               </p>
               <Link
                 href={user ? '/garage' : '/login'}
                 className="mt-4 inline-flex text-sm font-semibold text-kobber-700 hover:text-kobber-600"
               >
-                Registrér din bil
+                {f.registrerBil}
               </Link>
             </div>
             <div className="flex-1 rounded-2xl border border-grafit-200 bg-white p-6">
-              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">Nyttige links</h3>
+              <h3 className="font-display text-lg font-bold tracking-tight text-grafit-900">{f.linksTitel}</h3>
               <p className="mt-2 text-sm text-grafit-600">
-                Manualer, specs, test, tilbehør og lidt praktisk - samlet ét sted for Zeekr-ejere.
+                {f.linksTekst}
               </p>
               <Link href="/links" className="mt-4 inline-flex text-sm font-semibold text-kobber-700 hover:text-kobber-600">
-                Se nyttige links
+                {f.seLinks}
               </Link>
             </div>
           </div>

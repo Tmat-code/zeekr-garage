@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getEvent, getMinTilmelding } from '@/lib/events';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
-import { datoTid, relativTid } from '@/lib/tid';
+import { datoTid, relativTid } from '@/lib/i18n/format';
 import TilmeldKnap from '@/components/events/TilmeldKnap';
 import EventAdmin from '@/components/events/EventAdmin';
 

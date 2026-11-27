@@ -1,0 +1,207 @@
+#!/usr/bin/env node
+// UI-i18n: scanner der finder resterende danske UI-strenge i kildefilerne.
+//
+// Brug:
+//   node scripts/i18n-scan.mjs                 -> hele app/, components/, lib/ (oversigt pr. fil)
+//   node scripts/i18n-scan.mjs fil1 fil2 ...   -> kun de filer (fx en skives filer), med fund pr. linje
+//   node scripts/i18n-scan.mjs --skive U1      -> de filer der hører til skiven (SKIVER nedenfor)
+//   tilføj --vis for at liste hvert fund
+//
+// Hvad tæller som en "UI-streng": JSX-tekst med bogstaver, samt streng-literals
+// (inkl. template-strenge) der ligner menneske-tekst (har mellemrum eller dansk
+// bogstav æ/ø/å). Fraregnet: kommentarer, import/export-stier, className/key/
+// href/src/id-attributter, CSS-klasse-agtige strenge, stier/URL'er, Supabase-
+// kald (.from/.select/.eq/...), console.*, og ordbogsfilerne i lib/i18n/.
+// En linje kan undtages bevidst med kommentaren `i18n-ok` (fx et brandnavn).
+// Exit-kode 1 hvis der er fund i en eksplicit fil-liste/skive (til verifikation).
+
+import fs from 'node:fs';
+import path from 'node:path';
+import ts from 'typescript';
+
+const ROD = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+
+const SKIVER = {
+  U1: [
+    'app/layout.tsx',
+    'app/manifest.ts',
+    'app/page.tsx',
+    'app/om/page.tsx',
+    'app/links/page.tsx',
+    'app/software/page.tsx',
+    'app/sprog-actions.ts',
+    'components/Header.tsx',
+    'components/Nav.tsx',
+    'components/Footer.tsx',
+    'components/ConfirmButton.tsx',
+    'components/LinksVisning.tsx',
+    'components/SoftwareHistorik.tsx',
+    'components/SprogVaelger.tsx',
+    'components/SprogFelt.tsx',
+    'lib/config.ts',
+    'lib/i18n/sprog.ts',
+    'lib/i18n/server.ts',
+    'lib/i18n/klient.tsx',
+    'lib/i18n/format.ts',
+    'lib/i18n/index.ts',
+  ],
+};
+
+const IGNORER_ATTR = new Set([
+  'className', 'key', 'href', 'src', 'id', 'htmlFor', 'type', 'name', 'rel', 'target',
+  'method', 'action', 'role', 'viewBox', 'd', 'fill', 'stroke', 'strokeWidth',
+  'strokeLinecap', 'preserveAspectRatio', 'stopColor', 'offset', 'x1', 'x2', 'y1', 'y2',
+  'autoComplete', 'inputMode', 'lang', 'referrerPolicy', 'loading', 'sizes', 'accept',
+  'style', 'dangerouslySetInnerHTML', 'encType', 'pattern', 'mode',
+]);
+const IGNORER_KALD = new Set([
+  'from', 'select', 'eq', 'neq', 'in', 'is', 'order', 'rpc', 'upsert', 'insert', 'update',
+  'delete', 'match', 'ilike', 'like', 'or', 'not', 'contains', 'storage', 'channel',
+  'on', 'get', 'set', 'has', 'append', 'redirect', 'push', 'replace', 'require',
+  'import', 'getElementById', 'querySelector', 'addEventListener', 'removeEventListener',
+  'dispatchEvent', 'toLocaleString', 'toLocaleDateString', 'toLocaleTimeString',
+  'revalidatePath', 'createElement', 'split', 'startsWith', 'endsWith', 'includes',
+  'test', 'matchAll', 'headers', 'cookies', 'error', 'log', 'warn', 'info', 'debug',
+]);
+
+const DANSK_BOGSTAV = /[æøåÆØÅ]/;
+const BOGSTAV = /[A-Za-zæøåÆØÅäöÄÖ]/;
+
+function lignerKlasser(s) {
+  // Tailwind/CSS: kun "tekniske" tokens uden store bogstaver/punktum-sætninger.
+  const tokens = s.trim().split(/\s+/);
+  return tokens.every((t) => /^[a-z0-9!:\[\]\/\.\-_#%(),&>*=+@'"~]+$/.test(t)) &&
+    tokens.some((t) => /-|:/.test(t));
+}
+
+function lignerTeknisk(s) {
+  const t = s.trim();
+  if (!t) return true;
+  if (/^(\/|https?:|mailto:|#|\.\/|@\/|data:)/.test(t)) return true;
+  if (/^[\w.-]+@[\w.-]+$/.test(t)) return true; // mail
+  if (/^[a-z0-9_]+(\.[a-z0-9_]+)+$/i.test(t)) return true; // dot.path
+  if (/^[A-Za-z0-9_\-]+$/.test(t) && !DANSK_BOGSTAV.test(t)) return true; // ét teknisk ord/slug
+  if (lignerKlasser(t)) return true;
+  if (/^[\d\s.,:;%+\-\u2013/()x×]+$/.test(t)) return true;
+  return false;
+}
+
+function erUiStreng(tekst, jsx) {
+  const t = tekst.replace(/\s+/g, ' ').trim();
+  if (!t || !BOGSTAV.test(t)) return false;
+  if (jsx) return !lignerTeknisk(t) || DANSK_BOGSTAV.test(t) || /\s/.test(t) || /^[A-ZÆØÅ][a-zæøå]+$/.test(t);
+  if (lignerTeknisk(t)) return false;
+  return /\s/.test(t) || DANSK_BOGSTAV.test(t);
+}
+
+function kaldNavn(node) {
+  // Finder evt. omsluttende kald hvor strengen er et argument: x.from('...') -> 'from'
+  const p = node.parent;
+  if (p && ts.isCallExpression(p) && p.arguments.includes(node)) {
+    const e = p.expression;
+    if (ts.isPropertyAccessExpression(e)) return e.name.text;
+    if (ts.isIdentifier(e)) return e.text;
+  }
+  return null;
+}
+
+function skalIgnoreres(node, sf) {
+  const p = node.parent;
+  if (!p) return false;
+  if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isExternalModuleReference(p)) return true;
+  if (ts.isExpressionStatement(p)) return true; // 'use client' / 'use server'
+  if (ts.isPropertyAssignment(p) && p.name === node) return true; // nøgle
+  if (ts.isLiteralTypeNode(p)) return true; // type 'stemt' | ...
+  if (ts.isElementAccessExpression(p) && p.argumentExpression === node) return true;
+  if (ts.isBinaryExpression(p) && /===|!==|==|!=/.test(ts.tokenToString(p.operatorToken.kind) ?? '')) return true;
+  if (ts.isCaseClause(p)) return true;
+  if (ts.isJsxAttribute(p) && IGNORER_ATTR.has(p.name.getText(sf))) return true;
+  if (ts.isJsxExpression(p) && p.parent && ts.isJsxAttribute(p.parent) && IGNORER_ATTR.has(p.parent.name.getText(sf))) return true;
+  const k = kaldNavn(node);
+  if (k && IGNORER_KALD.has(k)) return true;
+  // className={`... ${x}`} / cn(...)
+  let a = node.parent;
+  for (let i = 0; i < 4 && a; i++, a = a.parent) {
+    if (ts.isJsxAttribute(a)) return IGNORER_ATTR.has(a.name.getText(sf));
+    if (ts.isPropertyAssignment(a) && ['className', 'chip', 'badgeKlasse', 'klasse'].includes(a.name.getText(sf))) return true;
+  }
+  return false;
+}
+
+function scanFil(rel) {
+  const fuld = path.join(ROD, rel);
+  const kilde = fs.readFileSync(fuld, 'utf8');
+  const linjer = kilde.split('\n');
+  const sf = ts.createSourceFile(rel, kilde, ts.ScriptTarget.Latest, true,
+    rel.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const fund = [];
+  const noter = (node, tekst, jsx) => {
+    if (!erUiStreng(tekst, jsx)) return;
+    const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+    if ((linjer[line] ?? '').includes('i18n-ok')) return;
+    fund.push({ linje: line + 1, tekst: tekst.replace(/\s+/g, ' ').trim().slice(0, 90) });
+  };
+  const besoeg = (node) => {
+    if (ts.isJsxText(node)) {
+      noter(node, node.getText(sf), true);
+    } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      if (!skalIgnoreres(node, sf)) noter(node, node.text, false);
+    } else if (ts.isTemplateExpression(node)) {
+      if (!skalIgnoreres(node, sf)) {
+        const statisk = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ');
+        noter(node, statisk, false);
+      }
+    }
+    ts.forEachChild(node, besoeg);
+  };
+  besoeg(sf);
+  return fund;
+}
+
+function alleFiler() {
+  const ud = [];
+  const gaa = (dir) => {
+    for (const e of fs.readdirSync(path.join(ROD, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, e.name);
+      if (e.isDirectory()) gaa(rel);
+      else if (/\.(ts|tsx)$/.test(e.name)) ud.push(rel);
+    }
+  };
+  ['app', 'components', 'lib'].forEach(gaa);
+  return ud;
+}
+
+const args = process.argv.slice(2);
+const vis = args.includes('--vis');
+const skiveIdx = args.indexOf('--skive');
+let filer = args.filter((a, i) => !a.startsWith('--') && !(skiveIdx >= 0 && i === skiveIdx + 1));
+const eksplicit = filer.length > 0 || skiveIdx >= 0;
+if (skiveIdx >= 0) {
+  const navn = args[skiveIdx + 1];
+  if (!SKIVER[navn]) {
+    console.error(`Ukendt skive: ${navn}`);
+    process.exit(2);
+  }
+  filer = filer.concat(SKIVER[navn]);
+}
+if (!eksplicit) filer = alleFiler();
+// Ordbogsfilerne er selve oversættelserne - de skal være danske/svenske/engelske.
+filer = filer.filter((f) => !/^lib\/i18n\/(da|sv|en)\.ts$/.test(f) && !f.startsWith('lib/i18n/vaerksted/'));
+
+let total = 0;
+let medFund = 0;
+const rapport = [];
+for (const f of filer) {
+  if (!fs.existsSync(path.join(ROD, f))) {
+    rapport.push(`  (mangler) ${f}`);
+    continue;
+  }
+  const fund = scanFil(f);
+  total += fund.length;
+  if (fund.length) medFund++;
+  if (fund.length || eksplicit) rapport.push(`${String(fund.length).padStart(4)}  ${f}`);
+  if (vis || eksplicit) for (const x of fund) rapport.push(`        L${x.linje}: ${x.tekst}`);
+}
+console.log(rapport.join('\n'));
+console.log(`\n${total} UI-strenge i ${medFund} af ${filer.length} filer.`);
+process.exit(eksplicit && total > 0 ? 1 : 0);

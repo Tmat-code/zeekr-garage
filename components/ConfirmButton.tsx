@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { GarageBil } from '@/lib/types';
+import { useOrdbog } from '@/lib/i18n/klient';
+
+type Tilstand = 'stemt' | 'migMed' | 'registrer';
 
 function Boks({
   count,
@@ -13,11 +16,12 @@ function Boks({
   disabled,
 }: {
   count: number;
-  tilstand: 'stemt' | 'mig med' | 'registrér';
+  tilstand: Tilstand;
   onClick?: () => void;
   title?: string;
   disabled?: boolean;
 }) {
+  const t = useOrdbog();
   const aktiv = tilstand === 'stemt';
   return (
     <button
@@ -32,7 +36,7 @@ function Boks({
     >
       <span aria-hidden className="text-base leading-none">▲</span>
       <span className="text-xl font-semibold leading-tight">{count}</span>
-      <span className="text-[10px] text-grafit-400">{tilstand}</span>
+      <span className="text-[10px] text-grafit-400">{t.stem[tilstand]}</span>
     </button>
   );
 }
@@ -56,6 +60,7 @@ export default function ConfirmButton({
   naeste?: string;
 }) {
   const router = useRouter();
+  const t = useOrdbog();
   const [count, setCount] = useState(initialCount);
   // Antal af mine biler der har bekraeftet (0 = ikke stemt).
   const [mine, setMine] = useState(initialMine);
@@ -73,9 +78,9 @@ export default function ConfirmButton({
     return (
       <Boks
         count={count}
-        tilstand="mig med"
+        tilstand="migMed"
         onClick={() => router.push(`/login?naeste=${encodeURIComponent(naeste)}`)}
-        title="Log ind for at stemme"
+        title={t.stem.logIndForAtStemme}
       />
     );
   }
@@ -85,9 +90,9 @@ export default function ConfirmButton({
     return (
       <Boks
         count={count}
-        tilstand="registrér"
+        tilstand="registrer"
         onClick={() => router.push('/garage')}
-        title="Registrér din bil i Min garage for at stemme"
+        title={t.stem.registrerForAtStemme}
       />
     );
   }
@@ -97,12 +102,10 @@ export default function ConfirmButton({
     return (
       <Boks
         count={count}
-        tilstand="mig med"
+        tilstand="migMed"
         disabled
         title={
-          userCars.length === 1
-            ? `Rammer ikke din ${userCars[0].modelName}`
-            : 'Rammer ingen af dine biler'
+          userCars.length === 1 ? t.stem.rammerIkkeDin(userCars[0].modelName) : t.stem.rammerIngen
         }
       />
     );
@@ -122,7 +125,7 @@ export default function ConfirmButton({
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('ingen bruger');
+      if (!user) throw new Error('ingen bruger'); // i18n-ok (intern, vises ikke)
       const raekker = matchendeBiler.map((c) => ({
         issue_id: issueId,
         model_id: c.modelId,
@@ -157,7 +160,7 @@ export default function ConfirmButton({
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('ingen bruger');
+      if (!user) throw new Error('ingen bruger'); // i18n-ok (intern, vises ikke)
       // Fjern ALLE mine bilers bekraeftelser paa denne melding.
       const { error } = await sb
         .from('confirmations')
@@ -177,18 +180,19 @@ export default function ConfirmButton({
   const flere = matchendeBiler.length > 1;
   const titel = confirmed
     ? flere
-      ? `Fjern mine ${mine} bekræftelser`
-      : 'Fjern min bekræftelse'
+      ? t.stem.fjernMine(mine)
+      : t.stem.fjernMin
     : flere
-      ? `Bekræft med dine ${matchendeBiler.length} biler (én stemme pr. bil)`
-      : `Bekræft med din ${matchendeBiler[0].modelName}${
-          matchendeBiler[0].variantName ? ' ' + matchendeBiler[0].variantName : ''
-        }`;
+      ? t.stem.bekraeftMedDine(matchendeBiler.length)
+      : t.stem.bekraeftMedDin(
+          matchendeBiler[0].modelName +
+            (matchendeBiler[0].variantName ? ' ' + matchendeBiler[0].variantName : ''),
+        );
 
   return (
     <Boks
       count={count}
-      tilstand={confirmed ? 'stemt' : 'mig med'}
+      tilstand={confirmed ? 'stemt' : 'migMed'}
       onClick={confirmed ? fjern : bekraeft}
       disabled={busy}
       title={titel}

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { OtaModelHistorik, SoftwareUpdate } from '@/lib/types';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
+import { datoKort } from '@/lib/i18n/format';
 
 // Record<->snak: OTA-historikken her er record'en; selve diskussionen bor i det
 // relevante MODEL-forum (beslutning 27-11: den tvaergaaende Software & OTA-kategori
@@ -12,20 +14,6 @@ import type { OtaModelHistorik, SoftwareUpdate } from '@/lib/types';
 // Kort model-label til chip: "Zeekr 7GT" -> "7GT".
 function kort(navn: string): string {
   return navn.replace(/^Zeekr\s+/i, '');
-}
-
-// 'YYYY-MM-DD' -> dansk dato uden tid. Middag for at undgaa tz-dagskift.
-function datoKort(iso: string): string {
-  try {
-    return new Date(iso + 'T12:00:00').toLocaleDateString('da-DK', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'Europe/Copenhagen',
-    });
-  } catch {
-    return iso;
-  }
 }
 
 function VersionBlok({
@@ -41,6 +29,8 @@ function VersionBlok({
   forumHref: string;
   modelLabel: string;
 }) {
+  const t = useOrdbog();
+  const sprog = useSprog();
   return (
     <div className="overflow-hidden">
       <button
@@ -52,7 +42,7 @@ function VersionBlok({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-grafit-900">{u.version}</span>
-            <span className="text-xs text-grafit-400">{datoKort(u.releasedAt)}</span>
+            <span className="text-xs text-grafit-400">{datoKort(u.releasedAt, sprog)}</span>
             {u.modeller.length > 1 && (
               <span className="flex flex-wrap gap-1">
                 {u.modeller.map((m) => (
@@ -68,7 +58,7 @@ function VersionBlok({
           </div>
           {!aaben && (
             <div className="mt-0.5 text-xs text-grafit-400">
-              {u.punkter.length} {u.punkter.length === 1 ? 'ændring' : 'ændringer'}
+              {t.software.aendringer(u.punkter.length)}
             </div>
           )}
         </div>
@@ -85,14 +75,14 @@ function VersionBlok({
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-grafit-400">Ingen punkter angivet.</p>
+            <p className="text-sm text-grafit-400">{t.software.ingenPunkter}</p>
           )}
           {u.note && <p className="mt-3 text-sm italic text-grafit-500">{u.note}</p>}
           <a
             href={forumHref}
             className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-kobber-700 hover:text-kobber-800 hover:underline"
           >
-            Diskutér i {modelLabel}-forummet <span aria-hidden="true">→</span>
+            {t.software.diskuter(modelLabel)} <span aria-hidden="true">→</span>
           </a>
         </div>
       )}
@@ -101,6 +91,7 @@ function VersionBlok({
 }
 
 export default function SoftwareHistorik({ modeller }: { modeller: OtaModelHistorik[] }) {
+  const t = useOrdbog();
   const [valgt, setValgt] = useState<string | null>(null); // null = Alle
   // Aabne versioner (id'er). Nyeste pr. model er aaben som udgangspunkt.
   const [aabne, setAabne] = useState<Set<string>>(() => {
@@ -119,10 +110,8 @@ export default function SoftwareHistorik({ modeller }: { modeller: OtaModelHisto
   if (modeller.length === 0) {
     return (
       <div className="mt-8 rounded-xl border border-grafit-200 bg-grafit-50 p-6 text-center">
-        <p className="text-grafit-600">Der er endnu ikke logget nogen OTA-opdateringer.</p>
-        <p className="mt-1 text-sm text-grafit-400">
-          Historikken fyldes efterhånden som der kommer opdateringer til modellerne.
-        </p>
+        <p className="text-grafit-600">{t.software.tomTitel}</p>
+        <p className="mt-1 text-sm text-grafit-400">{t.software.tomTekst}</p>
       </div>
     );
   }
@@ -138,9 +127,9 @@ export default function SoftwareHistorik({ modeller }: { modeller: OtaModelHisto
   return (
     <div>
       {visFilter && (
-        <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Filtrér efter model">
+        <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label={t.faelles.filtrerModel}>
           <button className={chipKlasse(valgt === null)} onClick={() => setValgt(null)}>
-            Alle
+            {t.faelles.alle}
           </button>
           {modeller.map((m) => (
             <button
@@ -160,7 +149,7 @@ export default function SoftwareHistorik({ modeller }: { modeller: OtaModelHisto
             <h2 className="font-display text-lg font-bold text-grafit-900">{m.name}</h2>
             {m.nyesteVersion && (
               <span className="text-sm text-grafit-500">
-                Nyeste: <span className="font-medium text-kobber-700">{m.nyesteVersion}</span>
+                {t.software.nyeste} <span className="font-medium text-kobber-700">{m.nyesteVersion}</span>
               </span>
             )}
           </div>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { relativTid } from '@/lib/tid';
+import { relativTid } from '@/lib/i18n/format';
 import ModelBadge from '@/components/forum/ModelBadge';
 import type { ForumGruppe } from '@/lib/types';
 

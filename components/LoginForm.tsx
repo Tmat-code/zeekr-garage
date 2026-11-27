@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { Model, VariantMap } from '@/lib/types';
 import BilVaelger, { type BilValg } from '@/components/BilVaelger';
+import { useSprog } from '@/lib/i18n/klient';
+import { synkSprogVedLogin } from '@/app/sprog-actions';
 
 type Mode = 'ind' | 'opret' | 'glemt';
 
@@ -18,6 +20,7 @@ export default function LoginForm({
   const router = useRouter();
   const params = useSearchParams();
   const naeste = params.get('naeste') || '/';
+  const sprog = useSprog();
 
   // Udloebet/brugt mail-link lander paa /login?fejl=... - vis en venlig besked.
   const fejlParam = params.get('fejl');
@@ -95,6 +98,8 @@ export default function LoginForm({
           password: kode,
           options: {
             data: {
+              // UI-sproget følger med fra første mail (U8 vælger skabelon ud fra det).
+              sprog,
               display_name: navn.trim() || email.split('@')[0],
               car_model_id: bilModelId,
               car_variant_id: bilVariantId,
@@ -135,6 +140,8 @@ export default function LoginForm({
         const { error } = await sb.auth.signInWithPassword({ email, password: kode });
         if (error) throw error;
       }
+      // Sprog-synk: profilens sprog -> cookien, eller (tom profil) cookien -> profilen.
+      await synkSprogVedLogin().catch(() => {});
       router.push(naeste);
       router.refresh();
     } catch (err: any) {
