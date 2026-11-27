@@ -57,6 +57,29 @@ const SKIVER = {
     'lib/ota-oversaet.ts',
     'lib/ota-oversaet-kerne.ts',
   ],
+  // U3 + U3b: feedback + kontakt + flersproget feedback. Bevidst UDE:
+  // BilledeUpload/BilledeGalleri (forum-komponenter, U2) og ModereringsTabel
+  // (Værkstedet, U6).
+  U3: [
+    'app/feedback/page.tsx',
+    'app/meld/page.tsx',
+    'app/meld/actions.ts',
+    'app/melding/[id]/page.tsx',
+    'app/melding/actions.ts',
+    'app/kontakt/page.tsx',
+    'app/kontakt/actions.ts',
+    'components/FejlBoard.tsx',
+    'components/MeldFlow.tsx',
+    'components/MeldForm.tsx',
+    'components/Kommentarer.tsx',
+    'components/KontaktForm.tsx',
+    'components/BilVaelger.tsx',
+    'components/Tags.tsx',
+    'components/OversatTitel.tsx',
+    'lib/kildesprog.ts',
+    'lib/titel-oversaet.ts',
+    'lib/titel-oversaet-kerne.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

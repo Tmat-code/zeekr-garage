@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { SEVERITIES, SEVERITY_STYLE, ISSUE_CATEGORIES, type Severity, type IssueType } from '@/lib/config';
+import { SEVERITIES, ISSUE_CATEGORY_SLUGS, type Severity, type IssueType } from '@/lib/config';
+import { useOrdbog } from '@/lib/i18n/klient';
+import { efterMeldingOprettet } from '@/app/meld/actions';
 import { MELD_BUCKET, MELD_MAKS_BILLEDER, meldBilledeUrl } from '@/lib/billeder';
 import BilledeUpload from '@/components/forum/BilledeUpload';
 import type { Model } from '@/lib/types';
@@ -24,6 +26,8 @@ export default function MeldForm({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const t = useOrdbog();
+  const m = t.meld;
   const erOenske = type === 'oenske';
   const [titel, setTitel] = useState(initialTitle);
   const [beskrivelse, setBeskrivelse] = useState(initialBody);
@@ -44,13 +48,11 @@ export default function MeldForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setFejl('');
-    const ting = erOenske ? 'ønsket' : 'fejlen';
-    if (titel.trim().length < 5) return setFejl(`Giv ${ting} en kort, tydelig titel.`);
-    if (beskrivelse.trim().length < 10) return setFejl(`Beskriv ${ting} lidt mere.`);
-    if (valgte.length === 0) return setFejl(`Vælg mindst én model ${erOenske ? 'ønsket gælder' : 'fejlen rammer'}.`);
-    if (!kategori) return setFejl('Vælg en kategori - tag "Andet", hvis ingen passer.');
-    if (!erOenske && softwareVersion.trim().length < 2)
-      return setFejl('Skriv hvilken softwareversion (OTA) du er på - det er vigtigt for bevis på tværs.');
+    if (titel.trim().length < 5) return setFejl(m.fejlTitel(erOenske));
+    if (beskrivelse.trim().length < 10) return setFejl(m.fejlBeskriv(erOenske));
+    if (valgte.length === 0) return setFejl(m.fejlModel(erOenske));
+    if (!kategori) return setFejl(m.fejlKategori);
+    if (!erOenske && softwareVersion.trim().length < 2) return setFejl(m.fejlSoftware);
 
     setBusy(true);
     try {
@@ -77,7 +79,7 @@ export default function MeldForm({
         })
         .select('id')
         .single();
-      if (e1 || !issue) throw e1 ?? new Error('kunne ikke oprette');
+      if (e1 || !issue) throw e1 ?? new Error('insert');
 
       const { error: e2 } = await sb
         .from('issue_models')
@@ -96,10 +98,18 @@ export default function MeldForm({
           .insert(rene.map((path, i) => ({ issue_id: issue.id, path, display_order: i })));
       }
 
+      // U3b: forfin kildesproget (LibreTranslate ved usikker heuristik) og læg
+      // titlen i baggrunds-oversættelsen. Best-effort - må aldrig tabe meldingen.
+      try {
+        await efterMeldingOprettet(issue.id);
+      } catch {
+        /* ignoreres */
+      }
+
       router.push('/');
       router.refresh();
     } catch {
-      setFejl('Noget gik galt. Prøv igen.');
+      setFejl(t.faellesFejl.nogetGikGalt);
       setBusy(false);
     }
   }
@@ -108,45 +118,43 @@ export default function MeldForm({
     <form onSubmit={submit} className="kort mt-6 flex flex-col gap-5 p-6">
       {fraForum && (
         <div className="rounded-xl border border-kobber-200 bg-kobber-50 px-4 py-3 text-sm text-grafit-700">
-          📌 Oprettet ud fra en forum-tråd - titel og tekst er forudfyldt. Tjek og tilføj model(ler){' '}
-          {erOenske ? '' : '+ softwareversion'}, så fejlen bliver struktureret feedback.{' '}
+          {m.fraForum(erOenske)}{' '}
           <a href={fraForum} className="font-medium text-kobber-700 hover:underline">
-            Åbn tråden
+            {m.aabnTraaden}
           </a>
         </div>
       )}
       <div>
-        <label htmlFor="titel" className="label">Titel</label>
+        <label htmlFor="titel" className="label">{m.titelLabel}</label>
         <input
           id="titel"
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
-          placeholder={erOenske ? 'Trådløst CarPlay' : 'Kortmodul fryser ved opstart i koldt vejr'}
+          placeholder={erOenske ? m.titelPhOenske : m.titelPhFejl}
           className="input"
         />
       </div>
 
       <div>
-        <label htmlFor="besk" className="label">Beskrivelse</label>
+        <label htmlFor="besk" className="label">{m.beskrivelse}</label>
         <textarea
           id="besk"
           value={beskrivelse}
           onChange={(e) => setBeskrivelse(e.target.value)}
           rows={4}
-          placeholder={erOenske ? 'Hvad ønsker du, og hvorfor ville det gøre bilen bedre?' : 'Hvad sker der, hvornår, og hvordan genskaber man det?'}
+          placeholder={erOenske ? m.beskrPhOenske : m.beskrPhFejl}
           className="input"
         />
+        <p className="mt-1.5 text-xs text-grafit-400">{m.sprogNote}</p>
       </div>
 
       <div>
         <label className="label">
-          Billeder{' '}
-          <span className="font-normal text-grafit-400">(valgfrit)</span>
+          {m.billeder}{' '}
+          <span className="font-normal text-grafit-400">{t.faellesFejl.valgfrit}</span>
         </label>
         <p className="mb-2 text-xs text-grafit-500">
-          {erOenske
-            ? 'Vedhæft fx en skitse eller et eksempel på funktionen.'
-            : 'Foto-bevis vejer tungt over for Zeekr - skærmbillede af fejlbesked/OTA-skærm, en fysisk defekt eller en log.'}
+          {erOenske ? m.billedHjaelpOenske : m.billedHjaelpFejl}
         </p>
         <BilledeUpload bucket={MELD_BUCKET} urlFor={meldBilledeUrl} maksAntal={MELD_MAKS_BILLEDER} onChange={setBilleder} disabled={busy} />
       </div>
@@ -154,29 +162,29 @@ export default function MeldForm({
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="sw" className="label">
-            Softwareversion (OTA){' '}
-            {erOenske && <span className="font-normal text-grafit-400">(valgfri)</span>}
+            {m.software}{' '}
+            {erOenske && <span className="font-normal text-grafit-400">{t.faellesFejl.valgfri}</span>}
           </label>
           <input
             id="sw"
             value={softwareVersion}
             onChange={(e) => setSoftwareVersion(e.target.value)}
-            placeholder="fx OS 1.3.0"
+            placeholder={m.softwarePh}
             className="input font-mono"
           />
         </div>
         <div>
-          <label htmlFor="kat" className="label">Kategori</label>
+          <label htmlFor="kat" className="label">{m.kategori}</label>
           <select
             id="kat"
             value={kategori}
             onChange={(e) => setKategori(e.target.value)}
             className="input"
           >
-            <option value="">– vælg kategori –</option>
-            {ISSUE_CATEGORIES.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.label}
+            <option value="">{m.vaelgKategori}</option>
+            {ISSUE_CATEGORY_SLUGS.map((slug) => (
+              <option key={slug} value={slug}>
+                {t.config.kategori[slug]}
               </option>
             ))}
           </select>
@@ -186,7 +194,7 @@ export default function MeldForm({
       {!erOenske && (
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="sev" className="label">Alvorlighed</label>
+            <label htmlFor="sev" className="label">{m.alvor}</label>
             <select
               id="sev"
               value={severity}
@@ -194,7 +202,7 @@ export default function MeldForm({
               className="input"
             >
               {SEVERITIES.map((s) => (
-                <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
+                <option key={s} value={s}>{t.config.alvor[s]}</option>
               ))}
             </select>
           </div>
@@ -205,30 +213,27 @@ export default function MeldForm({
       {!erOenske && (
         <div className="rounded-xl border border-dashed border-grafit-300 p-4">
           <p className="text-sm font-semibold text-grafit-700">
-            Telefon <span className="font-normal text-grafit-400">- valgfrit</span>
+            {m.telefon} <span className="font-normal text-grafit-400">{m.telefonValgfrit}</span>
           </p>
-          <p className="mt-0.5 text-xs text-grafit-500">
-            Udfyld kun hvis fejlen handler om telefonen (CarPlay, Android Auto, Bluetooth, appen).
-            Det hjælper med at finde mønstre på tværs af telefoner.
-          </p>
+          <p className="mt-0.5 text-xs text-grafit-500">{m.telefonHjaelp}</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="pm" className="label">Telefonmodel</label>
+              <label htmlFor="pm" className="label">{m.telefonModel}</label>
               <input
                 id="pm"
                 value={phoneModel}
                 onChange={(e) => setPhoneModel(e.target.value)}
-                placeholder="fx iPhone 15 Pro / Samsung S24"
+                placeholder={m.telefonModelPh}
                 className="input"
               />
             </div>
             <div>
-              <label htmlFor="pos" className="label">Telefonens OS</label>
+              <label htmlFor="pos" className="label">{m.telefonOs}</label>
               <input
                 id="pos"
                 value={phoneOs}
                 onChange={(e) => setPhoneOs(e.target.value)}
-                placeholder="fx iOS 18.1 / Android 15"
+                placeholder={m.telefonOsPh}
                 className="input"
               />
             </div>
@@ -237,28 +242,28 @@ export default function MeldForm({
       )}
 
       <div>
-        <span className="label">{erOenske ? 'Hvilke modeller gælder ønsket?' : 'Hvilke modeller rammer fejlen?'}</span>
+        <span className="label">{m.modeller(erOenske)}</span>
         <div className="flex flex-wrap gap-2">
-          {models.map((m) => {
-            const valgt = valgte.includes(m.id);
+          {models.map((mo) => {
+            const valgt = valgte.includes(mo.id);
             return (
               <button
                 type="button"
-                key={m.id}
-                onClick={() => toggleModel(m.id)}
+                key={mo.id}
+                onClick={() => toggleModel(mo.id)}
                 className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                   valgt
                     ? 'border-kobber-500 bg-kobber-50 text-kobber-700'
                     : 'border-grafit-300 bg-white text-grafit-700 hover:border-kobber-400'
                 }`}
               >
-                {m.name}
+                {mo.name}
               </button>
             );
           })}
         </div>
         <p className="mt-1.5 text-xs text-grafit-400">
-          Tag gerne flere - rammer den hele platformen, vægter det tungere.
+          {m.modellerHjaelp}
         </p>
       </div>
 
@@ -266,15 +271,15 @@ export default function MeldForm({
 
       <div className="flex items-center gap-2">
         <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? 'Sender…' : erOenske ? 'Foreslå ønsket' : 'Meld fejlen'}
+          {busy ? m.sender : m.submit(erOenske)}
         </button>
         {onBack ? (
           <button type="button" onClick={onBack} className="btn-ghost">
-            ← Tilbage til søgning
+            {m.tilbageSoeg}
           </button>
         ) : (
           <button type="button" onClick={() => router.push('/')} className="btn-ghost">
-            Annullér
+            {t.faellesFejl.annuller}
           </button>
         )}
       </div>

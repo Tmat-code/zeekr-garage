@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin, erSuperadmin } from '@/lib/admin';
 import { STATUSES, SEVERITIES, ISSUE_CATEGORIES, type Status, type Severity } from '@/lib/config';
+import { erKildesprog } from '@/lib/kildesprog';
+import { planlaegTitelOversaettelse } from '@/lib/titel-oversaet';
 import type {
   AlleBruger,
   BrugerFiltre,
@@ -75,6 +77,20 @@ export async function saetKategori(issueId: string, kategori: string): Promise<v
   revalidatePath('/feedback');
 }
 
+// U3b: ret en meldings kildesprog (hvis detektionen ramte forkert). Styrer
+// rapport-oversættelsen og boardets titel-oversættelser (begge caches er keyet
+// på sproget, så de gen-oversættes af sig selv).
+export async function saetMeldingSprog(issueId: string, sprog: string): Promise<void> {
+  await kraevModerator();
+  if (!erKildesprog(sprog)) throw new Error('Ugyldigt sprog.');
+  const sb = supabaseServer();
+  const { error } = await sb.from('issues').update({ sprog }).eq('id', issueId);
+  if (error) throw new Error(error.message);
+  planlaegTitelOversaettelse();
+  revalider();
+  revalidatePath('/feedback');
+}
+
 export async function markerLoest(issueId: string): Promise<void> {
   return saetStatus(issueId, 'loest_i_ota');
 }
@@ -118,6 +134,7 @@ export async function gemRedigering(
     .update({ title, description })
     .eq('id', issueId);
   if (error) throw new Error(error.message);
+  planlaegTitelOversaettelse(); // U3b: ny titel -> ny oversættelse i baggrunden
   revalider();
 }
 

@@ -13,10 +13,13 @@ import {
   type Severity,
 } from '@/lib/config';
 import type { IssueRow } from '@/lib/types';
+import { KILDESPROG } from '@/lib/kildesprog';
+import { SPROG_EGET_NAVN } from '@/lib/i18n/sprog';
 import {
   saetStatus,
   saetSeverity,
   saetKategori,
+  saetMeldingSprog,
   markerLoest,
   sletMelding,
   gemRedigering,
@@ -336,6 +339,23 @@ function Raekke({ issue }: { issue: IssueRow }) {
                 {ISSUE_CATEGORIES.map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.label}
+                  </option>
+                ))}
+              </select>
+            </Felt>
+
+            {/* U3b: kildesprog (auto-detekteret ved oprettelse; ret hvis forkert) */}
+            <Felt label="Sprog">
+              <select
+                className={selectKlasse}
+                value={issue.sprog}
+                disabled={pending}
+                onChange={(e) => koer(() => saetMeldingSprog(issue.id, e.target.value))}
+                title="Meldingens originalsprog - styrer rapport- og titel-oversættelsen"
+              >
+                {KILDESPROG.map((s) => (
+                  <option key={s} value={s}>
+                    {SPROG_EGET_NAVN[s]}
                   </option>
                 ))}
               </select>

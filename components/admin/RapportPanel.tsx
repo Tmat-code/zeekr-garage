@@ -250,6 +250,29 @@ export default function RapportPanel({ erAdmin }: { erAdmin: boolean }) {
         )}
       </div>
 
+      {oversat?.svensk && oversat.svensk.length > 0 && (
+        <div className="mt-3 rounded-xl border border-grafit-200 bg-grafit-50 p-3 text-xs text-grafit-700" data-testid="svensk-maaling">
+          <p className="font-semibold text-grafit-900">Svensk kilde (U3b-måling)</p>
+          <ul className="mt-2 space-y-2">
+            {oversat.svensk.map((m, i) => (
+              <li key={i} className="rounded-lg border border-grafit-200 bg-white p-2">
+                <p className="font-medium">&quot;{m.kilde}&quot;</p>
+                <p>Heuristik: {m.heuristik} · LibreTranslate detect: {m.ltDetekt ?? '-'}</p>
+                {m.fejl ? (
+                  <p className="text-kobber-700">Fejl: {m.fejl}</p>
+                ) : (
+                  <>
+                    <p><span className="text-grafit-500">Gammel vej (da-sti):</span> {m.gammelEn}</p>
+                    <p><span className="text-grafit-500">Ny vej sv-&gt;en:</span> {m.nyEn}</p>
+                    <p><span className="text-grafit-500">Ny vej sv-&gt;da:</span> {m.nyDa}</p>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {besked && <p className="mt-2 text-sm text-loest">{besked}</p>}
       {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
     </section>

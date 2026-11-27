@@ -1,11 +1,20 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
 import { meldBilledeUrl, avatarUrl } from '@/lib/billeder';
+import { erKildesprog } from '@/lib/kildesprog';
 import type { IssueRow, Model, Kommentar, VariantMap, MinBil, GarageBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
-const ISSUE_SELECT = `id, type, title, description, category, severity, status, software_version, created_at,
+const ISSUE_SELECT_UDEN_SPROG: string = `id, type, title, description, category, severity, status, software_version, created_at,
        legacy_stemmer,
+       issue_models ( models ( id, slug, name, platform ) ),
+       issue_images ( path, display_order ),
+       confirmations ( count ),
+       comments ( count )`;
+// U3b: + kildesprog. Fejler opslaget (kolonnen findes ikke endnu - migrationen
+// ikke kørt), bruges select'en uden, og alt behandles som dansk.
+const ISSUE_SELECT: string = `id, type, title, description, category, severity, status, software_version, created_at,
+       legacy_stemmer, sprog,
        issue_models ( models ( id, slug, name, platform ) ),
        issue_images ( path, display_order ),
        confirmations ( count ),
@@ -37,6 +46,8 @@ function mapIssue(row: any): IssueRow {
     comments,
     software_version: row.software_version ?? null,
     billeder,
+    sprog: erKildesprog(row.sprog) ? row.sprog : 'da',
+    titler: {},
   };
 }
 
@@ -79,10 +90,16 @@ export async function getModels(): Promise<Model[]> {
 // --- Fejl (issues) med koblede modeller + optalte bekraeftelser ---
 export async function getIssues(): Promise<IssueRow[]> {
   const sb = supabaseServer();
-  const { data, error } = await sb
+  let { data, error } = await sb
     .from('issues')
     .select(ISSUE_SELECT)
     .order('created_at', { ascending: false });
+  if (error) {
+    ({ data, error } = await sb
+      .from('issues')
+      .select(ISSUE_SELECT_UDEN_SPROG)
+      .order('created_at', { ascending: false }));
+  }
 
   if (error || !data) return [];
   return data.map(mapIssue);
@@ -91,7 +108,10 @@ export async function getIssues(): Promise<IssueRow[]> {
 // --- Enkelt melding (til detalje-siden) ---
 export async function getIssueDetalje(id: string): Promise<IssueRow | null> {
   const sb = supabaseServer();
-  const { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
+  let { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
+  if (error && error.code !== 'PGRST116') {
+    ({ data, error } = await sb.from('issues').select(ISSUE_SELECT_UDEN_SPROG).eq('id', id).single());
+  }
   if (error || !data) return null;
   return mapIssue(data);
 }
@@ -197,16 +217,17 @@ export async function getVarianter(): Promise<VariantMap> {
 // --- Variant-fordeling på en melding (til detalje-siden) ---
 export async function getVariantFordeling(
   issueId: string,
-): Promise<{ navn: string; antal: number }[]> {
+): Promise<{ navn: string | null; antal: number }[]> {
   const sb = supabaseServer();
   const [{ data: live }, { data: issue }] = await Promise.all([
     sb.from('confirmations').select('variant_id, variants ( name )').eq('issue_id', issueId),
     sb.from('issues').select('legacy_biler').eq('id', issueId).single(),
   ]);
 
+  // Nøgle '' = uden variant (vises som t.melding.udenVariant på læserens sprog).
   const m = new Map<string, number>();
   for (const r of (live ?? []) as any[]) {
-    const navn = r.variants?.name ?? 'Uden variant';
+    const navn = r.variants?.name ?? '';
     m.set(navn, (m.get(navn) ?? 0) + 1);
   }
   // Importeret legacy-fordeling lægges oveni.
@@ -215,7 +236,7 @@ export async function getVariantFordeling(
   }
 
   return [...m.entries()]
-    .map(([navn, antal]) => ({ navn, antal }))
+    .map(([navn, antal]) => ({ navn: navn || null, antal }))
     .sort((a, b) => b.antal - a.antal);
 }
 

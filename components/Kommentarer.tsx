@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { relativTid } from '@/lib/i18n/format';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import type { Kommentar } from '@/lib/types';
 import Avatar from '@/components/forum/Avatar';
 import {
@@ -30,6 +31,9 @@ function KommentarKort({
   pending: boolean;
 }) {
   const router = useRouter();
+  const t = useOrdbog();
+  const sprog = useSprog();
+  const k_ = t.kommentarer;
   const [redigerer, setRedigerer] = useState(false);
   const [tekst, setTekst] = useState(k.body);
   const minEgen = !!megId && k.author_id === megId;
@@ -46,14 +50,14 @@ function KommentarKort({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Avatar url={k.author_avatar} navn={k.author_navn} px={28} />
-          <span className="font-medium text-grafit-900">{k.author_navn || 'Ejer'}</span>
+          <span className="font-medium text-grafit-900">{k.author_navn || k_.ejer}</span>
         </div>
-        <span className="text-xs text-grafit-400">{relativTid(k.created_at)}</span>
+        <span className="text-xs text-grafit-400">{relativTid(k.created_at, sprog)}</span>
       </div>
 
       {k.is_solution && (
         <span className="mt-1 inline-block text-xs font-semibold" style={{ color: '#4f6f4a' }}>
-          ✅ Markeret som løsning
+          {k_.markeretLoesning}
         </span>
       )}
 
@@ -75,7 +79,7 @@ function KommentarKort({
                 })
               }
             >
-              Gem
+              {k_.gem}
             </button>
             <button
               className="btn-ghost !py-1.5 text-sm"
@@ -84,7 +88,7 @@ function KommentarKort({
                 setRedigerer(false);
               }}
             >
-              Annullér
+              {t.faellesFejl.annuller}
             </button>
           </div>
         </div>
@@ -105,7 +109,7 @@ function KommentarKort({
                 })
               }
             >
-              ✉️ Skriv privat
+              {k_.skrivPrivat}
             </button>
           )}
           {erModerator && (
@@ -115,7 +119,7 @@ function KommentarKort({
               disabled={pending}
               onClick={() => koer(() => markerLoesning(k.id, issueId, !k.is_solution))}
             >
-              {k.is_solution ? 'Fjern løsning' : '✅ Markér som løsning'}
+              {k.is_solution ? k_.fjernLoesning : k_.markerLoesning}
             </button>
           )}
           {kanRette && (
@@ -124,18 +128,18 @@ function KommentarKort({
                 className="text-grafit-500 hover:text-kobber-700"
                 onClick={() => setRedigerer(true)}
               >
-                ✏️ Ret
+                {k_.ret}
               </button>
               <button
                 className="text-grafit-500 hover:text-kobber-700"
                 disabled={pending}
                 onClick={() => {
-                  if (confirm('Slet denne kommentar?')) {
+                  if (confirm(k_.bekraeftSlet)) {
                     koer(() => sletKommentar(k.id, issueId));
                   }
                 }}
               >
-                🗑 Slet
+                {k_.slet}
               </button>
             </>
           )}
@@ -160,6 +164,8 @@ export default function Kommentarer({
   isLoggedIn: boolean;
   naeste: string;
 }) {
+  const t = useOrdbog();
+  const k_ = t.kommentarer;
   const [ny, setNy] = useState('');
   const [fejl, setFejl] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -170,7 +176,7 @@ export default function Kommentarer({
       try {
         await fn();
       } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
+        setFejl(e?.message ?? t.faellesFejl.nogetGikGalt);
       }
     });
   }
@@ -182,7 +188,7 @@ export default function Kommentarer({
         await tilfoejKommentar(issueId, ny);
         setNy('');
       } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke sende.');
+        setFejl(e?.message ?? k_.kunneIkkeSende);
       }
     });
   }
@@ -190,16 +196,13 @@ export default function Kommentarer({
   return (
     <section className="mt-6">
       <h2 className="text-lg font-semibold text-grafit-900">
-        💬 Byggemøde ({kommentarer.length})
+        {k_.titel(kommentarer.length)}
       </h2>
-      <p className="mt-0.5 text-sm text-grafit-500">
-        Er det en betjeningsfejl, eller har du et fix? Hjælp de andre her - så fanges en fejl 40,
-        før den ryger i rapporten til Zeekr.
-      </p>
+      <p className="mt-0.5 text-sm text-grafit-500">{k_.intro}</p>
 
       <div className="mt-4 space-y-3">
         {kommentarer.length === 0 ? (
-          <p className="text-sm text-grafit-500">Ingen kommentarer endnu. Vær den første.</p>
+          <p className="text-sm text-grafit-500">{k_.ingen}</p>
         ) : (
           kommentarer.map((k) => (
             <KommentarKort
@@ -223,7 +226,7 @@ export default function Kommentarer({
               className="input min-h-[90px]"
               value={ny}
               onChange={(e) => setNy(e.target.value)}
-              placeholder="Fx: 'Dette er faktisk en indstilling - gå ind i menuen under…'"
+              placeholder={k_.ph}
             />
             <div className="flex items-center gap-3">
               <button
@@ -231,7 +234,7 @@ export default function Kommentarer({
                 disabled={pending || !ny.trim()}
                 onClick={send}
               >
-                Send kommentar
+                {k_.send}
               </button>
               {fejl && <span className="text-sm text-kobber-700">{fejl}</span>}
             </div>
@@ -242,9 +245,9 @@ export default function Kommentarer({
               href={`/login?naeste=${encodeURIComponent(naeste)}`}
               className="font-medium text-kobber-700 hover:underline"
             >
-              Log ind
-            </Link>{' '}
-            for at kommentere.
+              {t.faellesFejl.logInd}
+            </Link>
+            {k_.forAtKommentere}
           </div>
         )}
       </div>

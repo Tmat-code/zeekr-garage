@@ -1,4 +1,5 @@
 import type { Oversaettelser } from '@/lib/i18n/indhold';
+import type { Kildesprog } from '@/lib/kildesprog';
 import type { Severity, Status, IssueType } from '@/lib/config';
 
 export type Model = {
@@ -52,6 +53,11 @@ export type IssueRow = {
   software_version: string | null;
   // Vedhaeftede billeder (foto-bevis) - offentlige URL'er, i display-raekkefoelge.
   billeder: string[];
+  // U3b: meldingens kildesprog + titlen maskinoversat til de ANDRE sprog (kun
+  // fra cachen; tomt indtil baggrunds-oversættelsen har kørt). Bruges til
+  // visning på læserens sprog og til søgning på tværs af sprog.
+  sprog: Kildesprog;
+  titler: Partial<Record<Kildesprog, string>>;
 };
 
 // En kommentar ("Byggemøde") paa en melding.

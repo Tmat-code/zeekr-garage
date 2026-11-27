@@ -421,7 +421,8 @@ export function rensKilde(raw: string): string {
   // 5) Mellemrum efter sætningstegn hvis det mangler ("ord.Næste" -> "ord. Næste")
   //    - en hyppig kilde til løbske sætninger i indtastede meldinger. Rør ikke
   //    decimaltal (3.0) eller versioner: kun når der følger et bogstav.
-  s = s.replace(/([.!?])([A-ZÆØÅa-zæøå])/g, '$1 $2');
+  // U3b: også ä/ö (svenske kilder) - dansk tekst uden ä/ö er byte-identisk med før.
+  s = s.replace(/([.!?])([A-ZÆØÅÄÖa-zæøåäö])/g, '$1 $2');
 
   s = s.trim();
 

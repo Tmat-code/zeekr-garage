@@ -101,3 +101,13 @@ export function kategoriLabel(slug: string | null | undefined): string | null {
   if (!slug) return null;
   return KATEGORI_LABEL[slug] ?? slug;
 }
+
+// UI-i18n (U3): label på læserens sprog (t.config.kategori), med samme fallback
+// til den rå værdi for gamle fri-tekst-kategorier.
+export function kategoriLabelPaa(
+  slug: string | null | undefined,
+  labels: Record<IssueCategorySlug, string>,
+): string | null {
+  if (!slug) return null;
+  return (labels as Record<string, string>)[slug] ?? slug;
+}

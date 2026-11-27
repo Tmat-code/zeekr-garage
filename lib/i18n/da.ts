@@ -10,6 +10,7 @@
 // kun typer.
 
 import type { IssueCategorySlug, IssueType, Severity, Status } from '@/lib/config';
+import type { Kildesprog } from '@/lib/kildesprog';
 
 export const da = {
   meta: {
@@ -202,6 +203,235 @@ export const da = {
     oversatFraDansk: 'Oversat fra dansk · maskinoversat',
     visOriginal: 'Vis original',
     visOversaettelse: 'Vis oversættelse',
+  },
+  // ===== U3: Feedback + kontakt =====
+  faellesFejl: {
+    nogetGikGalt: 'Noget gik galt. Prøv igen.',
+    annuller: 'Annullér',
+    valgfri: '(valgfri)',
+    valgfrit: '(valgfrit)',
+    logInd: 'Log ind',
+  },
+
+  // U3b: maskinoversatte meldings-titler (board, detalje, forside).
+  oversatTitel: {
+    sprogNavn: { da: 'dansk', sv: 'svensk', en: 'engelsk' } satisfies Record<Kildesprog, string>,
+    oversatFra: (sprog: string) => `Oversat fra ${sprog} · maskinoversat`,
+    visOriginal: 'Vis original',
+    visOversaettelse: 'Vis oversættelse',
+  },
+
+  feedback: {
+    metaTitel: 'Feedback',
+    titel: 'Feedback',
+    intro:
+      'Meld fejl og ønsker, bekræft dem sammen, og stem de vigtigste op. Vi samler dem i konstruktive rapporter til Zeekr - som en medspiller, der vil se gode biler blive endnu bedre.',
+    meldFejl: 'Meld en fejl',
+    foreslaaOenske: 'Foreslå et ønske',
+    logIndForAtBidrage: 'Log ind for at bidrage',
+    note: 'Alle kan læse. Login kræves kun for at melde, bekræfte eller kommentere.',
+    // Boardet
+    alleModeller: 'Alle modeller',
+    status: 'Status',
+    aktive: 'Aktive',
+    afsluttet: 'Afsluttet',
+    type: 'Type',
+    fejlFane: 'Fejl',
+    oenskerFane: 'Ønsker',
+    soegPlaceholder: 'Søg i meldinger…',
+    soegHjaelp: 'Søgningen finder også meldinger skrevet på andre sprog.',
+    kategoriAria: 'Filtrér på kategori',
+    alleKategorier: 'Alle kategorier',
+    antal: (n: number, type: 'alle' | 'fejl' | 'oenske') =>
+      type === 'oenske'
+        ? `${n} ${n === 1 ? 'ønske' : 'ønsker'}`
+        : type === 'fejl'
+          ? `${n} fejl`
+          : `${n} ${n === 1 ? 'melding' : 'meldinger'}`,
+    flestStemmer: 'Flest stemmer',
+    nyeste: 'Nyeste',
+    tomTitel: 'Ingen meldinger her endnu',
+    tomFoerste: 'Vær den første til at melde ind.',
+    tomFilter: 'Intet matcher filteret endnu - prøv et andet.',
+    meldInd: 'Meld ind',
+    svar: (n: number) => `${n} svar`,
+    seBilleder: 'Se billeder på meldingen',
+    detaljer: 'Detaljer →',
+    rammerHele: (platform: string) => `rammer hele ${platform}`,
+  },
+
+  meld: {
+    metaTitel: 'Meld ind',
+    titel: 'Meld ind',
+    intro: 'Søg først - så undgår vi dubletter, og de rigtige fejl får flere stemmer.',
+    // Trin 0
+    hvadVilDuMelde: 'Hvad vil du melde?',
+    vaelgFoer: 'Vælg om det er en ',
+    vaelgFejl: 'fejl',
+    vaelgMidt: ' (noget der ikke virker) eller et ',
+    vaelgOenske: 'ønske',
+    vaelgEfter: ' til ny funktionalitet.',
+    enFejl: 'En fejl',
+    enFejlTekst: 'Noget i bilen virker ikke, som det skal.',
+    etOenske: 'Et ønske',
+    etOenskeTekst: 'En funktion eller forbedring, du ønsker Zeekr tilføjer.',
+    // Trin-indikator
+    trinSoeg: '1. Søg',
+    trinTjek: '2. Tjek',
+    trinUdfyld: (n: number) => `${n}. Udfyld`,
+    // Trin 1
+    soegTitel: (oenske: boolean) => `Først: er ${oenske ? 'ønsket' : 'fejlen'} allerede meldt?`,
+    soegTekst: (oenske: boolean) =>
+      `Søg efter ${oenske ? 'dit ønske' : 'fejlen'}. Findes der noget, der ligner, så giv det et "mig med" i stedet - det vejer tungere end en ny dublet. Søgningen finder også meldinger på svensk og engelsk.`,
+    phFejl: "Fx 'opladning stopper'…",
+    phOenske: "Fx 'trådløst CarPlay'…",
+    soeg: 'Søg',
+    findesHerunder: 'Findes den herunder? Så giv den et "mig med" i stedet.',
+    ingenErDin: (oenske: boolean) => `Er ingen af dem ${oenske ? 'dit ønske' : 'din fejl'}?`,
+    nejNy: (oenske: boolean) => `Nej, ${oenske ? 'mit ønske' : 'min fejl'} er ny → fortsæt`,
+    ingenMatch: (oenske: boolean) =>
+      `Ingen match - ${oenske ? 'dit ønske' : 'din fejl'} ser ud til at være ny.`,
+    fortsaet: 'Fortsæt →',
+    tilbageBoard: '← Tilbage til boardet',
+    vaelgTypeIgen: '← Vælg type igen',
+    // Trin 2
+    tjekTitel: 'Hurtig-tjek først',
+    tjekFoer: 'Har du prøvet en ',
+    tjekGenstart: 'genstart af skærmen',
+    tjekMidt: ' og tjekket at du er på ',
+    tjekOta: 'nyeste OTA',
+    tjekEfter: '? En del software-bøvl forsvinder efter en genstart eller en opdatering - så slipper vi for dubletter.',
+    jaLoeste: 'Ja - og det løste det',
+    jaLoesteSub: 'Så behøver vi ikke melde den. Tak!',
+    nejStadig: 'Nej - fejlen er der stadig',
+    nejStadigSub: 'Så melder vi den rigtigt →',
+    tilbageSoeg: '← Tilbage til søgning',
+    // Formularen
+    fejlTitel: (oenske: boolean) => `Giv ${oenske ? 'ønsket' : 'fejlen'} en kort, tydelig titel.`,
+    fejlBeskriv: (oenske: boolean) => `Beskriv ${oenske ? 'ønsket' : 'fejlen'} lidt mere.`,
+    fejlModel: (oenske: boolean) =>
+      `Vælg mindst én model ${oenske ? 'ønsket gælder' : 'fejlen rammer'}.`,
+    fejlKategori: 'Vælg en kategori - tag "Andet", hvis ingen passer.',
+    fejlSoftware:
+      'Skriv hvilken softwareversion (OTA) du er på - det er vigtigt for bevis på tværs.',
+    fraForum: (oenske: boolean) =>
+      `📌 Oprettet ud fra en forum-tråd - titel og tekst er forudfyldt. Tjek og tilføj model(ler)${oenske ? '' : ' + softwareversion'}, så fejlen bliver struktureret feedback.`,
+    aabnTraaden: 'Åbn tråden',
+    titelLabel: 'Titel',
+    titelPhFejl: 'Kortmodul fryser ved opstart i koldt vejr',
+    titelPhOenske: 'Trådløst CarPlay',
+    beskrivelse: 'Beskrivelse',
+    beskrPhFejl: 'Hvad sker der, hvornår, og hvordan genskaber man det?',
+    beskrPhOenske: 'Hvad ønsker du, og hvorfor ville det gøre bilen bedre?',
+    sprogNote:
+      'Skriv gerne på dansk, svensk eller engelsk - vi oversætter til rapporten og boardet.',
+    billeder: 'Billeder',
+    billedHjaelpFejl:
+      'Foto-bevis vejer tungt over for Zeekr - skærmbillede af fejlbesked/OTA-skærm, en fysisk defekt eller en log.',
+    billedHjaelpOenske: 'Vedhæft fx en skitse eller et eksempel på funktionen.',
+    software: 'Softwareversion (OTA)',
+    softwarePh: 'fx OS 1.3.0',
+    kategori: 'Kategori',
+    vaelgKategori: '- vælg kategori -',
+    alvor: 'Alvorlighed',
+    telefon: 'Telefon',
+    telefonValgfrit: '- valgfrit',
+    telefonHjaelp:
+      'Udfyld kun hvis fejlen handler om telefonen (CarPlay, Android Auto, Bluetooth, appen). Det hjælper med at finde mønstre på tværs af telefoner.',
+    telefonModel: 'Telefonmodel',
+    telefonModelPh: 'fx iPhone 15 Pro / Samsung S24',
+    telefonOs: 'Telefonens OS',
+    telefonOsPh: 'fx iOS 18.1 / Android 15',
+    modeller: (oenske: boolean): string =>
+      oenske ? 'Hvilke modeller gælder ønsket?' : 'Hvilke modeller rammer fejlen?',
+    modellerHjaelp: 'Tag gerne flere - rammer den hele platformen, vægter det tungere.',
+    sender: 'Sender…',
+    submit: (oenske: boolean): string => (oenske ? 'Foreslå ønsket' : 'Meld fejlen'),
+  },
+
+  melding: {
+    tilbage: '← Tilbage til listen',
+    meldt: (dato: string, n: number) =>
+      `Meldt ${dato} · 🚗 ${n} ${n === 1 ? 'bil bekræftet' : 'biler bekræftet'}`,
+    saadanOpleves: 'Sådan opleves fejlen',
+    oensket: 'Ønsket',
+    fotoBevis: 'Foto-bevis',
+    billeder: 'Billeder',
+    billede: 'Billede',
+    oplever: 'Oplever du også dette?',
+    oplevTekst: 'Bekræft med din variant - jo flere ejere, jo tungere vejer fejlen over for Zeekr.',
+    udenVariant: 'Uden variant',
+  },
+
+  kommentarer: {
+    titel: (n: number) => `💬 Byggemøde (${n})`,
+    intro:
+      'Er det en betjeningsfejl, eller har du et fix? Hjælp de andre her - så fanges en fejl 40, før den ryger i rapporten til Zeekr.',
+    ingen: 'Ingen kommentarer endnu. Vær den første.',
+    ejer: 'Ejer',
+    markeretLoesning: '✅ Markeret som løsning',
+    gem: 'Gem',
+    skrivPrivat: '✉️ Skriv privat',
+    fjernLoesning: 'Fjern løsning',
+    markerLoesning: '✅ Markér som løsning',
+    ret: '✏️ Ret',
+    slet: '🗑 Slet',
+    bekraeftSlet: 'Slet denne kommentar?',
+    ph: "Fx: 'Dette er faktisk en indstilling - gå ind i menuen under…'",
+    send: 'Send kommentar',
+    kunneIkkeSende: 'Kunne ikke sende.',
+    forAtKommentere: ' for at kommentere.',
+    // Server-fejl
+    logIndFoerst: 'Log ind for at kommentere.',
+    skrivEn: 'Skriv en kommentar.',
+    forLang: 'Kommentaren er for lang.',
+    maaIkkeVaereTom: 'Kommentaren må ikke være tom.',
+    kunModerator: 'Kun moderator/admin.',
+  },
+
+  kontakt: {
+    metaTitel: 'Kontakt',
+    titel: 'Kontakt staben',
+    intro:
+      'Noget der ikke hører hjemme offentligt? Skriv direkte og privat til os - fx en klage over en anden bruger, noget om sikkerhed eller persondata, eller noget personligt. Beskeden lander kun hos staben, ikke på forummet.',
+    henvisFoer: 'Har du i stedet fundet en ',
+    henvisFejl: 'fejl på bilen',
+    henvisMidt: ' eller et ønske til et board, så brug ',
+    henvisLink: 'Meld en fejl',
+    henvisEfter: '. Ønsker eller fejl ved ',
+    henvisSiden: 'selve siden',
+    henvisSlut: ' hører til i forumgruppen "Om Zeekr Garage".',
+    logIndTitel: 'Log ind for at skrive til staben',
+    logIndTekst:
+      'Vi holder kanalen for indloggede ejere, så vi ved hvem vi taler med og undgår spam.',
+    // Formularen
+    emne: 'Emne',
+    emnePh: 'Kort overskrift',
+    besked: 'Besked',
+    beskedPh: 'Beskriv hvad det handler om. Jo mere konkret, jo bedre kan vi hjælpe.',
+    svarMail: 'Svar-mail',
+    svarMailPh: 'dig@eksempel.dk',
+    svarMailHjaelp:
+      'Udfyld hvis du vil have svar på en bestemt mail. Dit navn og din konto følger automatisk med.',
+    sender: 'Sender...',
+    send: 'Send henvendelse',
+    takSendt: 'Tak - din henvendelse er sendt. 🙌',
+    sendtTekst: (mail: string | null) =>
+      `Staben får besked og vender tilbage${mail ? ` på ${mail}` : ', hvis der er brug for det'}. Beskeden er privat og ses kun af staben - ikke på forummet.`,
+    skrivEnTil: 'Skriv en til',
+    tilForsiden: 'Til forsiden',
+    // Fejl (klient + kendte RPC-fejl)
+    udfyldBegge: 'Udfyld både emne og besked.',
+    logIndFoerst: 'Log ind for at sende en henvendelse.',
+    emneForLangt: 'Emnet er for langt (maks 160 tegn).',
+    beskedForLang: 'Beskeden er for lang (maks 4000 tegn).',
+    mailForkert: 'Svar-mailen ser ikke rigtig ud.',
+  },
+
+  bil: {
+    vaelgModel: 'Vælg model…',
+    vaelgVariant: 'Vælg variant…',
+    ejerIkke: 'Ejer ikke en Zeekr endnu',
   },
 };
 

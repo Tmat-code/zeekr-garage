@@ -1,6 +1,7 @@
 'use client';
 
 import type { VariantMap } from '@/lib/types';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 export type BilValg = { modelId: string; variantId: string; ejerIkke: boolean };
 
@@ -18,6 +19,7 @@ export default function BilVaelger({
   // Skjul "Ejer ikke en Zeekr endnu" (fx naar man tilfoejer en bil til garagen).
   skjulEjerIkke?: boolean;
 }) {
+  const t = useOrdbog();
   const vs = value.modelId ? (varianter[value.modelId] ?? []) : [];
 
   return (
@@ -37,7 +39,7 @@ export default function BilVaelger({
               });
             }}
           >
-            <option value="">Vælg model…</option>
+            <option value="">{t.bil.vaelgModel}</option>
             {models.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -51,7 +53,7 @@ export default function BilVaelger({
             disabled={!value.modelId || vs.length <= 1}
             onChange={(e) => onChange({ ...value, variantId: e.target.value })}
           >
-            <option value="">{vs.length > 1 ? 'Vælg variant…' : vs.length === 1 ? vs[0].name : '-'}</option>
+            <option value="">{vs.length > 1 ? t.bil.vaelgVariant : vs.length === 1 ? vs[0].name : '-'}</option>
             {vs.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
@@ -68,7 +70,7 @@ export default function BilVaelger({
             checked={value.ejerIkke}
             onChange={(e) => onChange({ modelId: '', variantId: '', ejerIkke: e.target.checked })}
           />
-          Ejer ikke en Zeekr endnu
+          {t.bil.ejerIkke}
         </label>
       )}
     </div>

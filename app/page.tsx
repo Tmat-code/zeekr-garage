@@ -6,7 +6,9 @@ import {
   getForsideBesked,
 } from '@/lib/queries';
 import { TYPE_META } from '@/lib/config';
-import { hentOrdbog } from '@/lib/i18n/server';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
+import { medTitelOversaettelser } from '@/lib/titel-oversaet';
+import { titelPaaSprog } from '@/lib/titel-oversaet-kerne';
 
 // Altid frisk fra databasen (offentlig læsning, ingen statisk caching).
 export const dynamic = 'force-dynamic';
@@ -31,7 +33,10 @@ export default async function Forside() {
     modeller: models.length,
     sendt: issues.filter((i) => i.status === 'sendt_til_zeekr').length,
   };
-  const seneste = issues.slice(0, 3);
+  // U3b: de seneste meldingers titler på læserens sprog (cachet oversættelse;
+  // ellers originalen). Ingen "vis original" her - et klik åbner meldingen.
+  const sprog = await hentSprog();
+  const seneste = await medTitelOversaettelser(issues.slice(0, 3));
   const forumModeller = models.length ? models : [];
 
   return (
@@ -220,7 +225,7 @@ export default async function Forside() {
                     >
                       <span className={`chip ${meta.chip}`}>{t.config.type[i.type].badge}</span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-grafit-800">
-                        {i.title}
+                        {titelPaaSprog(i, sprog) ?? i.title}
                       </span>
                       {m && (
                         <span className="shrink-0 font-mono text-xs text-grafit-400">

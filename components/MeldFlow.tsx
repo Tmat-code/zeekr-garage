@@ -7,6 +7,10 @@ import type { IssueType } from '@/lib/config';
 import { PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
 import MeldForm from '@/components/MeldForm';
+import OversatTitel from '@/components/OversatTitel';
+import { useOrdbog } from '@/lib/i18n/klient';
+import { kategoriLabelPaa } from '@/lib/config';
+import { soegeOrd, soegeTraef } from '@/lib/titel-oversaet-kerne';
 
 type Trin = 'vaelg' | 'soeg' | 'tjek' | 'formular';
 
@@ -30,6 +34,8 @@ export default function MeldFlow({
   fraForum?: string;
 }) {
   const router = useRouter();
+  const t = useOrdbog();
+  const m = t.meld;
   const [type, setType] = useState<IssueType | null>(initialType);
   const [trin, setTrin] = useState<Trin>(initialType ? 'soeg' : 'vaelg');
   const [query, setQuery] = useState(initialTitle);
@@ -39,31 +45,36 @@ export default function MeldFlow({
   const naesteEfterSoeg: Trin = erOenske ? 'formular' : 'tjek';
 
   const match = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 3 || !type) return [];
-    const ord = q.split(/\s+/).filter(Boolean);
+    // U3b: dublet-tjekket matcher også titlernes oversættelser (en svensker der
+    // søger "bromsar" finder den danske "bremser"-melding) + let stamme-reduktion.
+    if (query.trim().length < 3 || !type) return [];
+    const ord = soegeOrd(query);
     return issues
       .filter((i) => i.type === type)
-      .map((i) => {
-        const hay = `${i.title} ${i.description} ${i.category ?? ''}`.toLowerCase();
-        return { i, traef: ord.filter((o) => hay.includes(o)).length };
-      })
+      .map((i) => ({
+        i,
+        traef: soegeTraef(
+          i,
+          [i.category ?? '', kategoriLabelPaa(i.category, t.config.kategori) ?? ''],
+          ord,
+        ),
+      }))
       .filter((x) => x.traef > 0)
       .sort((a, b) => b.traef - a.traef || b.i.confirmations - a.i.confirmations)
       .slice(0, 6)
       .map((x) => x.i);
-  }, [issues, query, type]);
+  }, [issues, query, type, t]);
 
   // Trin-indikator (vises når type er valgt).
   const trinListe: { key: Trin; navn: string }[] = erOenske
     ? [
-        { key: 'soeg', navn: '1. Søg' },
-        { key: 'formular', navn: '2. Udfyld' },
+        { key: 'soeg', navn: m.trinSoeg },
+        { key: 'formular', navn: m.trinUdfyld(2) },
       ]
     : [
-        { key: 'soeg', navn: '1. Søg' },
-        { key: 'tjek', navn: '2. Tjek' },
-        { key: 'formular', navn: '3. Udfyld' },
+        { key: 'soeg', navn: m.trinSoeg },
+        { key: 'tjek', navn: m.trinTjek },
+        { key: 'formular', navn: m.trinUdfyld(3) },
       ];
 
   function vaelgType(t: IssueType) {
@@ -76,29 +87,28 @@ export default function MeldFlow({
       {/* ===== TRIN 0: VÆLG TYPE ===== */}
       {trin === 'vaelg' && (
         <div className="kort mt-6 p-6">
-          <h2 className="text-lg font-semibold text-grafit-900">Hvad vil du melde?</h2>
+          <h2 className="text-lg font-semibold text-grafit-900">{m.hvadVilDuMelde}</h2>
           <p className="mt-1 text-sm text-grafit-600">
-            Vælg om det er en <strong>fejl</strong> (noget der ikke virker) eller et{' '}
-            <strong>ønske</strong> til ny funktionalitet.
+            {m.vaelgFoer}
+            <strong>{m.vaelgFejl}</strong>
+            {m.vaelgMidt}
+            <strong>{m.vaelgOenske}</strong>
+            {m.vaelgEfter}
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <button
               onClick={() => vaelgType('fejl')}
               className="rounded-xl border border-grafit-200 bg-white p-5 text-left transition-colors hover:border-kobber-500 hover:bg-kobber-50"
             >
-              <span className="block text-base font-semibold text-grafit-900">En fejl</span>
-              <span className="mt-0.5 block text-sm text-grafit-500">
-                Noget i bilen virker ikke, som det skal.
-              </span>
+              <span className="block text-base font-semibold text-grafit-900">{m.enFejl}</span>
+              <span className="mt-0.5 block text-sm text-grafit-500">{m.enFejlTekst}</span>
             </button>
             <button
               onClick={() => vaelgType('oenske')}
               className="rounded-xl border border-grafit-200 bg-white p-5 text-left transition-colors hover:border-kobber-500 hover:bg-kobber-50"
             >
-              <span className="block text-base font-semibold text-grafit-900">Et ønske</span>
-              <span className="mt-0.5 block text-sm text-grafit-500">
-                En funktion eller forbedring, du ønsker Zeekr tilføjer.
-              </span>
+              <span className="block text-base font-semibold text-grafit-900">{m.etOenske}</span>
+              <span className="mt-0.5 block text-sm text-grafit-500">{m.etOenskeTekst}</span>
             </button>
           </div>
         </div>
@@ -131,13 +141,8 @@ export default function MeldFlow({
       {/* ===== TRIN 1: SØG ===== */}
       {trin === 'soeg' && (
         <div className="kort p-6">
-          <h2 className="text-lg font-semibold text-grafit-900">
-            Først: er {erOenske ? 'ønsket' : 'fejlen'} allerede meldt?
-          </h2>
-          <p className="mt-1 text-sm text-grafit-600">
-            Søg efter {erOenske ? 'dit ønske' : 'fejlen'}. Findes der noget, der ligner, så giv det
-            et &quot;mig med&quot; i stedet - det vejer tungere end en ny dublet.
-          </p>
+          <h2 className="text-lg font-semibold text-grafit-900">{m.soegTitel(erOenske)}</h2>
+          <p className="mt-1 text-sm text-grafit-600">{m.soegTekst(erOenske)}</p>
 
           <div className="mt-4 flex gap-2">
             <input
@@ -148,7 +153,7 @@ export default function MeldFlow({
                 setHarSoegt(false);
               }}
               onKeyDown={(e) => e.key === 'Enter' && query.trim().length >= 3 && setHarSoegt(true)}
-              placeholder={erOenske ? "Fx 'trådløst CarPlay'…" : "Fx 'opladning stopper'…"}
+              placeholder={erOenske ? m.phOenske : m.phFejl}
               className="input"
               autoFocus
             />
@@ -157,7 +162,7 @@ export default function MeldFlow({
               disabled={query.trim().length < 3}
               className="btn-primary shrink-0"
             >
-              Søg
+              {m.soeg}
             </button>
           </div>
 
@@ -165,9 +170,7 @@ export default function MeldFlow({
             <div className="mt-5">
               {match.length > 0 ? (
                 <div className="rounded-xl border border-kobber-200 bg-kobber-50 p-4">
-                  <p className="font-semibold text-kobber-800">
-                    Findes den herunder? Så giv den et &quot;mig med&quot; i stedet.
-                  </p>
+                  <p className="font-semibold text-kobber-800">{m.findesHerunder}</p>
                   <ul className="mt-3 grid gap-2">
                     {match.map((i) => (
                       <li key={i.id} className="flex gap-3 rounded-lg border border-grafit-200 bg-white p-3">
@@ -180,11 +183,17 @@ export default function MeldFlow({
                           isLoggedIn
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-grafit-900">{i.title}</p>
+                          <OversatTitel
+                            tag="p"
+                            titel={i.title}
+                            sprog={i.sprog}
+                            titler={i.titler}
+                            className="font-medium text-grafit-900"
+                          />
                           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                            {i.models.map((m) => (
-                              <span key={m.slug} className="chip bg-grafit-100 text-grafit-700">
-                                {m.name.replace('Zeekr ', '')}
+                            {i.models.map((mo) => (
+                              <span key={mo.slug} className="chip bg-grafit-100 text-grafit-700">
+                                {mo.name.replace('Zeekr ', '')}
                               </span>
                             ))}
                             <PlatformSignal platforms={i.models.map((m) => m.platform)} />
@@ -198,18 +207,16 @@ export default function MeldFlow({
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-4 text-sm text-grafit-600">Er ingen af dem {erOenske ? 'dit ønske' : 'din fejl'}?</p>
+                  <p className="mt-4 text-sm text-grafit-600">{m.ingenErDin(erOenske)}</p>
                   <button onClick={() => setTrin(naesteEfterSoeg)} className="btn-secondary mt-2">
-                    Nej, {erOenske ? 'mit ønske' : 'min fejl'} er ny → fortsæt
+                    {m.nejNy(erOenske)}
                   </button>
                 </div>
               ) : (
                 <div className="rounded-xl border border-loest/40 bg-loest/5 p-4">
-                  <p className="font-semibold text-grafit-800">
-                    Ingen match - {erOenske ? 'dit ønske' : 'din fejl'} ser ud til at være ny.
-                  </p>
+                  <p className="font-semibold text-grafit-800">{m.ingenMatch(erOenske)}</p>
                   <button onClick={() => setTrin(naesteEfterSoeg)} className="btn-primary mt-3">
-                    Fortsæt →
+                    {m.fortsaet}
                   </button>
                 </div>
               )}
@@ -217,10 +224,10 @@ export default function MeldFlow({
           )}
 
           <button
-            onClick={() => (initialType ? router.push('/') : setTrin('vaelg'))}
+            onClick={() => (initialType ? router.push('/feedback') : setTrin('vaelg'))}
             className="mt-4 text-sm text-grafit-400 hover:text-grafit-600"
           >
-            {initialType ? '← Tilbage til boardet' : '← Vælg type igen'}
+            {initialType ? m.tilbageBoard : m.vaelgTypeIgen}
           </button>
         </div>
       )}
@@ -228,24 +235,26 @@ export default function MeldFlow({
       {/* ===== TRIN 2: HURTIG-TJEK (kun fejl) ===== */}
       {trin === 'tjek' && (
         <div className="kort p-6 text-center">
-          <h2 className="text-lg font-semibold text-grafit-900">Hurtig-tjek først</h2>
+          <h2 className="text-lg font-semibold text-grafit-900">{m.tjekTitel}</h2>
           <p className="mx-auto mt-2 max-w-md text-grafit-600">
-            Har du prøvet en <strong>genstart af skærmen</strong> og tjekket at du er på{' '}
-            <strong>nyeste OTA</strong>? En del software-bøvl forsvinder efter en genstart eller en
-            opdatering - så slipper vi for dubletter.
+            {m.tjekFoer}
+            <strong>{m.tjekGenstart}</strong>
+            {m.tjekMidt}
+            <strong>{m.tjekOta}</strong>
+            {m.tjekEfter}
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button onClick={() => router.push('/')} className="btn-ghost justify-center !py-4">
-              Ja - og det løste det
-              <span className="block text-xs font-normal text-grafit-400">Så behøver vi ikke melde den. Tak!</span>
+              {m.jaLoeste}
+              <span className="block text-xs font-normal text-grafit-400">{m.jaLoesteSub}</span>
             </button>
             <button onClick={() => setTrin('formular')} className="btn-primary justify-center !py-4">
-              Nej - fejlen er der stadig
-              <span className="block text-xs font-normal text-white/80">Så melder vi den rigtigt →</span>
+              {m.nejStadig}
+              <span className="block text-xs font-normal text-white/80">{m.nejStadigSub}</span>
             </button>
           </div>
           <button onClick={() => setTrin('soeg')} className="mt-4 text-sm text-grafit-400 hover:text-grafit-600">
-            ← Tilbage til søgning
+            {m.tilbageSoeg}
           </button>
         </div>
       )}

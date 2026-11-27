@@ -3,6 +3,7 @@ import type { RapportType, RapportSprog } from '@/lib/rapport-i18n';
 import { oversaetKommentarer } from '@/lib/oversaet';
 import type { KommentarInput } from '@/lib/rapport-kommentar-cache';
 import { ISSUE_CATEGORIES } from '@/lib/config';
+import { erKildesprog, type Kildesprog } from '@/lib/kildesprog';
 import { meldBilledeUrl, MELD_MAKS_BILLEDER } from '@/lib/billeder';
 
 export type RapportFejl = {
@@ -23,6 +24,8 @@ export type RapportFejl = {
   sidst_sendt_dato: string | null;
   variant_fordeling: { variant: string; n: number }[];
   category: string | null;
+  // U3b: meldingens kildesprog (issues.sprog). Styrer rapport-oversættelsen.
+  sprog: Kildesprog;
 };
 
 export async function getRapportFejl(
@@ -55,19 +58,27 @@ export async function getRapportFejl(
     sidst_sendt_dato: r.sidst_sendt_dato ?? null,
     variant_fordeling: Array.isArray(r.variant_fordeling) ? r.variant_fordeling : [],
     category: null,
+    sprog: 'da' as Kildesprog,
   }));
 
   // Kategori ligger ikke i rapport_fejl-RPC'en (undgår migration) - hentes
   // separat fra issues (offentlig læsning) og mappes på. Fri-tekst-værdier
   // bevares urørt; grupperingen falder tilbage via kategoriLabel().
+  // U3b: kildesproget hentes samme vej (sprog-kolonnen). Defensivt: findes
+  // kolonnen ikke (migrationen ikke kørt), hentes kun kategori, og alt er 'da'.
   if (fejl.length > 0) {
-    const { data: katRows } = await sb
-      .from('issues')
-      .select('id, category')
-      .in('id', fejl.map((f) => f.id));
-    const katMap = new Map<string, string | null>();
-    for (const r of (katRows ?? []) as any[]) katMap.set(r.id, r.category ?? null);
-    for (const f of fejl) f.category = katMap.get(f.id) ?? null;
+    const ids = fejl.map((f) => f.id);
+    const forsoeg = await sb.from('issues').select('id, category, sprog').in('id', ids);
+    let katRows: any[] | null = forsoeg.data as any[] | null;
+    if (forsoeg.error) katRows = (await sb.from('issues').select('id, category').in('id', ids)).data as any[] | null;
+    const katMap = new Map<string, { category: string | null; sprog: Kildesprog }>();
+    for (const r of (katRows ?? []) as any[]) {
+      katMap.set(r.id, { category: r.category ?? null, sprog: erKildesprog(r.sprog) ? r.sprog : 'da' });
+    }
+    for (const f of fejl) {
+      f.category = katMap.get(f.id)?.category ?? null;
+      f.sprog = katMap.get(f.id)?.sprog ?? 'da';
+    }
   }
 
   return fejl;

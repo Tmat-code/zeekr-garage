@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { sendKontakt } from '@/app/kontakt/actions';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 const EMNE_MAKS = 160;
 const BESKED_MAKS = 4000;
@@ -13,6 +14,8 @@ export default function KontaktForm({
   // Brugerens konto-mail som forvalgt svar-mail (kan ryddes/aendres).
   svarMailStandard?: string;
 }) {
+  const t = useOrdbog();
+  const k = t.kontakt;
   const [emne, setEmne] = useState('');
   const [besked, setBesked] = useState('');
   const [svarMail, setSvarMail] = useState(svarMailStandard);
@@ -25,7 +28,7 @@ export default function KontaktForm({
     const e = emne.trim();
     const b = besked.trim();
     if (!e || !b) {
-      setFejl('Udfyld både emne og besked.');
+      setFejl(k.udfyldBegge);
       return;
     }
     start(async () => {
@@ -33,7 +36,7 @@ export default function KontaktForm({
         await sendKontakt(e, b, svarMail);
         setSendt(true);
       } catch (err: any) {
-        setFejl(err?.message ?? 'Noget gik galt. Prøv igen.');
+        setFejl(err?.message ?? t.faellesFejl.nogetGikGalt);
       }
     });
   }
@@ -41,12 +44,8 @@ export default function KontaktForm({
   if (sendt) {
     return (
       <div className="rounded-xl border border-kobber-200 bg-kobber-50 p-5">
-        <p className="font-semibold text-grafit-900">Tak - din henvendelse er sendt. 🙌</p>
-        <p className="mt-1 text-sm text-grafit-600">
-          Staben får besked og vender tilbage
-          {svarMail.trim() ? ` på ${svarMail.trim()}` : ', hvis der er brug for det'}.
-          Beskeden er privat og ses kun af staben - ikke på forummet.
-        </p>
+        <p className="font-semibold text-grafit-900">{k.takSendt}</p>
+        <p className="mt-1 text-sm text-grafit-600">{k.sendtTekst(svarMail.trim() || null)}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             className="btn-ghost text-sm"
@@ -56,10 +55,10 @@ export default function KontaktForm({
               setSendt(false);
             }}
           >
-            Skriv en til
+            {k.skrivEnTil}
           </button>
           <Link href="/" className="btn-ghost text-sm">
-            Til forsiden
+            {k.tilForsiden}
           </Link>
         </div>
       </div>
@@ -70,14 +69,14 @@ export default function KontaktForm({
     <div className="space-y-4">
       <div>
         <label className="label" htmlFor="kontakt-emne">
-          Emne
+          {k.emne}
         </label>
         <input
           id="kontakt-emne"
           className="input"
           value={emne}
           maxLength={EMNE_MAKS}
-          placeholder="Kort overskrift"
+          placeholder={k.emnePh}
           disabled={pending}
           onChange={(e) => setEmne(e.target.value)}
         />
@@ -85,14 +84,14 @@ export default function KontaktForm({
 
       <div>
         <label className="label" htmlFor="kontakt-besked">
-          Besked
+          {k.besked}
         </label>
         <textarea
           id="kontakt-besked"
           className="input min-h-[160px] resize-y"
           value={besked}
           maxLength={BESKED_MAKS}
-          placeholder="Beskriv hvad det handler om. Jo mere konkret, jo bedre kan vi hjælpe."
+          placeholder={k.beskedPh}
           disabled={pending}
           onChange={(e) => setBesked(e.target.value)}
         />
@@ -103,7 +102,7 @@ export default function KontaktForm({
 
       <div>
         <label className="label" htmlFor="kontakt-mail">
-          Svar-mail <span className="font-normal text-grafit-400">(valgfri)</span>
+          {k.svarMail} <span className="font-normal text-grafit-400">{t.faellesFejl.valgfri}</span>
         </label>
         <input
           id="kontakt-mail"
@@ -111,13 +110,12 @@ export default function KontaktForm({
           className="input"
           value={svarMail}
           maxLength={200}
-          placeholder="dig@eksempel.dk"
+          placeholder={k.svarMailPh}
           disabled={pending}
           onChange={(e) => setSvarMail(e.target.value)}
         />
         <p className="mt-1 text-xs text-grafit-400">
-          Udfyld hvis du vil have svar på en bestemt mail. Dit navn og din konto følger
-          automatisk med.
+          {k.svarMailHjaelp}
         </p>
       </div>
 
@@ -125,7 +123,7 @@ export default function KontaktForm({
 
       <div className="flex items-center gap-3">
         <button className="btn-primary" disabled={pending} onClick={send}>
-          {pending ? 'Sender...' : 'Send henvendelse'}
+          {pending ? k.sender : k.send}
         </button>
       </div>
     </div>

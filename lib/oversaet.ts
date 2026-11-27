@@ -7,7 +7,8 @@ import crypto from 'node:crypto';
 import { supabaseServer } from '@/lib/supabase/server';
 import { MAALSPROG, type RapportSprog } from '@/lib/rapport-i18n';
 import type { RapportFejl } from '@/lib/rapport';
-import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytTilSvensk, beskytBevar, genindsaetTermer, erTokenSkadet, splitSaetninger, samlSaetninger, type BeskyttetKilde } from '@/lib/rapport-ordliste';
+import { forberedSaetninger, samlOversatteSaetninger, erIndholdstab, erDegeneration, oversaetKunSprog, beskytTilSvensk, beskytBevar, genindsaetTermer, erTokenSkadet, splitSaetninger, samlSaetninger, rensKilde, type BeskyttetKilde } from '@/lib/rapport-ordliste';
+import { gaetKildesprog, fraLtDetekt, kildesprogAf, type Kildesprog } from '@/lib/kildesprog';
 import { oversaetKommentarerKerne, type KommentarInput } from '@/lib/rapport-kommentar-cache';
 
 export type { KommentarInput };
@@ -54,7 +55,11 @@ const NLLB_URL = process.env.NLLB_URL || '';
 // former -> "the X", flere OTA-termer, token-skade-værn på pivoten.
 // v3-lt-g (U1b): svensk ordliste (EN_SV) på en->sv-pivoten.
 // v3-lt-h (U1b): pivoten sætning-for-sætning med trinvis fallback (A/B/C).
-const MOTOR_ID = 'v3-lt-h';
+// v3-lt-i (U3b): rapporten oversætter fra meldingens RIGTIGE kildesprog
+// (issues.sprog): sv->en direkte UDEN den danske ordliste, svensk original
+// uoversat i sv-rapporten, en->sv via pivoten. Kildesproget indgår i hash'et.
+// Buster `oversaettelser`, `kommentar_oversaettelser` og OTA-cachen én gang.
+const MOTOR_ID = 'v3-lt-i';
 
 function hash(s: string): string {
   return crypto.createHash('sha1').update(MOTOR_ID + '\n' + s).digest('hex');
@@ -153,26 +158,28 @@ async function motorOversaet(tekster: string[], maal: string, _tvingLT = false):
   return pivotTilSvensk(engelsk, maal, BRUG_LT);
 }
 
-// en->sv-pivoten (U1b, live 27-11). Sætning for sætning (en forvansket token
-// rammer kun dén sætning) og i TRIN, så en sætning aldrig ender dårligere end før:
-//   A) faste svenske fagtermer (EN_SV) + bevar-ord som tokens  (bedst)
-//   B) kun bevar-ord som tokens                                   (som v3-lt-f)
-//   C) uden tokens                                                (som før U1b)
-// En sætning går videre til næste trin kun hvis motoren forvanskede et token
-// (erTokenSkadet). Hvert trin er ÉT motorkald for alle de sætninger, der er
-// tilbage. Sprog-løse enheder sendes aldrig (oversaetKunSprog). Fejler et kald,
-// kastes der videre, så kalderen beholder originalen.
-async function pivotTilSvensk(engelsk: string[], maal: string, brugLT: boolean): Promise<string[]> {
-  const delt = engelsk.map((e) => splitSaetninger(e));
+// Trinvis, sætning-for-sætning oversættelse kilde->maal (U1b-pivoten, generaliseret
+// i U3b). Hver sætning prøves med det første beskyttelses-trin; har motoren
+// forvansket et token (erTokenSkadet), prøves netop dén sætning igen med næste
+// (mindre) trin - så en sætning aldrig ender dårligere end uden tokens. Hvert
+// trin er ÉT motorkald for de sætninger, der er tilbage. Sprog-løse enheder
+// sendes aldrig (oversaetKunSprog). Fejler et kald, kastes der videre, så
+// kalderen beholder originalen.
+type BeskytTrin = (s: string) => BeskyttetKilde;
+const UDEN_TOKENS: BeskytTrin = (s) => ({ tekst: s, erstatninger: [] });
+
+async function trinvisOversaet(
+  tekster: string[],
+  kilde: string,
+  maal: string,
+  trin: BeskytTrin[],
+  forbered: (t: string) => string = (t) => t,
+): Promise<string[]> {
+  const delt = tekster.map((e) => splitSaetninger(forbered(e)));
   const flade: string[] = delt.flatMap((d) => d.dele);
   const ud: string[] = new Array(flade.length).fill('');
-  const kald = (u: string[]) => motorKald(u, 'en', maal, brugLT);
+  const kald = (u: string[]) => motorKald(u, kilde, maal, true);
 
-  const trin: ((s: string) => BeskyttetKilde)[] = [
-    beskytTilSvensk,
-    beskytBevar,
-    (s) => ({ tekst: s, erstatninger: [] }),
-  ];
   let tilbage = flade.map((_, i) => i);
   for (const beskyt of trin) {
     if (tilbage.length === 0) break;
@@ -195,6 +202,88 @@ async function pivotTilSvensk(engelsk: string[], maal: string, brugLT: boolean):
   });
 }
 
+// en->sv-pivoten (U1b, live 27-11), trin:
+//   A) faste svenske fagtermer (EN_SV) + bevar-ord som tokens  (bedst)
+//   B) kun bevar-ord som tokens                                   (som v3-lt-f)
+//   C) uden tokens                                                (som før U1b)
+async function pivotTilSvensk(engelsk: string[], maal: string, _brugLT: boolean): Promise<string[]> {
+  return trinvisOversaet(engelsk, 'en', maal, [beskytTilSvensk, beskytBevar, UDEN_TOKENS]);
+}
+
+// U3b: ikke-dansk kilde (sv/en) -> andet sprog UDEN den dansk-tunede ordliste.
+// Rensning (struktur, sprog-neutral), sætning-for-sætning, BEVAR-tokens
+// (versioner, akronymer, modelnavne - sprog-neutrale) med fallback uden tokens,
+// sprog-løs-værn. LibreTranslate pivoterer selv via engelsk hvor der ikke er en
+// direkte model (sv->da).
+async function udenOrdliste(tekster: string[], kilde: Kildesprog, maal: Kildesprog): Promise<string[]> {
+  return trinvisOversaet(tekster, kilde, maal, [beskytBevar, UDEN_TOKENS], rensKilde);
+}
+
+// U3b: én indgang for ALLE retninger mellem da/sv/en. Kilde == mål -> originalen.
+//   da->en: rapportens da-pipeline (ordliste + BEVAR + sætning-for-sætning)
+//   da->sv: da->en + pivoten (EN_SV)
+//   en->sv: pivoten direkte
+//   sv->en, sv->da, en->da: udenOrdliste
+// Kaster hvis motoren fejler (kalderen beholder originalen).
+export async function oversaetFraKilde(
+  tekster: string[],
+  kilde: Kildesprog,
+  maal: Kildesprog,
+): Promise<string[]> {
+  if (tekster.length === 0) return [];
+  if (kilde === maal) return [...tekster];
+  if (kilde === 'da') return motorOversaet(tekster, maal);
+  if (kilde === 'en' && maal === 'sv') return pivotTilSvensk(tekster, 'sv', true);
+  return udenOrdliste(tekster, kilde, maal);
+}
+
+// Grupperer tekster efter kildesprog og oversætter hver gruppe med ét kald-forløb.
+// Rækkefølgen bevares. Bruges af rapportens meldinger og kommentarer.
+async function oversaetBlandet(
+  tekster: string[],
+  kilder: Kildesprog[],
+  maal: Kildesprog,
+): Promise<string[]> {
+  const ud = [...tekster];
+  const grupper = new Map<Kildesprog, number[]>();
+  kilder.forEach((k, i) => {
+    if (k === maal) return; // originalen er record - vises uoversat
+    (grupper.get(k) ?? grupper.set(k, []).get(k)!).push(i);
+  });
+  for (const [kilde, idx] of grupper) {
+    const r = await oversaetFraKilde(idx.map((i) => tekster[i]), kilde, maal);
+    idx.forEach((i, k) => {
+      ud[i] = r[k] ?? tekster[i];
+    });
+  }
+  return ud;
+}
+
+// U3b: LibreTranslate /detect (bruges kun når heuristikken er usikker). null ved
+// fejl/ukendt/lav konfidens.
+export async function ltDetekt(tekst: string): Promise<{ sprog: Kildesprog | null; raa: string | null }> {
+  if (!LT_URL || !tekst.trim()) return { sprog: null, raa: null };
+  try {
+    const body: Record<string, unknown> = { q: tekst.slice(0, 2000) };
+    if (LT_KEY) body.api_key = LT_KEY;
+    const res = await fetch(`${LT_URL.replace(/\/$/, '')}/detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return { sprog: null, raa: null };
+    const data = (await res.json()) as { language?: string; confidence?: number }[];
+    const top = Array.isArray(data) ? data[0] : null;
+    return {
+      sprog: fraLtDetekt(data),
+      raa: top?.language ? `${top.language} (${Math.round(top.confidence ?? 0)})` : null,
+    };
+  } catch {
+    return { sprog: null, raa: null };
+  }
+}
+
 // U1b: rapportens da->en/sv-pipeline (rensning, term-beskyttelse, ordliste/BEVAR,
 // sætning-for-sætning, sprog-løs-værn, BEVAR på pivoten) til ANDET dansk fagindhold
 // - OTA-noterne på /software. Kaster hvis motoren fejler (kalderen beholder dansk).
@@ -209,27 +298,41 @@ export function oversaetKildeHash(kilde: string): string {
   return hash(kilde);
 }
 
+// Cache-nøgle for en meldings oversættelse: kildesprog + titel + beskrivelse
+// (MOTOR_ID foldes ind af hash()). Et rettet kildesprog giver dermed cache-miss.
+function fejlKildeHash(f: Pick<RapportFejl, 'sprog' | 'title' | 'description'>): string {
+  return hash(`${f.sprog}\n${f.title}\n${f.description}`);
+}
+
+// U3b: meldingerne oversættes fra deres RIGTIGE kildesprog (issues.sprog). En
+// melding hvis kildesprog ER rapportens sprog vises uoversat (originalen er
+// record) - fx en svensk melding i den svenske rapport. Den danske rapport
+// (MAALSPROG da = null) viser som altid originalerne.
 export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Promise<RapportFejl[]> {
-  const maal = MAALSPROG[sprog];
+  const maal = MAALSPROG[sprog] as Kildesprog | null;
   if (!maal || (!LT_URL && !NLLB_URL) || fejl.length === 0) return fejl;
 
   const sb = supabaseServer();
   const resultat: RapportFejl[] = [...fejl];
   const mangler: number[] = [];
 
+  // Kun meldinger på et ANDET sprog end rapportens skal oversættes.
+  const skalOversaettes = fejl.filter((f) => f.sprog !== maal);
+  if (skalOversaettes.length === 0) return resultat;
+
   // 1) Cache-opslag i ét kald.
   const { data: cacheRows } = await sb
     .from('oversaettelser')
     .select('issue_id, kilde_hash, titel, beskrivelse')
-    .in('issue_id', fejl.map((f) => f.id))
+    .in('issue_id', skalOversaettes.map((f) => f.id))
     .eq('sprog', sprog);
   const cache = new Map<string, { kilde_hash: string; titel: string; beskrivelse: string }>();
   for (const r of (cacheRows ?? []) as any[]) cache.set(r.issue_id, r);
 
   fejl.forEach((f, i) => {
-    const kildeHash = hash(`${f.title}\n${f.description}`);
+    if (f.sprog === maal) return;
     const c = cache.get(f.id);
-    if (c && c.kilde_hash === kildeHash) {
+    if (c && c.kilde_hash === fejlKildeHash(f)) {
       resultat[i] = { ...f, title: c.titel, description: c.beskrivelse };
     } else {
       mangler.push(i);
@@ -238,55 +341,24 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
 
   if (mangler.length === 0) return resultat;
 
-  // 2) Oversæt manglende i små klumper (5 meldinger = 10 strenge).
+  // 2) Oversæt manglende i små klumper (5 meldinger = 10 strenge). Titler og
+  //    beskrivelser går hver for sig gennem oversaetBlandet, som grupperer på
+  //    kildesprog (da-stien med ordliste, sv/en-stien uden). Trin 2.4's titel-
+  //    rutning og NLLB-længdevagten er overflødige siden trin 2.5 (alt er LT).
   const KLUMP = 5;
   for (let start = 0; start < mangler.length; start += KLUMP) {
     const gruppe = mangler.slice(start, start + KLUMP);
-    // TITEL-RUTNING (trin 2.4): titler -> ALTID LibreTranslate; beskrivelser -> NLLB.
-    // NLLB (grådig, distilleret) hallucinerer korte TITLER til flydende, IKKE-
-    // gentagende boilerplate ("The vehicle shall be equipped with a 'R' system",
-    // "The following information is provided for the purpose of this Annex") der
-    // hverken er et drop eller gentagende - altså uopdageligt for det heuristiske
-    // værn - og OVENI er det ikke-deterministisk: samme titel kan være fin i én
-    // kørsel og degenereret i næste (batch-afhængigt, da alle sætninger sendes i ét
-    // kald). Heuristik-jagt er derfor whack-a-mole. I stedet fjernes ÅRSAGEN: NLLB
-    // free-runner kun på korte input, så korte titler oversættes med LibreTranslate
-    // (mere ordret, laver ikke den fejl). Beskrivelser (længere tekst) bliver på
-    // NLLB hvor den er stærk og ikke degenererer, med content-loss-/degenerations-
-    // værnet som backup. Budskabet skal nå frem - en lidt mindre flydende titel er
-    // langt bedre end hallucineret boilerplate der vildleder Zeekr.
+    const kilder = gruppe.map((i) => fejl[i].sprog);
     let oversatTitler: string[];
     let oversatBeskr: string[];
     try {
       [oversatTitler, oversatBeskr] = await Promise.all([
-        motorOversaet(gruppe.map((i) => fejl[i].title), maal, true), // tving LibreTranslate
-        motorOversaet(gruppe.map((i) => fejl[i].description), maal),  // NLLB
+        oversaetBlandet(gruppe.map((i) => fejl[i].title), kilder, maal),
+        oversaetBlandet(gruppe.map((i) => fejl[i].description), kilder, maal),
       ]);
     } catch (e) {
-      console.error('[oversaet] klump fejlede, beholder dansk:', e);
+      console.error('[oversaet] klump fejlede, beholder originalen:', e);
       continue;
-    }
-
-    // Content-loss-/degenerations-værn på BESKRIVELSERNE (NLLB-stien): kan NLLB
-    // droppe en sætning (`erIndholdstab`) eller - sjældent på længere tekst -
-    // degenerere (`erDegeneration`), genoversæt NETOP den beskrivelse med
-    // LibreTranslate. Titlerne er allerede LibreTranslate, så de behøver ikke værnet.
-    if (NLLB_URL && LT_URL) {
-      const tabt: number[] = []; // indeks ind i gruppe
-      gruppe.forEach((i, j) => {
-        const ud = oversatBeskr[j] ?? '';
-        if (erIndholdstab(fejl[i].description, ud) || erDegeneration(fejl[i].description, ud)) tabt.push(j);
-      });
-      if (tabt.length > 0) {
-        try {
-          const ltUd = await motorOversaet(tabt.map((j) => fejl[gruppe[j]].description), maal, true);
-          tabt.forEach((j, k) => {
-            if (ltUd[k] != null) oversatBeskr[j] = ltUd[k];
-          });
-        } catch (e) {
-          console.error('[oversaet] beskrivelses-vagt: LibreTranslate-fallback fejlede, beholder NLLB-forsøg:', e);
-        }
-      }
     }
 
     const upserts: any[] = [];
@@ -298,7 +370,7 @@ export async function oversaetFejl(fejl: RapportFejl[], sprog: RapportSprog): Pr
       upserts.push({
         issue_id: f.id,
         sprog,
-        kilde_hash: hash(`${f.title}\n${f.description}`),
+        kilde_hash: fejlKildeHash(f),
         titel: nyTitel,
         beskrivelse: nyBesk,
         updated_at: new Date().toISOString(),
@@ -328,12 +400,17 @@ function kommentarKildeHash(tekst: string): string {
 // begge tjek kører på den. Kaster videre hvis motoren fejler helt, så kernens
 // klump-try/catch beholder dansk (ikke cachet) og et genforsøg prøver igen.
 async function oversaetMedVaern(tekster: string[], maal: string): Promise<string[]> {
-  const oversat = await motorOversaet(tekster, maal);
+  // U3b: hver kommentar oversættes fra sit eget kildesprog (heuristikken - en
+  // kommentar har ingen sprog-kolonne; reglen er deterministisk på teksten, så
+  // cache-nøglen hash(tekst) forbliver gyldig). En kommentar på rapportens sprog
+  // vises uoversat.
+  const m = maal as Kildesprog;
+  const oversat = await oversaetBlandet(tekster, tekster.map(kildesprogAf), m);
   if (NLLB_URL && LT_URL) {
     const tabt: number[] = [];
     tekster.forEach((t, j) => {
       const u = oversat[j] ?? '';
-      if (erIndholdstab(t, u) || erDegeneration(t, u)) tabt.push(j);
+      if (kildesprogAf(t) === 'da' && (erIndholdstab(t, u) || erDegeneration(t, u))) tabt.push(j);
     });
     if (tabt.length > 0) {
       try {
@@ -401,7 +478,46 @@ export type OversaetStatus = {
   ok: boolean;
   prove?: { kilde: string; resultat: string };
   fejl?: string;
+  // U3b: måling af svensk KILDE - LT /detect, heuristikken, den gamle vej (svensk
+  // tekst sendt gennem da-stien med dansk ordliste, som før U3b) og de nye veje.
+  svensk?: SvenskMaaling[];
 };
+
+export type SvenskMaaling = {
+  kilde: string;
+  heuristik: string; // fx "sv (sikker)"
+  ltDetekt: string | null; // fx "sv (92)"
+  gammelEn: string; // da-stien (før U3b)
+  nyEn: string; // sv->en uden ordliste
+  nyDa: string; // sv->da (board-titler for danske læsere)
+  fejl?: string;
+};
+
+const SVENSKE_PROEVER = [
+  'Nödbromsning vid backning',
+  'Bilen nödbromsar ibland när jag backar ut från garaget, trots att det inte finns något hinder. Det började efter uppdateringen till 3.0.3 och ACC stängs av.',
+  'Bilen startar inte alltid och skärmen blir svart i kylan.',
+];
+
+async function maalSvensk(): Promise<SvenskMaaling[]> {
+  const ud: SvenskMaaling[] = [];
+  for (const kilde of SVENSKE_PROEVER) {
+    const g = gaetKildesprog(kilde);
+    const heuristik = `${g.sprog} (${g.sikker ? 'sikker' : 'usikker'})`;
+    try {
+      const [detekt, [gammelEn], [nyEn], [nyDa]] = await Promise.all([
+        ltDetekt(kilde),
+        motorOversaet([kilde], 'en'),
+        oversaetFraKilde([kilde], 'sv', 'en'),
+        oversaetFraKilde([kilde], 'sv', 'da'),
+      ]);
+      ud.push({ kilde, heuristik, ltDetekt: detekt.raa, gammelEn, nyEn, nyDa });
+    } catch (e) {
+      ud.push({ kilde, heuristik, ltDetekt: null, gammelEn: '', nyEn: '', nyDa: '', fejl: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  return ud;
+}
 
 // "Test oversættelse" i admin - live-diagnose af den AKTIVE rapport-motor (NLLB når
 // NLLB_URL er sat, ellers LibreTranslate). Kører den rigtige pipeline (motorOversaet),
@@ -419,7 +535,8 @@ export async function oversaetDiagnose(): Promise<OversaetStatus> {
   const kilde = 'Bilen bremser pludseligt i bakgear.';
   try {
     const [resultat] = await motorOversaet([kilde], 'en');
-    return { konfigureret: true, motor, vaert, ok: true, prove: { kilde, resultat } };
+    const svensk = LT_URL ? await maalSvensk() : undefined;
+    return { konfigureret: true, motor, vaert, ok: true, prove: { kilde, resultat }, svensk };
   } catch (e) {
     return { konfigureret: true, motor, vaert, ok: false, fejl: e instanceof Error ? e.message : String(e) };
   }
