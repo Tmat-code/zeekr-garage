@@ -16,6 +16,7 @@
 import crypto from 'node:crypto';
 import { supabaseService } from '@/lib/supabase/service';
 import { erForumSprog, type ForumSprog } from '@/lib/forum-sprog';
+import { FORUM_OVERSAET_VERSION, oversaetForumTekst } from '@/lib/forum-enheder';
 
 const LT_URL = process.env.LIBRETRANSLATE_URL || '';
 const LT_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
@@ -26,17 +27,23 @@ export type ForumOversaettelse = {
   uaendret: boolean; // kilde == maal (eller tomt resultat) -> original vist
 };
 
+// Versions-praefikset (P42) busted alle aeldre raekker uden migration: en raekke
+// fra foer P42 har en ren sha1 og matcher aldrig `f2:<sha1>` -> gen-oversaettes.
 function hashKilde(body: string): string {
-  return crypto.createHash('sha1').update(body).digest('hex');
+  return `${FORUM_OVERSAET_VERSION}:${crypto.createHash('sha1').update(body).digest('hex')}`;
 }
 
 // Ét LibreTranslate-kald med source=auto: giver BAADE oversaettelsen OG det
 // detekterede kildesprog i ét svar, saa vi slipper et separat /detect-kald.
+// Faar KUN sprog-stykkerne (P42, se lib/forum-enheder.ts). Ét stykke sendes som
+// streng - byte-identisk med foer P42 for indlaeg uden sprog-loese enheder; flere
+// stykker sendes som q-liste i SAMME kald.
 async function ltForum(
-  tekst: string,
+  tekster: string[],
   maal: ForumSprog,
-): Promise<{ oversat: string; kilde: string | null }> {
-  const body: Record<string, unknown> = { q: tekst, source: 'auto', target: maal, format: 'text' };
+): Promise<{ oversat: string[]; kilde: string | null }> {
+  const q: string | string[] = tekster.length === 1 ? tekster[0] : tekster;
+  const body: Record<string, unknown> = { q, source: 'auto', target: maal, format: 'text' };
   if (LT_KEY) body.api_key = LT_KEY;
   const res = await fetch(`${LT_URL.replace(/\/$/, '')}/translate`, {
     method: 'POST',
@@ -49,12 +56,19 @@ async function ltForum(
     translatedText: string | string[];
     detectedLanguage?: { language?: string } | { language?: string }[];
   };
-  const oversat = Array.isArray(data.translatedText) ? data.translatedText[0] : data.translatedText;
+  const oversat = Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
+  // Kildesprog: ved en liste tages detektionen for det LAENGSTE stykke (mest
+  // tekst = mest paalidelig detekt; korte stykker som "Hej." kan gaettes forkert).
   let kilde: string | null = null;
   const dl = data.detectedLanguage;
-  if (Array.isArray(dl)) kilde = dl[0]?.language ?? null;
-  else if (dl) kilde = dl.language ?? null;
-  return { oversat: oversat ?? tekst, kilde };
+  if (Array.isArray(dl)) {
+    let laengst = 0;
+    tekster.forEach((t, i) => {
+      if (t.length > (tekster[laengst]?.length ?? 0)) laengst = i;
+    });
+    kilde = dl[laengst]?.language ?? dl[0]?.language ?? null;
+  } else if (dl) kilde = dl.language ?? null;
+  return { oversat, kilde };
 }
 
 // Oversaet ÉT forum-indlaeg til laeserens sprog (on-demand, ved klik).
@@ -100,11 +114,13 @@ export async function oversaetIndlaeg(postId: string, maal: string): Promise<For
     };
   }
 
-  // 3) Oversaet (raa gist, LT auto-detekt).
+  // 3) Oversaet (raa gist, LT auto-detekt). Sprog-loese enheder (emoji, tal,
+  //    tegn) sendes aldrig til LT men staar ordret (P42) - ellers hallucinerer
+  //    Argos fx "PACKAGE LEAFLET" for en "🚗" sidst i indlaegget.
   let oversat: string;
   let kilde: string | null;
   try {
-    const r = await ltForum(body, maal);
+    const r = await oversaetForumTekst(body, (tekster) => ltForum(tekster, maal));
     oversat = r.oversat;
     kilde = r.kilde;
   } catch (e) {
