@@ -523,8 +523,11 @@ async function maalSvensk(): Promise<SvenskMaaling[]> {
 // NLLB_URL er sat, ellers LibreTranslate). Kører den rigtige pipeline (motorOversaet),
 // så term-/rensnings-laget og en evt. NLLB->LibreTranslate-fallback testes med.
 export async function oversaetDiagnose(): Promise<OversaetStatus> {
-  const motor: OversaetStatus['motor'] = NLLB_URL ? 'nllb' : LT_URL ? 'libretranslate' : null;
-  const aktivUrl = NLLB_URL || LT_URL;
+  // Siden trin 2.5 tvinger motorOversaet LibreTranslate (BRUG_LT), uanset om
+  // NLLB_URL stadig står i miljøet - så diagnosen viser den motor, der faktisk
+  // kører (før U3b viste den fejlagtigt "NLLB-600M (nllb:8000)", når env'en var sat).
+  const motor: OversaetStatus['motor'] = LT_URL ? 'libretranslate' : null;
+  const aktivUrl = LT_URL;
   if (!aktivUrl) return { konfigureret: false, motor: null, vaert: null, ok: false };
   let vaert = aktivUrl;
   try {
