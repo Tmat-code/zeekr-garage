@@ -345,6 +345,10 @@ export const sv: Ordbog = {
     oplever: 'Upplever du också detta?',
     oplevTekst: 'Bekräfta med din variant - ju fler ägare, desto tyngre väger felet gentemot Zeekr.',
     udenVariant: 'Utan variant',
+    sammenlagtTitel: 'Ihopslaget med ett annat ärende',
+    sammenlagtTekst:
+      'Samma fel eller önskemål var rapporterat två gånger. Röster, kommentarer och bilder är samlade på:',
+    sammenlagtOriginal: 'det samlade ärendet',
   },
 
   kommentarer: {

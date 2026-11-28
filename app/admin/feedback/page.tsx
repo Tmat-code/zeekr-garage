@@ -1,7 +1,9 @@
 import { getIssues } from '@/lib/queries';
-import { getFeedbackAktivitet } from '@/lib/queries-admin';
+import { getFeedbackAktivitet, getSammenlaegninger } from '@/lib/queries-admin';
+import { medTitelOversaettelser } from '@/lib/titel-oversaet';
 import { erAdmin } from '@/lib/admin';
 import ModereringsTabel from '@/components/admin/ModereringsTabel';
+import SammenlagteListe from '@/components/admin/SammenlagteListe';
 import OprydningPanel from '@/components/admin/OprydningPanel';
 import StorageOprydningPanel from '@/components/admin/StorageOprydningPanel';
 import AktivitetFeed from '@/components/admin/AktivitetFeed';
@@ -16,12 +18,16 @@ export async function generateMetadata() {
 }
 
 export default async function AdminFeedbackSide() {
-  const [issues, aktivitet, kanAdmin, sprog] = await Promise.all([
+  const [raaIssues, aktivitet, kanAdmin, sprog, sammenlagte] = await Promise.all([
     getIssues(),
     getFeedbackAktivitet(12),
     erAdmin(),
     hentSprog(),
+    getSammenlaegninger(50),
   ]);
+  // P43: titlernes oversættelser med, så "Læg sammen"-søgningen finder en
+  // original på tværs af sprog (svensk dublet -> dansk original).
+  const issues = await medTitelOversaettelser(raaIssues);
   const v = vordbog(sprog);
 
   return (
@@ -32,6 +38,15 @@ export default async function AdminFeedbackSide() {
           <span className="text-sm text-grafit-400">{v.faelles.iAlt(issues.length)}</span>
         </div>
         <ModereringsTabel issues={issues} />
+      </section>
+
+      <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-grafit-900">{v.feedback.sammenlagtTitel}</h2>
+          <span className="text-sm text-grafit-400">{v.faelles.iAlt(sammenlagte.length)}</span>
+        </div>
+        <p className="mb-4 text-sm text-grafit-500">{v.feedback.sammenlagtIntro}</p>
+        <SammenlagteListe poster={sammenlagte} />
       </section>
 
       <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">

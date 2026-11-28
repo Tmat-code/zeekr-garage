@@ -122,6 +122,32 @@ export const vda = {
     markerLoest: '✅ Markér løst',
     rediger: '✏️ Redigér',
     slet: '🗑 Slet',
+    // P43: sammenlæg dubletter
+    laegSammen: '🔗 Læg sammen med...',
+    samlTitel: 'Læg denne melding ind under originalen',
+    samlIntro:
+      'Vælg den melding, der skal beholdes. Stemmer (én pr. bil), kommentarer og billeder flyttes dertil, originalen arver modellerne, og denne melding skjules. Kan fortrydes.',
+    samlSoegPh: 'Søg efter originalen (titel, også på de andre sprog)',
+    samlIngenTraef: 'Ingen meldinger matcher.',
+    samlVaelg: 'Vælg',
+    samlBekraeft: (dublet: string, original: string) => `Læg "${dublet}" ind under "${original}"?`,
+    samlKnap: '🔗 Læg sammen',
+    samlImporteret:
+      'Importeret fra bugherrer - kan ikke være dubletten før cutover. Læg i stedet den anden melding ind under denne.',
+    stemmer: (n: number) => `${n} ${n === 1 ? 'stemme' : 'stemmer'}`,
+    sammenlagtTitel: 'Sammenlagte dubletter',
+    sammenlagtIntro:
+      'Dubletter der er lagt ind under en original. De er skjult overalt (board, søgning, rapport). Fortryd flytter stemmer, kommentarer og billeder tilbage.',
+    ingenSammenlagte: 'Ingen sammenlagte dubletter.',
+    dublet: 'Dublet',
+    original: 'Original',
+    flyttet: (s: number, d: number, k: number, b: number) =>
+      `${s} ${s === 1 ? 'stemme' : 'stemmer'} flyttet` +
+      (d > 0 ? ` (${d} fra samme bil fjernet)` : '') +
+      ` · ${k} ${k === 1 ? 'kommentar' : 'kommentarer'} · ${b} ${b === 1 ? 'billede' : 'billeder'}`,
+    af: (navn: string | null, dato: string) => `${navn ?? 'Ukendt'} · ${dato}`,
+    fortrydKnap: '↩ Fortryd',
+    fortrydSpoerg: 'Fortryd sammenlægningen?',
   },
 
   aktivitetFeed: {
@@ -330,6 +356,16 @@ export const vda = {
     maalErAdmin: 'En admin eller superadmin kan ikke sanktioneres - fjern rollen først.',
     brugerFindesIkke: 'Brugeren findes ikke.',
     henvendelseFindesIkke: 'Henvendelsen findes ikke længere.',
+    meldingFindesIkke: 'Meldingen findes ikke længere.',
+    samlSelv: 'En melding kan ikke lægges sammen med sig selv.',
+    samlImporteret: 'En importeret bugherrer-melding kan ikke være dubletten før cutover.',
+    samlAllerede: 'Meldingen er allerede lagt sammen.',
+    samlOriginalSkjult: 'Originalen er selv lagt sammen med en anden melding - vælg den i stedet.',
+    samlHarIndlagte: 'Denne melding har selv fået dubletter lagt ind - fortryd dem først, eller brug den som original.',
+    samlTypeForskel: 'En fejl og et ønske kan ikke lægges sammen.',
+    sammenlaegningFindesIkke: 'Sammenlægningen findes ikke længere.',
+    alleredeFortrudt: 'Sammenlægningen er allerede fortrudt.',
+    fortrydManuelt: 'Dubletten peger ikke længere på originalen - fortryd manuelt.',
     nogetGikGalt: 'Noget gik galt. Prøv igen.',
   } satisfies Record<VFejl, string>,
 
@@ -445,6 +481,11 @@ export const vda = {
                 naar: 'Zeekr har rettet en fejl i en opdatering',
                 tekst: 'Feedback-fanen → find meldingen → ✅ Markér løst → Løst i OTA.',
               },
+              {
+                naar: 'Samme fejl er meldt to gange (fx på dansk og svensk)',
+                tekst:
+                  'Feedback-fanen → ⋯ på den nyeste/mindste → 🔗 Læg sammen med... → vælg originalen. Så samles stemmerne på én melding over for Zeekr.',
+              },
             ],
           },
         ],
@@ -486,6 +527,11 @@ export const vda = {
                 navn: 'Slet',
                 tekst:
                   'Under ⋯-menuen, med en bekræftelse. Sletningen er uoprettelig og fjerner også meldingens billeder.',
+              },
+              {
+                navn: 'Læg sammen',
+                tekst:
+                  'Under ⋯-menuen på DUBLETTEN: søg originalen frem (også på svensk/engelsk titel) og bekræft. Stemmer flyttes med én pr. bil, kommentarer og billeder flyttes, og dubletten skjules overalt. Står under _Sammenlagte dubletter_ nederst, hvor _↩ Fortryd_ lægger alt tilbage. En importeret bugherrer-melding kan ikke være dubletten før cutover.',
               },
             ],
           },

@@ -535,11 +535,12 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
 
   // De rigtige raise exception-tekster fra de RPC'er moderator-fladerne kalder
   // -> nøgle (aldrig null).
-  const fn = ['mod_suspender_bruger', 'admin_ban_bruger', 'admin_ophaev', 'admin_anonymiser', 'kontakt_saet_behandlet'];
+  const fn = ['mod_suspender_bruger', 'admin_ban_bruger', 'admin_ophaev', 'admin_anonymiser', 'kontakt_saet_behandlet', 'feedback_saml_dublet', 'feedback_fortryd_sammenlaegning'];
   const sqlFiler = [
     'supabase/migrations/20261124140000_bruger_sanktioner.sql',
     'supabase/migrations/20261124210000_p32_audit_superadmin.sql',
     'supabase/migrations/20261126130000_kontakt_beskeder.sql',
+    'supabase/migrations/20261128140000_p43_sammenlaeg_dubletter.sql',
   ].map((f) => fs.readFileSync(path.join(ROD, f), 'utf8'));
   const raises = new Set();
   for (const sql of sqlFiler) {
@@ -556,6 +557,22 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   lig('U6 adgang', [F('Kun moderator/admin.'), F('Kun admin.'), F('Kun stab.'), F('new row violates row-level security policy for table "issues"')], ['ingenAdgang', 'ingenAdgang', 'ingenAdgang', 'ingenAdgang']);
   lig('U6 egen konto / admin-mål', [F('Du kan ikke suspendere din egen konto.'), F('En admin/superadmin kan ikke suspenderes - fjern rollen foerst.'), F('En admin kan ikke bannes - fjern admin-rollen foerst.')], ['egenKonto', 'maalErAdmin', 'maalErAdmin']);
   lig('U6 dage / grund / findes ikke', [F('Antal dage skal vaere mellem 1 og 3650.'), F('Ugyldig grund.'), F('Brugeren findes ikke.'), F('Henvendelsen findes ikke.')], ['ugyldigeDage', 'ugyldigGrund', 'brugerFindesIkke', 'henvendelseFindesIkke']);
+  // P43: sammenlæg-RPC'ernes tekster -> egne nøgler (ikke den generiske).
+  lig('P43 saml/fortryd-fejl', [
+    F('Kun moderatorer kan laegge meldinger sammen.'),
+    F('Meldingen findes ikke.'),
+    F('En melding kan ikke laegges sammen med sig selv.'),
+    F('En importeret bugherrer-melding kan ikke vaere dubletten (foer cutover).'),
+    F('Dubletten er allerede lagt sammen.'),
+    F('duplicate key value violates unique constraint "issue_sammenlaegninger_aktiv_dublet"'),
+    F('Originalen er selv lagt sammen med en anden melding.'),
+    F('Dubletten har selv faaet meldinger lagt ind - fortryd dem foerst.'),
+    F('En fejl og et oenske kan ikke laegges sammen.'),
+    F('Sammenlaegningen findes ikke.'),
+    F('Sammenlaegningen er allerede fortrudt.'),
+    F('Dubletten peger ikke laengere paa originalen - fortryd manuelt.'),
+  ], ['ingenAdgang', 'meldingFindesIkke', 'samlSelv', 'samlImporteret', 'samlAllerede', 'samlAllerede', 'samlOriginalSkjult', 'samlHarIndlagte', 'samlTypeForskel', 'sammenlaegningFindesIkke', 'alleredeFortrudt', 'fortrydManuelt']);
+  lig('P43 flyttet-tekst', [vda.feedback.flyttet(1, 0, 1, 0), vda.feedback.flyttet(3, 2, 0, 1), ven.feedback.flyttet(2, 1, 2, 2), vsv.feedback.stemmer(1)], ['1 stemme flyttet · 1 kommentar · 0 billeder', '3 stemmer flyttet (2 fra samme bil fjernet) · 0 kommentarer · 1 billede', '2 votes moved (1 from the same car removed) · 2 comments · 2 images', '1 röst']);
   lig('U6 ukendt/tom -> null', [F('duplicate key value'), F(''), F(null), F(undefined)], [null, null, null, null]);
   lig('U6 erVFejl', [VF.erVFejl('ingenAdgang'), VF.erVFejl('IngenAdgang'), VF.erVFejl(1)], [true, false, false]);
   lig('U6 gyldigeDage', [0, 1, 7, 3650, 3651, 2.5, '7', NaN].map(VF.gyldigeDage), [false, true, true, true, false, false, false, false]);

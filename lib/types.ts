@@ -58,6 +58,11 @@ export type IssueRow = {
   // visning på læserens sprog og til søgning på tværs af sprog.
   sprog: Kildesprog;
   titler: Partial<Record<Kildesprog, string>>;
+  // P43: sat på en dublet der er lagt sammen med en anden melding (id på
+  // originalen). Skjult overalt; kun detalje-siden viser den (med henvisning).
+  sammenlagtI?: string | null;
+  // Importeret fra bugherrer (kan ikke være dubletten før cutover).
+  importeret?: boolean;
 };
 
 // En kommentar ("Byggemøde") paa en melding.

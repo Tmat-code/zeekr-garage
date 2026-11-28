@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   STATUSES,
@@ -10,12 +10,13 @@ import {
   type Status,
   type Severity,
 } from '@/lib/config';
-import { useOrdbog } from '@/lib/i18n/klient';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
 import { useVKoer } from '@/components/admin/useVKoer';
 import type { IssueRow } from '@/lib/types';
 import { KILDESPROG } from '@/lib/kildesprog';
 import { SPROG_EGET_NAVN } from '@/lib/i18n/sprog';
+import { soegeOrd, soegeTraef, titelPaaSprog } from '@/lib/titel-oversaet-kerne';
 import {
   saetStatus,
   saetSeverity,
@@ -24,6 +25,7 @@ import {
   markerLoest,
   sletMelding,
   gemRedigering,
+  samlDublet,
 } from '@/app/admin/actions';
 
 const LOEST_GROEN = '#4f6f4a';
@@ -179,7 +181,116 @@ function MenuPunkt({
   );
 }
 
-function Raekke({ issue }: { issue: IssueRow }) {
+// P43: læg DENNE melding (dubletten) ind under en anden (originalen). Søgningen
+// matcher også titlernes oversættelser, så en svensk dublet finder den danske
+// original. Kun samme type (fejl/ønske); RPC'en håndhæver resten.
+function SamlPanel({
+  issue,
+  alle,
+  pending,
+  onSaml,
+  onLuk,
+}: {
+  issue: IssueRow;
+  alle: IssueRow[];
+  pending: boolean;
+  onSaml: (original: IssueRow) => void;
+  onLuk: () => void;
+}) {
+  const v = useVOrdbog();
+  const f = v.feedback;
+  const sprog = useSprog();
+  const [q, setQ] = useState('');
+  const [valgt, setValgt] = useState<IssueRow | null>(null);
+
+  const kandidater = useMemo(() => {
+    const ord = soegeOrd(q);
+    if (q.trim().length < 2) return [];
+    return alle
+      .filter((i) => i.id !== issue.id && i.type === issue.type)
+      .map((i) => ({ i, traef: soegeTraef(i, [], ord) }))
+      .filter((x) => x.traef > 0)
+      .sort((a, b) => b.traef - a.traef || b.i.confirmations - a.i.confirmations)
+      .slice(0, 6)
+      .map((x) => x.i);
+  }, [alle, issue.id, issue.type, q]);
+
+  return (
+    <div className="mt-3 rounded-lg border border-kobber-200 bg-kobber-50/40 p-3">
+      <p className="text-sm font-semibold text-grafit-900">{f.samlTitel}</p>
+      <p className="mt-0.5 text-xs text-grafit-500">{f.samlIntro}</p>
+
+      {valgt ? (
+        <div className="mt-3 space-y-2">
+          <p className="text-sm text-grafit-800">{f.samlBekraeft(issue.title, valgt.title)}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-lg bg-kobber-600 px-2.5 py-1 text-sm font-semibold text-white hover:bg-kobber-700"
+              disabled={pending}
+              onClick={() => onSaml(valgt)}
+            >
+              {f.samlKnap}
+            </button>
+            <button className="btn-ghost !px-2 !py-1 text-sm" onClick={() => setValgt(null)}>
+              {v.faelles.fortryd}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <div className="flex gap-2">
+            <input
+              className="input !py-1.5 text-sm"
+              value={q}
+              autoFocus
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={f.samlSoegPh}
+            />
+            <button className="btn-ghost !px-2 !py-1 text-sm" onClick={onLuk}>
+              {f.annuller}
+            </button>
+          </div>
+          {q.trim().length >= 2 && kandidater.length === 0 && (
+            <p className="text-xs text-grafit-500">{f.samlIngenTraef}</p>
+          )}
+          {kandidater.length > 0 && (
+            <ul className="divide-y divide-grafit-100 overflow-hidden rounded-lg border border-grafit-200 bg-white">
+              {kandidater.map((k) => {
+                const oversat = titelPaaSprog(k, sprog);
+                return (
+                  <li key={k.id} className="flex items-center gap-3 px-3 py-2">
+                    <span className="min-w-[56px] text-xs tabular-nums text-grafit-500">
+                      ▲ {f.stemmer(k.confirmations)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-grafit-900">{k.title}</span>
+                      {oversat && (
+                        <span className="block truncate text-xs text-grafit-400">{oversat}</span>
+                      )}
+                      <span className="block text-xs text-grafit-400">
+                        {k.models.map((m) => m.name.replace('Zeekr ', '')).join(', ') || '-'}
+                        {' · '}
+                        {SPROG_EGET_NAVN[k.sprog]}
+                      </span>
+                    </span>
+                    <button
+                      className="rounded-lg border border-kobber-300 px-2.5 py-1 text-sm font-medium text-kobber-700 hover:bg-kobber-50"
+                      onClick={() => setValgt(k)}
+                    >
+                      {f.samlVaelg}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Raekke({ issue, alle }: { issue: IssueRow; alle: IssueRow[] }) {
   const t = useOrdbog();
   const v = useVOrdbog();
   const f = v.feedback;
@@ -187,6 +298,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
   const [redigerer, setRedigerer] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [markerer, setMarkerer] = useState(false);
+  const [samler, setSamler] = useState(false);
   const [titel, setTitel] = useState(issue.title);
   const [beskrivelse, setBeskrivelse] = useState(issue.description);
 
@@ -421,6 +533,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
               )}
               <HandlingerMenu disabled={pending} label={f.flereHandlinger}>
                 <MenuPunkt onClick={() => setRedigerer(true)}>{f.rediger}</MenuPunkt>
+                <MenuPunkt onClick={() => setSamler(true)}>{f.laegSammen}</MenuPunkt>
                 <MenuPunkt danger onClick={() => setBekraeftSlet(true)}>
                   {f.slet}
                 </MenuPunkt>
@@ -429,6 +542,24 @@ function Raekke({ issue }: { issue: IssueRow }) {
           )}
         </div>
       )}
+
+      {samler &&
+        (issue.importeret ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-grafit-200 bg-grafit-50 p-3 text-xs text-grafit-600">
+            <span className="flex-1">{f.samlImporteret}</span>
+            <button className="btn-ghost !px-2 !py-1 text-sm" onClick={() => setSamler(false)}>
+              {f.annuller}
+            </button>
+          </div>
+        ) : (
+          <SamlPanel
+            issue={issue}
+            alle={alle}
+            pending={pending}
+            onLuk={() => setSamler(false)}
+            onSaml={(o) => koer(() => samlDublet(issue.id, o.id), () => setSamler(false))}
+          />
+        ))}
 
       {fejl && <p className="mt-2 text-xs text-kobber-700">{fejl}</p>}
     </div>
@@ -447,7 +578,7 @@ export default function ModereringsTabel({ issues }: { issues: IssueRow[] }) {
   return (
     <div className="space-y-2.5">
       {sorteret.map((i) => (
-        <Raekke key={i.id} issue={i} />
+        <Raekke key={i.id} issue={i} alle={issues} />
       ))}
     </div>
   );

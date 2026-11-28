@@ -17,6 +17,17 @@ export const VAERKSTED_FEJL = [
   'maalErAdmin',
   'brugerFindesIkke',
   'henvendelseFindesIkke',
+  // P43: sammenlæg dubletter
+  'meldingFindesIkke',
+  'samlSelv',
+  'samlImporteret',
+  'samlAllerede',
+  'samlOriginalSkjult',
+  'samlHarIndlagte',
+  'samlTypeForskel',
+  'sammenlaegningFindesIkke',
+  'alleredeFortrudt',
+  'fortrydManuelt',
   'nogetGikGalt',
 ] as const;
 
@@ -32,7 +43,9 @@ export function erVFejl(x: unknown): x is VFejl {
 // moderator-flader kalder (mod_suspender_bruger, admin_ban_bruger, admin_ophaev,
 // admin_anonymiser i 20261124140000_bruger_sanktioner.sql + P32-udgaverne i
 // 20261124210000_p32_audit_superadmin.sql, kontakt_saet_behandlet i
-// 20261126130000_kontakt_beskeder.sql) + RLS-afvisninger -> nøgle.
+// 20261126130000_kontakt_beskeder.sql, feedback_saml_dublet/
+// feedback_fortryd_sammenlaegning i 20261128140000_p43_sammenlaeg_dubletter.sql)
+// + RLS-afvisninger -> nøgle.
 // Ukendt -> null (kalderen bruger 'nogetGikGalt' og logger originalen).
 export function vFejlFraDb(besked: string | null | undefined): VFejl | null {
   const m = (besked ?? '').toLowerCase();
@@ -45,6 +58,18 @@ export function vFejlFraDb(besked: string | null | undefined): VFejl | null {
   if (/^en admin/.test(m)) return 'maalErAdmin';
   if (m.includes('brugeren findes ikke')) return 'brugerFindesIkke';
   if (m.includes('henvendelsen findes ikke')) return 'henvendelseFindesIkke';
+  // P43
+  if (m.includes('meldingen findes ikke')) return 'meldingFindesIkke';
+  if (m.includes('sammen med sig selv')) return 'samlSelv';
+  if (m.includes('importeret bugherrer-melding')) return 'samlImporteret';
+  if (m.includes('dubletten er allerede lagt sammen') || m.includes('issue_sammenlaegninger_aktiv_dublet'))
+    return 'samlAllerede';
+  if (m.includes('originalen er selv lagt sammen')) return 'samlOriginalSkjult';
+  if (m.includes('dubletten har selv')) return 'samlHarIndlagte';
+  if (m.includes('fejl og et oenske')) return 'samlTypeForskel';
+  if (m.includes('sammenlaegningen findes ikke')) return 'sammenlaegningFindesIkke';
+  if (m.includes('allerede fortrudt')) return 'alleredeFortrudt';
+  if (m.includes('peger ikke laengere')) return 'fortrydManuelt';
   return null;
 }
 

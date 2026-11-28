@@ -49,7 +49,9 @@ let venter = false;
 
 async function varmTitler(): Promise<void> {
   const svc = supabaseService();
-  const { data, error } = await svc.from('issues').select('id, title, sprog');
+  // P43: skjulte dubletter oversættes ikke (de vises ingen steder).
+  let { data, error } = await svc.from('issues').select('id, title, sprog').is('sammenlagt_i', null);
+  if (error) ({ data, error } = await svc.from('issues').select('id, title, sprog'));
   if (error || !data) return;
   const kilder: TitelKilde[] = (data as any[]).map((r) => ({
     id: r.id,

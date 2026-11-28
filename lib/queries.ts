@@ -23,6 +23,16 @@ const ISSUE_SELECT: string = `id, type, title, description, category, severity, 
        confirmations ( count ),
        comments ( count )`;
 
+// P43: + sammenlagt_i (skjulte dubletter) + legacy_bugherrer_id (en importeret
+// melding kan ikke være dubletten før cutover). Fejler opslaget (migrationen
+// ikke kørt), falder vi tilbage til U3b-select'en - så er intet sammenlagt endnu.
+const ISSUE_SELECT_P43: string = `id, type, title, description, category, severity, status, software_version, created_at,
+       legacy_stemmer, sprog, sammenlagt_i, legacy_bugherrer_id,
+       issue_models ( models ( id, slug, name, platform ) ),
+       issue_images ( path, display_order ),
+       confirmations ( count ),
+       comments ( count )`;
+
 function mapIssue(row: any): IssueRow {
   const models = (row.issue_models ?? [])
     .map((im: any) => im.models)
@@ -51,6 +61,8 @@ function mapIssue(row: any): IssueRow {
     billeder,
     sprog: erKildesprog(row.sprog) ? row.sprog : 'da',
     titler: {},
+    sammenlagtI: row.sammenlagt_i ?? null,
+    importeret: row.legacy_bugherrer_id != null,
   };
 }
 
@@ -91,12 +103,21 @@ export async function getModels(): Promise<Model[]> {
 }
 
 // --- Fejl (issues) med koblede modeller + optalte bekraeftelser ---
+// P43: sammenlagte dubletter (sammenlagt_i sat) er skjult overalt - board,
+// forside, /meld-dublet-tjekket og Værkstedets liste.
 export async function getIssues(): Promise<IssueRow[]> {
   const sb = supabaseServer();
   let { data, error } = await sb
     .from('issues')
-    .select(ISSUE_SELECT)
+    .select(ISSUE_SELECT_P43)
+    .is('sammenlagt_i', null)
     .order('created_at', { ascending: false });
+  if (error) {
+    ({ data, error } = await sb
+      .from('issues')
+      .select(ISSUE_SELECT)
+      .order('created_at', { ascending: false }));
+  }
   if (error) {
     ({ data, error } = await sb
       .from('issues')
@@ -109,9 +130,13 @@ export async function getIssues(): Promise<IssueRow[]> {
 }
 
 // --- Enkelt melding (til detalje-siden) ---
+// Henter OGSÅ en sammenlagt dublet (siden viser så "Lagt sammen med ..." + link).
 export async function getIssueDetalje(id: string): Promise<IssueRow | null> {
   const sb = supabaseServer();
-  let { data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single();
+  let { data, error } = await sb.from('issues').select(ISSUE_SELECT_P43).eq('id', id).single();
+  if (error && error.code !== 'PGRST116') {
+    ({ data, error } = await sb.from('issues').select(ISSUE_SELECT).eq('id', id).single());
+  }
   if (error && error.code !== 'PGRST116') {
     ({ data, error } = await sb.from('issues').select(ISSUE_SELECT_UDEN_SPROG).eq('id', id).single());
   }

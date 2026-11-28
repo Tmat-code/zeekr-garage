@@ -151,6 +151,46 @@ export async function gemRedigering(
   return OK;
 }
 
+// --- P43: sammenlæg dublet-meldinger ---
+// Hele flytningen sker atomisk i én security-definer RPC (stemmer med dedupe
+// pr. bil, kommentarer, billeder, modeller + skjul dubletten). RPC'en gater
+// selv på er_moderator() og logges i P32-audit; vi stopper tidligt her.
+function revaliderSammenlaegning(...ids: string[]) {
+  revalider();
+  revalidatePath('/feedback');
+  revalidatePath('/meld');
+  revalidatePath('/admin/feedback');
+  for (const id of ids) revalidatePath(`/melding/${id}`);
+}
+
+export async function samlDublet(dubletId: string, originalId: string): Promise<VSvar> {
+  if (!(await erModerator())) return fejlSvar('ingenAdgang');
+  if (!dubletId || !originalId) return fejlSvar('meldingFindesIkke');
+  if (dubletId === originalId) return fejlSvar('samlSelv');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('feedback_saml_dublet', {
+    p_dublet: dubletId,
+    p_original: originalId,
+  });
+  if (error) return dbSvar(error);
+  revaliderSammenlaegning(dubletId, originalId);
+  return OK;
+}
+
+export async function fortrydSammenlaegning(
+  id: number,
+  dubletId: string,
+  originalId: string,
+): Promise<VSvar> {
+  if (!(await erModerator())) return fejlSvar('ingenAdgang');
+  if (!Number.isInteger(id) || id < 1) return fejlSvar('sammenlaegningFindesIkke');
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('feedback_fortryd_sammenlaegning', { p_id: id });
+  if (error) return dbSvar(error);
+  revaliderSammenlaegning(dubletId, originalId);
+  return OK;
+}
+
 // --- Bruger-administration / sanktioner (P20) ---
 // Oversigten er moderator-laesbar (find en bruger at handle paa); handlingerne
 // er rolle-gatede: moderator maa advare + suspendere, admin maa banne, ophaeve

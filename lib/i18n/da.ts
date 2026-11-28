@@ -365,6 +365,11 @@ export const da = {
     oplever: 'Oplever du også dette?',
     oplevTekst: 'Bekræft med din variant - jo flere ejere, jo tungere vejer fejlen over for Zeekr.',
     udenVariant: 'Uden variant',
+    // P43: dublet lagt sammen med en anden melding
+    sammenlagtTitel: 'Lagt sammen med en anden melding',
+    sammenlagtTekst:
+      'Den samme fejl eller det samme ønske var meldt to gange. Stemmer, kommentarer og billeder er samlet på:',
+    sammenlagtOriginal: 'den samlede melding',
   },
 
   kommentarer: {

@@ -344,6 +344,10 @@ export const en: Ordbog = {
     oplever: 'Are you seeing this too?',
     oplevTekst: 'Confirm with your variant - the more owners, the more weight the bug carries with Zeekr.',
     udenVariant: 'No variant',
+    sammenlagtTitel: 'Merged with another report',
+    sammenlagtTekst:
+      'The same bug or wish was reported twice. Votes, comments and images are collected on:',
+    sammenlagtOriginal: 'the combined report',
   },
 
   kommentarer: {

@@ -21,10 +21,13 @@ function tomStatusMap(): Record<Status, number> {
 
 export async function getAdminStats(): Promise<AdminStats> {
   const sb = supabaseServer();
-  const [{ count: bekraeftelser }, { data: statusRows }] = await Promise.all([
+  const [{ count: bekraeftelser }, statusSvar] = await Promise.all([
     sb.from('confirmations').select('*', { count: 'exact', head: true }),
-    sb.from('issues').select('status'),
+    // P43: sammenlagte dubletter tæller ikke som meldinger (fallback før migrationen).
+    sb.from('issues').select('status').is('sammenlagt_i', null),
   ]);
+  let statusRows = statusSvar.data;
+  if (statusSvar.error) statusRows = (await sb.from('issues').select('status')).data;
 
   const perStatus = tomStatusMap();
   for (const r of (statusRows ?? []) as { status: Status }[]) {
@@ -797,4 +800,27 @@ export async function getAuditSeneste(limit = 50, offset = 0): Promise<AuditSide
     haendelser: rows.map(mapHaendelse),
     total: rows.length > 0 ? Number(rows[0].total) : 0,
   };
+}
+
+// --- P43: aktive sammenlægninger (Værkstedet -> Feedback) ---
+export type Sammenlaegning = {
+  id: number;
+  created_at: string;
+  aktoer_navn: string | null;
+  dublet_id: string;
+  dublet_titel: string;
+  original_id: string;
+  original_titel: string;
+  antal_stemmer: number;
+  antal_droppede: number;
+  antal_kommentarer: number;
+  antal_billeder: number;
+};
+
+// RPC'en gater selv på er_moderator(). Fejl (fx migrationen ikke kørt) -> tom liste.
+export async function getSammenlaegninger(graense = 50): Promise<Sammenlaegning[]> {
+  const sb = supabaseServer();
+  const { data, error } = await sb.rpc('feedback_sammenlaegninger', { p_limit: graense });
+  if (error || !data) return [];
+  return data as Sammenlaegning[];
 }

@@ -13,6 +13,7 @@ import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 import { DATO_LOCALE } from '@/lib/i18n/format';
 import type { UiSprog } from '@/lib/i18n/sprog';
 import { medTitelOversaettelser } from '@/lib/titel-oversaet';
+import { titelPaaSprog } from '@/lib/titel-oversaet-kerne';
 import OversatTitel from '@/components/OversatTitel';
 import { StatusTag, SeverityTag, PlatformSignal } from '@/components/Tags';
 import ConfirmButton from '@/components/ConfirmButton';
@@ -43,8 +44,45 @@ export default async function MeldingSide({ params }: { params: { id: string } }
   ]);
 
   if (!raaIssue) notFound();
-  const [issue] = await medTitelOversaettelser([raaIssue]);
   const md = t.melding;
+
+  // P43: dubletten er lagt sammen med en anden melding - vis kun en henvisning
+  // (stemmer/kommentarer/billeder ligger nu på originalen). Gamle links og
+  // notifikationer lander dermed et sted, der giver mening.
+  if (raaIssue.sammenlagtI) {
+    const raaOriginal = await getIssueDetalje(raaIssue.sammenlagtI);
+    const [dublet, original] = await medTitelOversaettelser(
+      raaOriginal ? [raaIssue, raaOriginal] : [raaIssue],
+    );
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <Link href="/feedback" className="text-sm text-grafit-500 hover:text-kobber-700">
+          {md.tilbage}
+        </Link>
+        <div className="mt-3">
+          <OversatTitel
+            tag="h1"
+            titel={dublet.title}
+            sprog={dublet.sprog}
+            titler={dublet.titler}
+            className="text-2xl font-semibold tracking-tight text-grafit-400"
+          />
+        </div>
+        <div className="mt-5 rounded-2xl border-2 border-kobber-200 bg-kobber-50 p-5">
+          <h2 className="text-sm font-semibold text-grafit-900">🔗 {md.sammenlagtTitel}</h2>
+          <p className="mt-1 text-sm text-grafit-700">{md.sammenlagtTekst}</p>
+          <Link
+            href={`/melding/${raaIssue.sammenlagtI}`}
+            className="mt-3 inline-flex items-center gap-1 font-medium text-kobber-700 hover:text-kobber-800"
+          >
+            {original ? (titelPaaSprog(original, sprog) ?? original.title) : md.sammenlagtOriginal} →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const [issue] = await medTitelOversaettelser([raaIssue]);
   const kat = kategoriLabelPaa(issue.category, t.config.kategori);
 
   const erModerator = rolleErModerator(ctx.rolle);

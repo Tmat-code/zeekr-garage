@@ -27,6 +27,7 @@ const TABEL_LABEL: Record<string, string> = {
   forum_reports: 'Rapport',
   site_announcement: 'Forside-besked',
   messages: 'Besked',
+  issue_sammenlaegninger: 'Feedback-sammenlægning',
 };
 
 const OP_LABEL: Record<string, { tekst: string; klasse: string }> = {

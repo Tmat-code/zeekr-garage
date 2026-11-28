@@ -102,6 +102,32 @@ export const ven: VOrdbog = {
     markerLoest: '✅ Mark resolved',
     rediger: '✏️ Edit',
     slet: '🗑 Delete',
+    // P43: merge duplicates
+    laegSammen: '🔗 Merge into...',
+    samlTitel: 'Merge this issue into the original',
+    samlIntro:
+      'Pick the issue to keep. Votes (one per car), comments and images move there, the original inherits the models, and this issue is hidden. Can be undone.',
+    samlSoegPh: 'Search for the original (title, also in the other languages)',
+    samlIngenTraef: 'No issues match.',
+    samlVaelg: 'Pick',
+    samlBekraeft: (dublet, original) => `Merge "${dublet}" into "${original}"?`,
+    samlKnap: '🔗 Merge',
+    samlImporteret:
+      'Imported from bugherrer - cannot be the duplicate before cutover. Merge the other issue into this one instead.',
+    stemmer: (n) => `${n} ${n === 1 ? 'vote' : 'votes'}`,
+    sammenlagtTitel: 'Merged duplicates',
+    sammenlagtIntro:
+      'Duplicates merged into an original. They are hidden everywhere (board, search, report). Undo moves the votes, comments and images back.',
+    ingenSammenlagte: 'No merged duplicates.',
+    dublet: 'Duplicate',
+    original: 'Original',
+    flyttet: (s, d, k, b) =>
+      `${s} ${s === 1 ? 'vote' : 'votes'} moved` +
+      (d > 0 ? ` (${d} from the same car removed)` : '') +
+      ` · ${k} ${k === 1 ? 'comment' : 'comments'} · ${b} ${b === 1 ? 'image' : 'images'}`,
+    af: (navn, dato) => `${navn ?? 'Unknown'} · ${dato}`,
+    fortrydKnap: '↩ Undo',
+    fortrydSpoerg: 'Undo the merge?',
   },
 
   aktivitetFeed: {
@@ -311,6 +337,16 @@ export const ven: VOrdbog = {
     maalErAdmin: 'An admin or superadmin cannot be sanctioned - remove the role first.',
     brugerFindesIkke: 'The user does not exist.',
     henvendelseFindesIkke: 'The enquiry no longer exists.',
+    meldingFindesIkke: 'The issue no longer exists.',
+    samlSelv: 'An issue cannot be merged into itself.',
+    samlImporteret: 'An imported bugherrer issue cannot be the duplicate before cutover.',
+    samlAllerede: 'The issue has already been merged.',
+    samlOriginalSkjult: 'The original has itself been merged into another issue - pick that one instead.',
+    samlHarIndlagte: 'This issue has duplicates merged into it - undo those first, or use it as the original.',
+    samlTypeForskel: 'A bug and a wish cannot be merged.',
+    sammenlaegningFindesIkke: 'The merge no longer exists.',
+    alleredeFortrudt: 'The merge has already been undone.',
+    fortrydManuelt: 'The duplicate no longer points to the original - undo it manually.',
     nogetGikGalt: 'Something went wrong. Please try again.',
   },
 
@@ -423,6 +459,11 @@ export const ven: VOrdbog = {
                 naar: 'Zeekr has fixed a bug in an update',
                 tekst: 'Feedback tab → find the issue → ✅ Mark resolved → Fixed in OTA.',
               },
+              {
+                naar: 'The same bug has been reported twice (e.g. in Danish and Swedish)',
+                tekst:
+                  'Feedback tab → ⋯ on the newest/smallest one → 🔗 Merge into... → pick the original. The votes then add up on one issue for Zeekr.',
+              },
             ],
           },
         ],
@@ -464,6 +505,11 @@ export const ven: VOrdbog = {
                 navn: 'Delete',
                 tekst:
                   "In the ⋯ menu, with a confirmation. Deleting cannot be undone and also removes the issue's images.",
+              },
+              {
+                navn: 'Merge',
+                tekst:
+                  'In the ⋯ menu on the DUPLICATE: search for the original (also by its Danish/Swedish title) and confirm. Votes move with one per car, comments and images move, and the duplicate is hidden everywhere. It is listed under _Merged duplicates_ at the bottom, where _↩ Undo_ puts everything back. An imported bugherrer issue cannot be the duplicate before cutover.',
               },
             ],
           },

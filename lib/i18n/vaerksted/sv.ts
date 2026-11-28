@@ -102,6 +102,32 @@ export const vsv: VOrdbog = {
     markerLoest: '✅ Markera som löst',
     rediger: '✏️ Redigera',
     slet: '🗑 Ta bort',
+    // P43: slå ihop dubbletter
+    laegSammen: '🔗 Slå ihop med...',
+    samlTitel: 'Lägg det här ärendet under originalet',
+    samlIntro:
+      'Välj det ärende som ska behållas. Röster (en per bil), kommentarer och bilder flyttas dit, originalet ärver modellerna och det här ärendet döljs. Kan ångras.',
+    samlSoegPh: 'Sök efter originalet (rubrik, även på de andra språken)',
+    samlIngenTraef: 'Inga ärenden matchar.',
+    samlVaelg: 'Välj',
+    samlBekraeft: (dublet, original) => `Lägga "${dublet}" under "${original}"?`,
+    samlKnap: '🔗 Slå ihop',
+    samlImporteret:
+      'Importerat från bugherrer - kan inte vara dubbletten före cutover. Lägg i stället det andra ärendet under det här.',
+    stemmer: (n) => `${n} ${n === 1 ? 'röst' : 'röster'}`,
+    sammenlagtTitel: 'Ihopslagna dubbletter',
+    sammenlagtIntro:
+      'Dubbletter som har lagts under ett original. De är dolda överallt (tavlan, sökningen, rapporten). Ångra flyttar tillbaka röster, kommentarer och bilder.',
+    ingenSammenlagte: 'Inga ihopslagna dubbletter.',
+    dublet: 'Dubblett',
+    original: 'Original',
+    flyttet: (s, d, k, b) =>
+      `${s} ${s === 1 ? 'röst' : 'röster'} flyttade` +
+      (d > 0 ? ` (${d} från samma bil borttagna)` : '') +
+      ` · ${k} ${k === 1 ? 'kommentar' : 'kommentarer'} · ${b} ${b === 1 ? 'bild' : 'bilder'}`,
+    af: (navn, dato) => `${navn ?? 'Okänd'} · ${dato}`,
+    fortrydKnap: '↩ Ångra',
+    fortrydSpoerg: 'Ångra sammanslagningen?',
   },
 
   aktivitetFeed: {
@@ -310,6 +336,16 @@ export const vsv: VOrdbog = {
     maalErAdmin: 'En admin eller superadmin kan inte sanktioneras - ta bort rollen först.',
     brugerFindesIkke: 'Användaren finns inte.',
     henvendelseFindesIkke: 'Förfrågan finns inte längre.',
+    meldingFindesIkke: 'Ärendet finns inte längre.',
+    samlSelv: 'Ett ärende kan inte slås ihop med sig självt.',
+    samlImporteret: 'Ett importerat bugherrer-ärende kan inte vara dubbletten före cutover.',
+    samlAllerede: 'Ärendet är redan ihopslaget.',
+    samlOriginalSkjult: 'Originalet är självt ihopslaget med ett annat ärende - välj det i stället.',
+    samlHarIndlagte: 'Det här ärendet har själv fått dubbletter inlagda - ångra dem först, eller använd det som original.',
+    samlTypeForskel: 'Ett fel och ett önskemål kan inte slås ihop.',
+    sammenlaegningFindesIkke: 'Sammanslagningen finns inte längre.',
+    alleredeFortrudt: 'Sammanslagningen är redan ångrad.',
+    fortrydManuelt: 'Dubbletten pekar inte längre på originalet - ångra manuellt.',
     nogetGikGalt: 'Något gick fel. Försök igen.',
   },
 
@@ -422,6 +458,11 @@ export const vsv: VOrdbog = {
                 naar: 'Zeekr har åtgärdat ett fel i en uppdatering',
                 tekst: 'Fliken Feedback → hitta ärendet → ✅ Markera som löst → Löst i OTA.',
               },
+              {
+                naar: 'Samma fel är rapporterat två gånger (t.ex. på danska och svenska)',
+                tekst:
+                  'Fliken Feedback → ⋯ på det nyaste/minsta → 🔗 Slå ihop med... → välj originalet. Då samlas rösterna på ett ärende inför Zeekr.',
+              },
             ],
           },
         ],
@@ -463,6 +504,11 @@ export const vsv: VOrdbog = {
                 navn: 'Ta bort',
                 tekst:
                   'Under ⋯-menyn, med en bekräftelse. Borttagningen går inte att ångra och tar även bort ärendets bilder.',
+              },
+              {
+                navn: 'Slå ihop',
+                tekst:
+                  'Under ⋯-menyn på DUBBLETTEN: sök fram originalet (även på dansk/engelsk rubrik) och bekräfta. Röster flyttas med en per bil, kommentarer och bilder flyttas, och dubbletten döljs överallt. Den står under _Ihopslagna dubbletter_ längst ned, där _↩ Ångra_ lägger tillbaka allt. Ett importerat bugherrer-ärende kan inte vara dubbletten före cutover.',
               },
             ],
           },
