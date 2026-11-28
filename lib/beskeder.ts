@@ -1,5 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { beskedBilledeUrl, avatarUrl } from '@/lib/billeder';
+import { hentOrdbog } from '@/lib/i18n/server';
 import type { SamtaleRow, SamtaleDetalje, AndenPart, Deltager, Besked } from '@/lib/types';
 
 // Embed af en deltagers profil + bil (garage-badge), samme FK-hints som forum.
@@ -33,11 +34,16 @@ function mapPart(p: any): AndenPart {
 
 // Afled en visnings-label for en gruppe: eksplicit navn vinder, ellers
 // deltagernes navne ("Anna, Bo, Carl" / "Anna, Bo +2").
-function gruppeLabel(titel: string | null | undefined, navne: (string | null)[]): string {
+// `udenNavne` = ordbogens "Gruppe" på læserens sprog (U5).
+function gruppeLabel(
+  titel: string | null | undefined,
+  navne: (string | null)[],
+  udenNavne: string,
+): string {
   const t = (titel ?? '').trim();
   if (t) return t;
   const n = navne.map((x) => (x ?? '').trim()).filter(Boolean);
-  if (n.length === 0) return 'Gruppe';
+  if (n.length === 0) return udenNavne;
   if (n.length <= 3) return n.join(', ');
   return `${n.slice(0, 2).join(', ')} +${n.length - 2}`;
 }
@@ -55,6 +61,7 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
   const sb = supabaseServer();
   const meg = await minId();
   if (!meg) return [];
+  const t = (await hentOrdbog()).beskeder;
 
   // RLS: kun samtaler jeg er deltager i kommer tilbage.
   const { data: convs } = await sb
@@ -93,8 +100,8 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
     // 1:1: modparten (fallback mig selv hvis alene). Gruppe: ingen enkelt modpart.
     const anden = erGruppe ? null : mapPart(andre[0] ?? mig);
     const titel = erGruppe
-      ? gruppeLabel(c.title, andre.map((d) => d.profil?.display_name ?? null))
-      : (anden?.navn ?? 'Ejer');
+      ? gruppeLabel(c.title, andre.map((d) => d.profil?.display_name ?? null), t.gruppe)
+      : (anden?.navn ?? t.ejer);
 
     rows.push({
       id: c.id,
@@ -103,7 +110,7 @@ export async function getSamtaler(): Promise<SamtaleRow[]> {
       titel,
       antalDeltagere: deltagere.length,
       // Kun-billede-beskeder har tom body -> vis en billed-markoer i stedet.
-      sidsteBesked: sidste ? (sidste.body?.trim() ? sidste.body : '📷 Billede') : null,
+      sidsteBesked: sidste ? (sidste.body?.trim() ? sidste.body : t.billedeMarkoer) : null,
       sidsteTidspunkt: c.last_message_at,
       // Ulæst hvis der er kommet noget efter jeg sidst læste, og det ikke var mig selv.
       ulaest: sidstMsg > minLaest && sidste?.sender_id !== meg,
@@ -211,9 +218,10 @@ export async function getSamtale(convId: string): Promise<SamtaleDetalje | null>
     billeder: billedMap.get(m.id) ?? [],
   }));
 
+  const t = (await hentOrdbog()).beskeder;
   const titel = erGruppe
-    ? gruppeLabel((c as any).title, andreRaw.map((d) => d.profil?.display_name ?? null))
-    : (andenPart?.navn ?? 'Ejer');
+    ? gruppeLabel((c as any).title, andreRaw.map((d) => d.profil?.display_name ?? null), t.gruppe)
+    : (andenPart?.navn ?? t.ejer);
 
   return {
     id: (c as any).id,
@@ -241,6 +249,7 @@ export async function senesteKontakter(graense = 8): Promise<AndenPart[]> {
   const sb = supabaseServer();
   const meg = await minId();
   if (!meg) return [];
+  const t = (await hentOrdbog()).beskeder;
 
   const { data: convs } = await sb
     .from('conversations')

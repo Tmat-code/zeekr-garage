@@ -5,25 +5,30 @@ import { relativTid } from '@/lib/i18n/format';
 import GarageBadge from '@/components/forum/GarageBadge';
 import Avatar from '@/components/forum/Avatar';
 import IndbakkeSletKnap from '@/components/beskeder/IndbakkeSletKnap';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Beskeder' };
+export async function generateMetadata() {
+  return { title: (await hentOrdbog()).beskeder.titel };
+}
 
 export default async function BeskederSide() {
-  const { user } = await adminKontekst();
+  const [{ user }, sprog] = await Promise.all([adminKontekst(), hentSprog()]);
+  const t = (await hentOrdbog()).beskeder;
+  const ft = (await hentOrdbog()).faellesFejl;
 
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Beskeder</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">{t.titel}</h1>
         <div className="mt-4 rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-600">
           <Link
             href="/login?naeste=/beskeder"
             className="font-medium text-kobber-700 hover:underline"
           >
-            Log ind
+            {ft.logInd}
           </Link>{' '}
-          for at se dine beskeder.
+          {t.logIndIndbakke}
         </div>
       </div>
     );
@@ -35,20 +40,17 @@ export default async function BeskederSide() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">Beskeder</h1>
-          <p className="mt-1 text-sm text-grafit-500">
-            Private samtaler med andre ejere.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">{t.titel}</h1>
+          <p className="mt-1 text-sm text-grafit-500">{t.intro}</p>
         </div>
         <Link href="/beskeder/ny" className="btn-primary shrink-0 !py-2 text-sm">
-          Ny besked
+          {t.nyBesked}
         </Link>
       </div>
 
       {samtaler.length === 0 ? (
         <div className="mt-6 rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-6 text-center text-sm text-grafit-500">
-          Du har ingen samtaler endnu. Klik "Ny besked" for at skrive direkte til en ejer -
-          eller start en fra en andens forum-indlæg.
+          {t.tomIndbakke(t.nyBesked)}
         </div>
       ) : (
         <div className="mt-5 space-y-2">
@@ -84,7 +86,7 @@ export default async function BeskederSide() {
                     <span
                       className={`truncate ${s.ulaest ? 'font-semibold text-grafit-900' : 'font-medium text-grafit-800'}`}
                     >
-                      {s.erGruppe ? s.titel : s.andenPart?.navn || 'Ejer'}
+                      {s.erGruppe ? s.titel : s.andenPart?.navn || t.ejer}
                     </span>
                     {s.erGruppe ? (
                       <span className="chip shrink-0 bg-grafit-100 text-grafit-600">
@@ -96,11 +98,11 @@ export default async function BeskederSide() {
                     )}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-grafit-500">
-                    {s.sidsteBesked ?? 'Ingen beskeder endnu'}
+                    {s.sidsteBesked ?? t.ingenBeskederEndnu}
                   </p>
                 </div>
                 <span className="shrink-0 whitespace-nowrap text-xs text-grafit-400">
-                  {relativTid(s.sidsteTidspunkt)}
+                  {relativTid(s.sidsteTidspunkt, sprog)}
                 </span>
               </Link>
               <IndbakkeSletKnap convId={s.id} />

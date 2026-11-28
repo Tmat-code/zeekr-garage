@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { getEvent } from '@/lib/events';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import EventForm from '@/components/events/EventForm';
+import { hentOrdbog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Rediger event' };
+export async function generateMetadata() {
+  return { title: (await hentOrdbog()).events.rediger.titel };
+}
 
 export default async function RedigerEventSide({ params }: { params: { slug: string } }) {
   const event = await getEvent(params.slug);
@@ -22,7 +25,7 @@ export default async function RedigerEventSide({ params }: { params: { slug: str
         ← {event.title}
       </Link>
       <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-grafit-900">
-        Rediger event
+        {(await hentOrdbog()).events.rediger.titel}
       </h1>
       <EventForm
         initial={{

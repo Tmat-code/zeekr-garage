@@ -3,13 +3,16 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { opretEvent, retEvent } from '@/app/events/actions';
+import { useOrdbog } from '@/lib/i18n/klient';
+import { EVENT_TITEL_MIN, validerEvent, type EventFejl } from '@/lib/events-fejl';
 
 // ISO (UTC) -> value til <input type="datetime-local"> (lokal tid).
 function isoTilLokal(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+  // i18n-ok (datetime-local-format)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad( // i18n-ok
     d.getMinutes(),
   )}`;
 }
@@ -32,35 +35,44 @@ type Initial = {
 
 export default function EventForm({ initial }: { initial?: Initial }) {
   const router = useRouter();
+  const o = useOrdbog();
+  const t = o.events;
   const redigerer = !!initial;
   const [titel, setTitel] = useState(initial?.title ?? '');
   const [beskrivelse, setBeskrivelse] = useState(initial?.description ?? '');
   const [sted, setSted] = useState(initial?.location ?? '');
   const [start, setStart] = useState(isoTilLokal(initial?.startsAt ?? null));
   const [slut, setSlut] = useState(isoTilLokal(initial?.endsAt ?? null));
-  const [fejl, setFejl] = useState<string | null>(null);
+  // Nøgle, ikke tekst: fejlen skifter med sproget (U5).
+  const [fejl, setFejl] = useState<EventFejl | null>(null);
   const [pending, startT] = useTransition();
 
   function gem() {
     setFejl(null);
+    const input = {
+      title: titel,
+      description: beskrivelse,
+      location: sted,
+      startsAt: lokalTilIso(start),
+      endsAt: lokalTilIso(slut),
+    };
+    // Samme validering som serveren - fanges her uden et kald.
+    const ugyldig = validerEvent(input);
+    if (ugyldig) return setFejl(ugyldig);
     startT(async () => {
       try {
-        const input = {
-          title: titel,
-          description: beskrivelse,
-          location: sted,
-          startsAt: lokalTilIso(start),
-          endsAt: lokalTilIso(slut),
-        };
         if (redigerer) {
-          await retEvent(initial!.id, initial!.slug, input);
+          const r = await retEvent(initial!.id, initial!.slug, input);
+          if (!r.ok) return setFejl(r.fejl);
           router.push(`/events/${initial!.slug}`);
         } else {
-          const url = await opretEvent(input);
-          router.push(url);
+          const r = await opretEvent(input);
+          if (!r.ok) return setFejl(r.fejl);
+          router.push(r.data);
         }
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke gemme.');
+      } catch (e) {
+        console.error(e);
+        setFejl(redigerer ? 'kunneIkkeGemme' : 'kunneIkkeOprette');
       }
     });
   }
@@ -68,39 +80,39 @@ export default function EventForm({ initial }: { initial?: Initial }) {
   return (
     <div className="mt-6 space-y-4">
       <div>
-        <label className="label" htmlFor="t">Titel</label>
+        <label className="label" htmlFor="t">{t.form.titel}</label>
         <input
           id="t"
           className="input"
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
-          placeholder="Fx: Køretur til Møns Klint"
+          placeholder={t.form.titelEks}
           maxLength={160}
         />
       </div>
       <div>
-        <label className="label" htmlFor="b">Beskrivelse</label>
+        <label className="label" htmlFor="b">{t.form.beskrivelse}</label>
         <textarea
           id="b"
           className="input min-h-[140px]"
           value={beskrivelse}
           onChange={(e) => setBeskrivelse(e.target.value)}
-          placeholder="Hvad sker der, program, hvad skal man vide?"
+          placeholder={t.form.beskrivelseEks}
         />
       </div>
       <div>
-        <label className="label" htmlFor="s">Sted</label>
+        <label className="label" htmlFor="s">{t.form.sted}</label>
         <input
           id="s"
           className="input"
           value={sted}
           onChange={(e) => setSted(e.target.value)}
-          placeholder="Fx: P-plads ved Netto, Roskilde"
+          placeholder={t.form.stedEks}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="st">Start</label>
+          <label className="label" htmlFor="st">{t.form.start}</label>
           <input
             id="st"
             type="datetime-local"
@@ -111,7 +123,7 @@ export default function EventForm({ initial }: { initial?: Initial }) {
         </div>
         <div>
           <label className="label" htmlFor="sl">
-            Slut <span className="font-normal text-grafit-400">(valgfri)</span>
+            {t.form.slut} <span className="font-normal text-grafit-400">{o.faellesFejl.valgfri}</span>
           </label>
           <input
             id="sl"
@@ -123,10 +135,10 @@ export default function EventForm({ initial }: { initial?: Initial }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button className="btn-primary" disabled={pending || titel.trim().length < 3} onClick={gem}>
-          {pending ? 'Gemmer…' : redigerer ? 'Gem ændringer' : 'Opret event'}
+        <button className="btn-primary" disabled={pending || titel.trim().length < EVENT_TITEL_MIN} onClick={gem}>
+          {pending ? t.form.gemmer : redigerer ? t.form.gemAendringer : t.form.opret}
         </button>
-        {fejl && <span className="text-sm text-kobber-700">{fejl}</span>}
+        {fejl && <span className="text-sm text-kobber-700">{t.fejl[fejl]}</span>}
       </div>
     </div>
   );

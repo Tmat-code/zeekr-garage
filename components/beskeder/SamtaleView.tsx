@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/i18n/format';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
+import type { BeskedFejl } from '@/lib/beskeder-fejl';
 import type { AndenPart, Besked, Deltager } from '@/lib/types';
 import GarageBadge from '@/components/forum/GarageBadge';
 import Avatar from '@/components/forum/Avatar';
@@ -51,13 +53,17 @@ export default function SamtaleView({
   const [nyeBilleder, setNyeBilleder] = useState<string[]>([]);
   const [uploadKey, setUploadKey] = useState(0); // remount => ryd upload-preview
   const [blokeret, setBlokeret] = useState(initialBlokeret);
-  const [fejl, setFejl] = useState<string | null>(null);
+  // Nøgle, ikke tekst: en synlig fejl skifter med sproget (U5).
+  const [fejl, setFejl] = useState<BeskedFejl | null>(null);
+  const [anmeldt, setAnmeldt] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [bekraeftForlad, setBekraeftForlad] = useState(false);
   const [visPanel, setVisPanel] = useState(false);
   const [pending, start] = useTransition();
   const bundRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const t = useOrdbog().beskeder;
+  const sprog = useSprog();
 
   // Navne-opslag til afsender-visning i grupper (fra deltager-listen; realtime-
   // beskeder slår op heri, ukendte afsendere falder tilbage til "Ejer").
@@ -158,7 +164,9 @@ export default function SamtaleView({
     setFejl(null);
     start(async () => {
       try {
-        const id = await sendBesked(convId, b, paths);
+        const r = await sendBesked(convId, b, paths);
+        if (!r.ok) return setFejl(r.fejl);
+        const id = r.data;
         setBeskeder((prev) =>
           prev.some((x) => x.id === id)
             ? prev
@@ -178,8 +186,9 @@ export default function SamtaleView({
         setNy('');
         setNyeBilleder([]);
         setUploadKey((k) => k + 1);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke sende.');
+      } catch (e) {
+        console.error(e);
+        setFejl('kunneIkkeSende');
       }
     });
   }
@@ -189,15 +198,14 @@ export default function SamtaleView({
     setFejl(null);
     start(async () => {
       try {
-        if (blokeret) {
-          await fjernBlok(convId, andenPart.id);
-          setBlokeret(false);
-        } else {
-          await blokerBruger(convId, andenPart.id);
-          setBlokeret(true);
-        }
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
+        const r = blokeret
+          ? await fjernBlok(convId, andenPart.id)
+          : await blokerBruger(convId, andenPart.id);
+        if (!r.ok) return setFejl(r.fejl);
+        setBlokeret(!blokeret);
+      } catch (e) {
+        console.error(e);
+        setFejl('nogetGikGalt');
       }
     });
   }
@@ -206,11 +214,17 @@ export default function SamtaleView({
     setFejl(null);
     start(async () => {
       try {
-        await sletSamtale(convId);
+        const r = await sletSamtale(convId);
+        if (!r.ok) {
+          setFejl(r.fejl);
+          setBekraeftSlet(false);
+          return;
+        }
         router.push('/beskeder');
         router.refresh();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke slette samtalen.');
+      } catch (e) {
+        console.error(e);
+        setFejl('kunneIkkeSlette');
         setBekraeftSlet(false);
       }
     });
@@ -220,25 +234,36 @@ export default function SamtaleView({
     setFejl(null);
     start(async () => {
       try {
-        await forladGruppe(convId);
+        const r = await forladGruppe(convId);
+        if (!r.ok) {
+          setFejl(r.fejl);
+          setBekraeftForlad(false);
+          return;
+        }
         router.push('/beskeder');
         router.refresh();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke forlade gruppen.');
+      } catch (e) {
+        console.error(e);
+        setFejl('kunneIkkeForlade');
         setBekraeftForlad(false);
       }
     });
   }
 
   function anmeld() {
-    const grund = window.prompt('Hvorfor anmelder du denne samtale? (valgfrit)') ?? '';
+    const svar = window.prompt(t.anmeldPrompt);
+    if (svar === null) return; // fortrudt
     const sidste = beskeder[beskeder.length - 1];
+    setFejl(null);
+    setAnmeldt(false);
     start(async () => {
       try {
-        await anmeldBesked(convId, sidste?.id ?? null, grund);
-        setFejl('Tak - samtalen er anmeldt til moderatorerne.');
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke anmelde.');
+        const r = await anmeldBesked(convId, sidste?.id ?? null, svar);
+        if (!r.ok) return setFejl(r.fejl);
+        setAnmeldt(true);
+      } catch (e) {
+        console.error(e);
+        setFejl('kunneIkkeAnmelde');
       }
     });
   }
@@ -251,7 +276,7 @@ export default function SamtaleView({
           {!erGruppe && (
             <Avatar url={andenPart?.avatar ?? null} navn={andenPart?.navn ?? titel} px={32} />
           )}
-          <span className="truncate text-lg font-semibold text-grafit-900">{titel || 'Ejer'}</span>
+          <span className="truncate text-lg font-semibold text-grafit-900">{titel || t.ejer}</span>
           {erGruppe ? (
             <button
               type="button"
@@ -260,7 +285,7 @@ export default function SamtaleView({
               aria-expanded={visPanel}
             >
               <span aria-hidden="true">👥</span>
-              <span>{deltagere.length} deltagere</span>
+              <span>{t.deltagere(deltagere.length)}</span>
             </button>
           ) : (
             <GarageBadge bil={andenPart?.bil ?? null} />
@@ -272,7 +297,7 @@ export default function SamtaleView({
             disabled={pending}
             onClick={anmeld}
           >
-            Anmeld
+            {t.anmeld}
           </button>
 
           {/* 1:1: blokér. Gruppe: forlad. */}
@@ -284,14 +309,14 @@ export default function SamtaleView({
                   disabled={pending}
                   onClick={forlad}
                 >
-                  Forlad gruppe?
+                  {t.forladSpm}
                 </button>
                 <button
                   className="text-grafit-400 hover:text-grafit-600"
                   disabled={pending}
                   onClick={() => setBekraeftForlad(false)}
                 >
-                  Fortryd
+                  {t.fortryd}
                 </button>
               </span>
             ) : (
@@ -300,7 +325,7 @@ export default function SamtaleView({
                 disabled={pending}
                 onClick={() => setBekraeftForlad(true)}
               >
-                Forlad
+                {t.forlad}
               </button>
             )
           ) : (
@@ -310,7 +335,7 @@ export default function SamtaleView({
                 disabled={pending}
                 onClick={skiftBlok}
               >
-                {blokeret ? 'Fjern blokering' : 'Blokér'}
+                {blokeret ? t.fjernBlokering : t.bloker}
               </button>
               {bekraeftSlet ? (
                 <span className="flex items-center gap-2">
@@ -319,14 +344,14 @@ export default function SamtaleView({
                     disabled={pending}
                     onClick={slet}
                   >
-                    Slet samtale?
+                    {t.sletSpm}
                   </button>
                   <button
                     className="text-grafit-400 hover:text-grafit-600"
                     disabled={pending}
                     onClick={() => setBekraeftSlet(false)}
                   >
-                    Fortryd
+                    {t.fortryd}
                   </button>
                 </span>
               ) : (
@@ -335,7 +360,7 @@ export default function SamtaleView({
                   disabled={pending}
                   onClick={() => setBekraeftSlet(true)}
                 >
-                  Slet
+                  {t.slet}
                 </button>
               )}
             </>
@@ -358,7 +383,7 @@ export default function SamtaleView({
       <div className="min-h-[240px] space-y-2 py-4">
         {beskeder.length === 0 ? (
           <p className="py-10 text-center text-sm text-grafit-400">
-            Ingen beskeder endnu. Skriv den første.
+            {t.ingenBeskederSkriv}
           </p>
         ) : (
           beskeder.map((m, i) => {
@@ -374,7 +399,7 @@ export default function SamtaleView({
                   {visNavn && (
                     <div className="flex items-center gap-1.5 pl-1 text-[11px] font-medium text-grafit-500">
                       <Avatar url={m.senderAvatar} navn={m.senderNavn} px={18} />
-                      {m.senderNavn || 'Ejer'}
+                      {m.senderNavn || t.ejer}
                     </div>
                   )}
                   {harTekst && (
@@ -390,13 +415,13 @@ export default function SamtaleView({
                   )}
                   {m.billeder.length > 0 && (
                     <div className={min ? 'flex justify-end' : 'flex justify-start'}>
-                      <BilledeGalleri billeder={m.billeder} alt="Besked-billede" />
+                      <BilledeGalleri billeder={m.billeder} alt={t.billedeAlt} />
                     </div>
                   )}
                   <div
                     className={`mt-0.5 text-[11px] text-grafit-400 ${min ? 'text-right' : 'text-left'}`}
                   >
-                    {relativTid(m.createdAt)}
+                    {relativTid(m.createdAt, sprog)}
                   </div>
                 </div>
               </div>
@@ -409,7 +434,7 @@ export default function SamtaleView({
       {/* Composer */}
       {blokeret ? (
         <div className="rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-600">
-          Du har blokeret denne bruger. Fjern blokeringen for at skrive igen.
+          {t.blokeretInfo}
         </div>
       ) : (
         <div className="space-y-2">
@@ -417,7 +442,7 @@ export default function SamtaleView({
             className="input min-h-[72px]"
             value={ny}
             onChange={(e) => setNy(e.target.value)}
-            placeholder="Skriv en besked…"
+            placeholder={t.skrivPladsholder}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -438,14 +463,15 @@ export default function SamtaleView({
               disabled={pending || (!ny.trim() && nyeBilleder.length === 0)}
               onClick={send}
             >
-              Send
+              {t.send}
             </button>
-            <span className="text-xs text-grafit-400">⌘/Ctrl + Enter sender</span>
+            <span className="text-xs text-grafit-400">{t.sendGenvej}</span>
           </div>
         </div>
       )}
 
-      {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
+      {fejl && <p className="mt-2 text-sm text-kobber-700">{t.fejl[fejl]}</p>}
+      {anmeldt && !fejl && <p className="mt-2 text-sm text-grafit-600">{t.anmeldt}</p>}
     </div>
   );
 }

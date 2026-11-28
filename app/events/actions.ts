@@ -5,6 +5,20 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator } from '@/lib/admin';
 import { sendMailBcc } from '@/lib/email';
 import { SITE } from '@/lib/config';
+import { validerEvent, type EventFejl, type OpdateringGrund } from '@/lib/events-fejl';
+
+// U5: fejl gives tilbage som NØGLER (lib/events-fejl.ts) - aldrig som tekst eller
+// rå DB-fejl. Klienten slår teksten op på læserens sprog ved render.
+export type EventSvar<T = undefined> = { ok: true; data: T } | { ok: false; fejl: EventFejl };
+
+function nej(fejl: EventFejl): { ok: false; fejl: EventFejl } {
+  return { ok: false, fejl };
+}
+
+function dbNej(hvor: string, error: { message?: string } | null | undefined, fejl: EventFejl) {
+  console.error(`[events] ${hvor}:`, error?.message);
+  return nej(fejl);
+}
 
 function slugify(s: string): string {
   const base = s
@@ -20,9 +34,7 @@ function slugify(s: string): string {
   return base || 'event';
 }
 
-async function kraevMod() {
-  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
-}
+const erMod = erModerator;
 
 type EventInput = {
   title: string;
@@ -32,14 +44,16 @@ type EventInput = {
   endsAt?: string | null; // ISO
 };
 
-export async function opretEvent(input: EventInput): Promise<string> {
-  await kraevMod();
+export async function opretEvent(input: EventInput): Promise<EventSvar<string>> {
+  if (!(await erMod())) return nej('kunModerator');
+  const ugyldig = validerEvent(input);
+  if (ugyldig) return nej(ugyldig);
   const sb = supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
+  if (!user) return nej('kunModerator');
   const t = input.title.trim();
-  if (t.length < 3) throw new Error('Giv eventet en sigende titel.');
   const slug = `${slugify(t)}-${Math.random().toString(36).slice(2, 7)}`;
   const { data, error } = await sb
     .from('events')
@@ -50,19 +64,20 @@ export async function opretEvent(input: EventInput): Promise<string> {
       location: input.location?.trim() || null,
       starts_at: input.startsAt || null,
       ends_at: input.endsAt || null,
-      created_by: user!.id,
+      created_by: user.id,
     })
     .select('slug')
     .single();
-  if (error || !data) throw new Error(error?.message ?? 'Kunne ikke oprette eventet.');
+  if (error || !data) return dbNej('opret', error, 'kunneIkkeOprette');
   revalidatePath('/events');
-  return `/events/${data.slug}`;
+  return { ok: true, data: `/events/${data.slug}` };
 }
 
-export async function retEvent(id: string, slug: string, input: EventInput): Promise<void> {
-  await kraevMod();
+export async function retEvent(id: string, slug: string, input: EventInput): Promise<EventSvar> {
+  if (!(await erMod())) return nej('kunModerator');
+  const ugyldig = validerEvent(input);
+  if (ugyldig) return nej(ugyldig);
   const t = input.title.trim();
-  if (t.length < 3) throw new Error('Giv eventet en sigende titel.');
   const sb = supabaseServer();
   const { error } = await sb
     .from('events')
@@ -74,60 +89,65 @@ export async function retEvent(id: string, slug: string, input: EventInput): Pro
       ends_at: input.endsAt || null,
     })
     .eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) return dbNej('ret', error, 'kunneIkkeGemme');
   revalidatePath('/events');
   revalidatePath(`/events/${slug}`);
+  return { ok: true, data: undefined };
 }
 
-export async function aflysEvent(id: string, slug: string, vaerd: boolean): Promise<void> {
-  await kraevMod();
+export async function aflysEvent(id: string, slug: string, vaerd: boolean): Promise<EventSvar> {
+  if (!(await erMod())) return nej('kunModerator');
   const sb = supabaseServer();
   const { error } = await sb.from('events').update({ is_cancelled: vaerd }).eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) return dbNej('aflys', error, 'kunneIkkeAflyse');
   revalidatePath('/events');
   revalidatePath(`/events/${slug}`);
+  return { ok: true, data: undefined };
 }
 
-export async function sletEvent(id: string): Promise<void> {
-  await kraevMod();
+export async function sletEvent(id: string): Promise<EventSvar> {
+  if (!(await erMod())) return nej('kunModerator');
   const sb = supabaseServer();
   const { error } = await sb.from('events').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) return dbNej('slet', error, 'kunneIkkeSlette');
   revalidatePath('/events');
+  return { ok: true, data: undefined };
 }
 
 // --- Tilmelding (brugere) ---
-export async function tilmeld(eventId: string, slug: string, note?: string): Promise<void> {
+export async function tilmeld(eventId: string, slug: string, note?: string): Promise<EventSvar> {
   const sb = supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind for at melde dig til.');
+  if (!user) return nej('logIndTilmeld');
   const { error } = await sb
     .from('event_signups')
     .upsert(
       { event_id: eventId, user_id: user.id, note: note?.trim() || null },
       { onConflict: 'event_id,user_id' },
     );
-  if (error) throw new Error(error.message);
+  if (error) return dbNej('tilmeld', error, 'kunneIkkeTilmelde');
   revalidatePath(`/events/${slug}`);
   revalidatePath('/events');
+  return { ok: true, data: undefined };
 }
 
-export async function afmeld(eventId: string, slug: string): Promise<void> {
+export async function afmeld(eventId: string, slug: string): Promise<EventSvar> {
   const sb = supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind.');
+  if (!user) return nej('logIndTilmeld');
   const { error } = await sb
     .from('event_signups')
     .delete()
     .eq('event_id', eventId)
     .eq('user_id', user.id);
-  if (error) throw new Error(error.message);
+  if (error) return dbNej('afmeld', error, 'kunneIkkeAfmelde');
   revalidatePath(`/events/${slug}`);
   revalidatePath('/events');
+  return { ok: true, data: undefined };
 }
 
 // --- Opdatering til tilmeldte (moderator) ---
@@ -136,21 +156,24 @@ export async function sendOpdatering(
   slug: string,
   title: string,
   body: string,
-): Promise<{ sent: number; info: string }> {
-  await kraevMod();
+): Promise<EventSvar<{ sent: number; grund: OpdateringGrund }>> {
+  if (!(await erMod())) return nej('kunModerator');
   const sb = supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
+  if (!user) return nej('kunModerator');
   const tekst = body.trim();
-  if (!tekst) throw new Error('Skriv en besked.');
+  if (!tekst) return nej('skrivBesked');
 
   const { error } = await sb
     .from('event_updates')
-    .insert({ event_id: eventId, body: tekst, created_by: user!.id });
-  if (error) throw new Error(error.message);
+    .insert({ event_id: eventId, body: tekst, created_by: user.id });
+  if (error) return dbNej('opdatering', error, 'kunneIkkeSende');
 
-  // Hent de tilmeldtes emails (security-definer RPC, moderator-gated) og mail dem.
+  // Hent de tilmeldtes emails. NB: selve mailen er stadig DANSK for alle (U8:
+  // kræver at RPC'en også giver modtagerens sprog, så der kan sendes pr.
+  // sprog-gruppe). `info` er teknisk diagnose til serverloggen, ikke UI. (security-definer RPC, moderator-gated) og mail dem.
   let sent = 0;
   let info = '';
   try {
@@ -165,15 +188,16 @@ export async function sendOpdatering(
         .map((x) => (typeof x === 'string' ? x : x?.event_deltager_emails ?? x?.email))
         .filter((m: any) => typeof m === 'string' && m.includes('@'));
       if (liste.length === 0) {
-        info = 'ingen tilmeldte med email';
+        info = 'ingen tilmeldte med email'; // i18n-ok (log)
       } else {
         const link = `https://${SITE.domain}/events/${slug}`;
+        // i18n-ok (U8): event-mailen er dansk indtil U8.
         const html =
-          `<p>Der er en ny opdatering til <strong>${escapeHtml(title)}</strong>:</p>` +
-          `<p style="white-space:pre-line">${escapeHtml(tekst)}</p>` +
-          `<p><a href="${link}">Se eventet på ${SITE.domain}</a></p>` +
-          `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${SITE.name}.</p>`;
-        const res = await sendMailBcc(liste, `Opdatering: ${title} - ${SITE.name}`, html);
+          `<p>Der er en ny opdatering til <strong>${escapeHtml(title)}</strong>:</p>` + // i18n-ok (U8)
+          `<p style="white-space:pre-line">${escapeHtml(tekst)}</p>` + // i18n-ok (U8)
+          `<p><a href="${link}">Se eventet på ${SITE.domain}</a></p>` + // i18n-ok (U8)
+          `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${SITE.name}.</p>`; // i18n-ok (U8)
+        const res = await sendMailBcc(liste, `Opdatering: ${title} - ${SITE.name}`, html); // i18n-ok (U8)
         sent = res.sent;
         info = res.info;
       }
@@ -183,7 +207,12 @@ export async function sendOpdatering(
   }
 
   revalidatePath(`/events/${slug}`);
-  return { sent, info };
+  if (sent > 0) return { ok: true, data: { sent, grund: 'ok' } };
+  if (info === 'ingen tilmeldte med email' || info === 'ingen gyldige modtager-emails') { // i18n-ok
+    return { ok: true, data: { sent: 0, grund: 'ingenTilmeldte' } };
+  }
+  console.error('[events] opdaterings-mail:', info);
+  return { ok: true, data: { sent: 0, grund: 'mailFejl' } };
 }
 
 function escapeHtml(s: string): string {

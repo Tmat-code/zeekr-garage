@@ -413,5 +413,78 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   }
 }
 
+// --- U5: beskeder + events ---
+{
+  async function hent(rel, navn) {
+    const kilde = fs.readFileSync(path.join(ROD, rel), 'utf8');
+    const fil = path.join(os.tmpdir(), `zg-${navn}-${process.pid}.mjs`);
+    fs.writeFileSync(
+      fil,
+      ts.transpileModule(kilde, {
+        compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+      }).outputText,
+    );
+    const m = await import(fil);
+    fs.rmSync(fil, { force: true });
+    return m;
+  }
+  const B = await hent('lib/beskeder-fejl.ts', 'beskeder-fejl');
+  const E = await hent('lib/events-fejl.ts', 'events-fejl');
+
+  // Nøgle-listerne == ordbogens fejl-namespaces på alle sprog.
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    lig(`U5 ${navn}: beskeder.fejl == BESKED_FEJL`, Object.keys(o.beskeder.fejl).sort(), [...B.BESKED_FEJL].sort());
+    lig(`U5 ${navn}: events.fejl == EVENT_FEJL`, Object.keys(o.events.fejl).sort(), [...E.EVENT_FEJL].sort());
+  }
+
+  // De rigtige raise exception-tekster fra migrationerne -> nøgle.
+  const sql = ['supabase/migrations/20261122120000_beskeder.sql', 'supabase/migrations/20261123180000_gruppe_samtaler.sql']
+    .map((f) => fs.readFileSync(path.join(ROD, f), 'utf8'))
+    .join('\n');
+  const raises = [...new Set([...sql.matchAll(/raise exception '([^']+)'/g)].map((m) => m[1]))];
+  lig('U5 fandt RPC-fejltekster i SQL', raises.length >= 12, true);
+  lig('U5 alle RPC-fejltekster genkendes', raises.filter((r) => B.beskedFejlFraDb(r) === null), []);
+  const F = B.beskedFejlFraDb;
+  lig('U5 blokeret', [F('Samtale ikke mulig (blokeret).'), F('Kan ikke tilfoeje (blokeret).'), F('Samtale ikke mulig (en af deltagerne er blokeret).')], ['blokeret', 'blokeret', 'blokeret']);
+  lig('U5 RLS -> blokeret', F('new row violates row-level security policy for table "messages"'), 'blokeret');
+  lig('U5 for mange', F('For mange deltagere i gruppen (maks 50).'), 'forMange');
+  lig('U5 mindst to', F('En gruppe kraever mindst to andre deltagere.'), 'mindstTo');
+  lig('U5 findes ikke', [F('Brugeren findes ikke.'), F('En eller flere brugere findes ikke.')], ['brugerFindesIkke', 'brugerFindesIkke']);
+  lig('U5 kun opretter', F('Kun gruppens opretter kan omdoebe gruppen.'), 'kunOpretter');
+  lig('U5 dig selv vs. forlad', [F('Du kan ikke skrive til dig selv.'), F('Brug "Forlad gruppe" for at fjerne dig selv.')], ['digSelv', 'brugForlad']);
+  lig('U5 log ind', [F('Log ind.'), F('Log ind for at skrive beskeder.')], ['logInd', 'logInd']);
+  lig('U5 ukendt/tom -> null', [F('duplicate key value'), F(''), F(null), F(undefined)], [null, null, null, null]);
+  lig('U5 erBeskedFejl', [B.erBeskedFejl('blokeret'), B.erBeskedFejl('Blokeret'), B.erBeskedFejl(3)], [true, false, false]);
+
+  // Event-validering (deles af formular + server).
+  const V = E.validerEvent;
+  lig('U5 titel for kort', [V({ title: '  ab ' }), V({ title: 'abc' })], ['titelForKort', null]);
+  lig('U5 slut før start', V({ title: 'Træf', startsAt: '2026-12-01T10:00:00Z', endsAt: '2026-12-01T09:00:00Z' }), 'slutFoerStart');
+  lig('U5 slut = start ok', V({ title: 'Træf', startsAt: '2026-12-01T10:00:00Z', endsAt: '2026-12-01T10:00:00Z' }), null);
+  lig('U5 kun slut / kun start ok', [V({ title: 'Træf', endsAt: '2026-12-01T09:00:00Z' }), V({ title: 'Træf', startsAt: '2026-12-01T09:00:00Z', endsAt: null })], [null, null]);
+  lig('U5 erEventFejl', [E.erEventFejl('slutFoerStart'), E.erEventFejl('x')], [true, false]);
+
+  // Flertal + parametre.
+  lig('U5 deltagere', [da.beskeder.deltagere(1), da.beskeder.deltagere(3), sv.beskeder.deltagere(2), en.beskeder.deltagere(1), en.beskeder.deltagere(4)], ['1 deltager', '3 deltagere', '2 deltagare', '1 participant', '4 participants']);
+  lig('U5 tilmeldte', [da.events.tilmeldte(1), da.events.tilmeldte(0), sv.events.tilmeldte(1), sv.events.tilmeldte(5), en.events.tilmeldte(2)], ['1 tilmeldt', '0 tilmeldte', '1 anmäld', '5 anmälda', '2 signed up']);
+  lig('U5 var tilmeldt', [en.events.tilmeld.varTilmeldt(1), en.events.tilmeld.varTilmeldt(3), sv.events.tilmeld.varTilmeldt(3)], ['1 was signed up.', '3 were signed up.', '3 var anmälda.']);
+  lig('U5 mailet', [da.events.admin.mailet(1), en.events.admin.mailet(2)], ['Opdateringen er slået op og mailet til 1 tilmeldt.', 'The update is posted and emailed to 2 people signed up.']);
+  lig('U5 opret gruppe / skriv til', [sv.beskeder.opretGruppe(3), en.beskeder.skrivTil('Ida')], ['Skapa grupp (3)', 'Write to Ida']);
+  lig('U5 tom indbakke bruger knap-teksten', [da, sv, en].every((o) => o.beskeder.tomIndbakke(o.beskeder.nyBesked).includes(`"${o.beskeder.nyBesked}"`)), true);
+  lig('U5 ingen match', sv.beskeder.ingenMatch('Bo'), 'Inga ägare matchar "Bo". Prova ett annat namn.');
+
+  // Ingen lange tankestreger i U5's namespaces.
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    const tekst = JSON.stringify([o.beskeder, o.events]) + [o.beskeder.tomIndbakke('x'), o.events.admin.mailet(2)].join();
+    lig(`U5 ${navn}: ingen lange tankestreger`, /[–—]/.test(tekst), false);
+  }
+
+  // U5-filerne rummer ikke længere rå DB-fejl til UI'et (error.message videre).
+  for (const f of ['app/beskeder/actions.ts', 'app/events/actions.ts']) {
+    const k = fs.readFileSync(path.join(ROD, f), 'utf8');
+    lig(`U5 ${f}: ingen throw new Error(error.message)`, /throw new Error\((error|ie|e)\??\.message/.test(k), false);
+  }
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

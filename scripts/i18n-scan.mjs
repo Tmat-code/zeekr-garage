@@ -141,6 +141,33 @@ const SKIVER = {
     'lib/mail-skabelon.ts',
     'lib/notifikationer.ts',
   ],
+  // U5: beskeder + events. Bevidst UDE: event-MAILEN til de tilmeldte (dansk
+  // indtil U8 - markeret i18n-ok i app/events/actions.ts), notifikations-
+  // teksterne fra DB (U8), lib/ics.ts (kalender-fil, ikke UI). HTTP-statustekster
+  // i route-handlerne er markeret i18n-ok.
+  U5: [
+    'app/beskeder/page.tsx',
+    'app/beskeder/ny/page.tsx',
+    'app/beskeder/[id]/page.tsx',
+    'app/beskeder/actions.ts',
+    'app/beskeder/billede/[...sti]/route.ts',
+    'app/events/page.tsx',
+    'app/events/actions.ts',
+    'app/events/ny/page.tsx',
+    'app/events/[slug]/page.tsx',
+    'app/events/[slug]/rediger/page.tsx',
+    'app/events/[slug]/ics/route.ts',
+    'components/beskeder/SamtaleView.tsx',
+    'components/beskeder/NyBeskedView.tsx',
+    'components/beskeder/GruppePanel.tsx',
+    'components/beskeder/IndbakkeSletKnap.tsx',
+    'components/events/EventForm.tsx',
+    'components/events/EventAdmin.tsx',
+    'components/events/TilmeldKnap.tsx',
+    'lib/beskeder.ts',
+    'lib/beskeder-fejl.ts',
+    'lib/events-fejl.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

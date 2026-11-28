@@ -3,17 +3,20 @@ import { notFound } from 'next/navigation';
 import { adminKontekst } from '@/lib/admin';
 import { getSamtale } from '@/lib/beskeder';
 import SamtaleView from '@/components/beskeder/SamtaleView';
+import { hentOrdbog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const s = await getSamtale(params.id);
-  if (!s) return { title: 'Besked' };
-  return { title: s.erGruppe ? s.titel : `Besked med ${s.andenPart?.navn ?? 'ejer'}` };
+  const [s, o] = await Promise.all([getSamtale(params.id), hentOrdbog()]);
+  const t = o.beskeder;
+  if (!s) return { title: t.metaBesked };
+  return { title: s.erGruppe ? s.titel : t.metaBeskedMed(s.andenPart?.navn ?? t.ejer) };
 }
 
 export default async function SamtaleSide({ params }: { params: { id: string } }) {
   const { user } = await adminKontekst();
+  const o = await hentOrdbog();
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
@@ -21,9 +24,9 @@ export default async function SamtaleSide({ params }: { params: { id: string } }
           href={`/login?naeste=/beskeder/${params.id}`}
           className="font-medium text-kobber-700 hover:underline"
         >
-          Log ind
+          {o.faellesFejl.logInd}
         </Link>{' '}
-        for at se samtalen.
+        {o.beskeder.logIndSamtale}
       </div>
     );
   }
@@ -34,7 +37,7 @@ export default async function SamtaleSide({ params }: { params: { id: string } }
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <Link href="/beskeder" className="text-sm text-grafit-500 hover:text-kobber-700">
-        ← Alle beskeder
+        {o.beskeder.tilbageAlle}
       </Link>
       <SamtaleView
         convId={samtale.id}

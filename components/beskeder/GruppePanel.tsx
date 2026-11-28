@@ -9,7 +9,10 @@ import {
   tilfoejDeltager,
   fjernDeltager,
   omdoebGruppe,
+  type BeskedSvar,
 } from '@/app/beskeder/actions';
+import { useOrdbog } from '@/lib/i18n/klient';
+import type { BeskedFejl } from '@/lib/beskeder-fejl';
 
 type Props = {
   convId: string;
@@ -30,7 +33,8 @@ export default function GruppePanel({
   deltagere,
 }: Props) {
   const router = useRouter();
-  const [fejl, setFejl] = useState<string | null>(null);
+  const t = useOrdbog().beskeder;
+  const [fejl, setFejl] = useState<BeskedFejl | null>(null); // nøgle (U5)
   const [pending, start] = useTransition();
 
   // Omdøb
@@ -59,9 +63,10 @@ export default function GruppePanel({
         if (seqRef.current !== minSeq) return;
         // Udelad dem der allerede er med.
         setResultater(r.filter((p) => !medlemsIds.has(p.id)));
-      } catch (e: any) {
+      } catch (e) {
         if (seqRef.current !== minSeq) return;
-        setFejl(e?.message ?? 'Søgningen fejlede.');
+        console.error(e);
+        setFejl('soegning');
       } finally {
         if (seqRef.current === minSeq) setSoeger(false);
       }
@@ -70,14 +75,17 @@ export default function GruppePanel({
     // medlemsIds afledes af deltagere; q driver søgningen
   }, [q, erOpretter, deltagere]);
 
-  function gem(fn: () => Promise<void>) {
+  function gem(fn: () => Promise<BeskedSvar>, efter?: () => void) {
     setFejl(null);
     start(async () => {
       try {
-        await fn();
+        const r = await fn();
+        if (!r.ok) return setFejl(r.fejl);
+        efter?.();
         router.refresh();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
+      } catch (e) {
+        console.error(e);
+        setFejl('kunneIkkeGemme');
       }
     });
   }
@@ -88,7 +96,7 @@ export default function GruppePanel({
       {erOpretter && (
         <div className="mb-4">
           <label htmlFor="omdoeb" className="text-xs font-medium text-grafit-600">
-            Gruppenavn
+            {t.gruppenavn}
           </label>
           <div className="mt-1 flex gap-2">
             <input
@@ -96,7 +104,7 @@ export default function GruppePanel({
               className="input !py-2 text-sm"
               value={titel}
               onChange={(e) => setTitel(e.target.value)}
-              placeholder="Uden navn: opkaldt efter deltagerne"
+              placeholder={t.omdoebPladsholder}
               maxLength={80}
               autoComplete="off"
             />
@@ -106,14 +114,14 @@ export default function GruppePanel({
               disabled={pending || titel.trim() === (eksplicitTitel ?? '').trim()}
               onClick={() => gem(() => omdoebGruppe(convId, titel))}
             >
-              Gem
+              {t.gem}
             </button>
           </div>
         </div>
       )}
 
       {/* Medlemsliste */}
-      <p className="text-xs font-medium text-grafit-600">Deltagere ({deltagere.length})</p>
+      <p className="text-xs font-medium text-grafit-600">{t.deltagereOverskrift(deltagere.length)}</p>
       <ul className="mt-2 space-y-1.5">
         {deltagere.map((d) => (
           <li
@@ -121,8 +129,8 @@ export default function GruppePanel({
             className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"
           >
             <span className="min-w-0 flex-1 truncate font-medium text-grafit-800">
-              {d.navn || 'Ejer'}
-              {d.id === megId && <span className="ml-1 text-grafit-400">(dig)</span>}
+              {d.navn || t.ejer}
+              {d.id === megId && <span className="ml-1 text-grafit-400">{t.dig}</span>}
             </span>
             <GarageBadge bil={d.bil} />
             {erOpretter && d.id !== megId && (
@@ -132,7 +140,7 @@ export default function GruppePanel({
                 disabled={pending}
                 onClick={() => gem(() => fjernDeltager(convId, d.id))}
               >
-                Fjern
+                {t.fjern}
               </button>
             )}
           </li>
@@ -143,19 +151,19 @@ export default function GruppePanel({
       {erOpretter && (
         <div className="mt-4">
           <label htmlFor="tilfoej" className="text-xs font-medium text-grafit-600">
-            Tilføj en ejer
+            {t.tilfoejEjer}
           </label>
           <input
             id="tilfoej"
             className="input mt-1 !py-2 text-sm"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Søg på visningsnavn…"
+            placeholder={t.soegPladsholder}
             autoComplete="off"
           />
           <div className="mt-2 space-y-1.5">
             {q.trim().length >= 2 && soeger && resultater.length === 0 && (
-              <p className="px-1 text-xs text-grafit-400">Søger…</p>
+              <p className="px-1 text-xs text-grafit-400">{t.soeger}</p>
             )}
             {resultater.map((p) => (
               <button
@@ -163,26 +171,28 @@ export default function GruppePanel({
                 type="button"
                 disabled={pending}
                 onClick={() =>
-                  gem(async () => {
-                    await tilfoejDeltager(convId, p.id);
-                    setQ('');
-                    setResultater([]);
-                  })
+                  gem(
+                    () => tilfoejDeltager(convId, p.id),
+                    () => {
+                      setQ('');
+                      setResultater([]);
+                    },
+                  )
                 }
                 className="flex w-full items-center gap-2 rounded-lg border border-grafit-200 bg-white px-3 py-2 text-left text-sm hover:border-kobber-300 disabled:opacity-60"
               >
                 <span className="min-w-0 flex-1 truncate font-medium text-grafit-800">
-                  {p.navn || 'Ejer'}
+                  {p.navn || t.ejer}
                 </span>
                 <GarageBadge bil={p.bil} />
-                <span className="shrink-0 text-xs text-kobber-700">Tilføj →</span>
+                <span className="shrink-0 text-xs text-kobber-700">{t.tilfoej}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {fejl && <p className="mt-3 text-sm text-kobber-700">{fejl}</p>}
+      {fejl && <p className="mt-3 text-sm text-kobber-700">{t.fejl[fejl]}</p>}
     </div>
   );
 }

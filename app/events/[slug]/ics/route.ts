@@ -25,12 +25,12 @@ export async function GET(
     .limit(1)
     .maybeSingle();
 
-  if (!ev) return new NextResponse('Event findes ikke', { status: 404 });
+  if (!ev) return new NextResponse('Event findes ikke', { status: 404 }); // i18n-ok (HTTP-statustekst, ikke UI)
 
   // Uden starttid kan et VEVENT ikke bygges (ingen DTSTART) - eventet er endnu
   // ikke dato-sat. Knappen vises foerst naar der er en dato (se event-siden).
   if (!ev.starts_at) {
-    return new NextResponse('Eventet har endnu ingen dato', { status: 404 });
+    return new NextResponse('Eventet har endnu ingen dato', { status: 404 }); // i18n-ok (HTTP-statustekst, ikke UI)
   }
 
   const eventUrl = `${publicOrigin(req)}/events/${ev.slug}`;
@@ -39,8 +39,8 @@ export async function GET(
   return new NextResponse(body, {
     status: 200,
     headers: {
-      'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${ev.slug}.ics"`,
+      'Content-Type': 'text/calendar; charset=utf-8', // i18n-ok (HTTP-header)
+      'Content-Disposition': `attachment; filename="${ev.slug}.ics"`, // i18n-ok (HTTP-header)
       'Cache-Control': 'no-store',
     },
   });

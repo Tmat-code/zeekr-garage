@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sletSamtale } from '@/app/beskeder/actions';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 // Slet-for-mig på en indbakke-række. Inline bekræft (ingen native dialog), og
 // router.refresh() efter, så den skjulte samtale filtreres væk i getSamtaler.
@@ -10,11 +11,13 @@ export default function IndbakkeSletKnap({ convId }: { convId: string }) {
   const [bekraeft, setBekraeft] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useOrdbog().beskeder;
 
   function slet() {
     start(async () => {
       try {
-        await sletSamtale(convId);
+        const r = await sletSamtale(convId);
+        if (!r.ok) return setBekraeft(false);
         router.refresh();
       } catch {
         setBekraeft(false);
@@ -30,14 +33,14 @@ export default function IndbakkeSletKnap({ convId }: { convId: string }) {
           disabled={pending}
           onClick={slet}
         >
-          Slet?
+          {t.sletKortSpm}
         </button>
         <button
           className="text-grafit-400 hover:text-grafit-600"
           disabled={pending}
           onClick={() => setBekraeft(false)}
         >
-          Fortryd
+          {t.fortryd}
         </button>
       </div>
     );
@@ -48,9 +51,9 @@ export default function IndbakkeSletKnap({ convId }: { convId: string }) {
       className="shrink-0 self-center px-1 text-xs text-grafit-400 hover:text-kobber-700"
       disabled={pending}
       onClick={() => setBekraeft(true)}
-      aria-label="Slet samtale"
+      aria-label={t.sletAria}
     >
-      Slet
+      {t.slet}
     </button>
   );
 }

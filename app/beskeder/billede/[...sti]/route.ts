@@ -26,7 +26,7 @@ export async function GET(
 ) {
   const path = (params.sti ?? []).map((s) => decodeURIComponent(s)).join('/');
   if (!PATH_RE.test(path)) {
-    return new NextResponse('Ugyldig sti', { status: 400 });
+    return new NextResponse('Ugyldig sti', { status: 400 }); // i18n-ok (HTTP-statustekst, ikke UI)
   }
 
   // 1) Logget ind?
@@ -34,7 +34,7 @@ export async function GET(
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) return new NextResponse('Log ind', { status: 401 });
+  if (!user) return new NextResponse('Log ind', { status: 401 }); // i18n-ok (HTTP-statustekst, ikke UI)
 
   // 2) Adgang: uploader (eget path-praefiks) ELLER deltager i samtalen.
   const erUploader = path.startsWith(`${user.id}/`);
@@ -47,7 +47,7 @@ export async function GET(
       .eq('path', path);
     const msgIds = (imgs ?? []).map((r: any) => r.message_id).filter(Boolean);
     if (msgIds.length === 0) {
-      return new NextResponse('Ikke fundet', { status: 404 });
+      return new NextResponse('Ikke fundet', { status: 404 }); // i18n-ok (HTTP-statustekst, ikke UI)
     }
     const { data: msgs } = await svc
       .from('messages')
@@ -56,7 +56,7 @@ export async function GET(
     const convIds = [
       ...new Set((msgs ?? []).map((m: any) => m.conversation_id).filter(Boolean)),
     ];
-    if (convIds.length === 0) return new NextResponse('Ingen adgang', { status: 403 });
+    if (convIds.length === 0) return new NextResponse('Ingen adgang', { status: 403 }); // i18n-ok (HTTP-statustekst, ikke UI)
     const { data: part } = await svc
       .from('conversation_participants')
       .select('user_id')
@@ -64,7 +64,7 @@ export async function GET(
       .eq('user_id', user.id)
       .limit(1);
     if (!part || part.length === 0) {
-      return new NextResponse('Ingen adgang', { status: 403 });
+      return new NextResponse('Ingen adgang', { status: 403 }); // i18n-ok (HTTP-statustekst, ikke UI)
     }
   }
 
@@ -72,7 +72,7 @@ export async function GET(
   const svc = supabaseService();
   const { data, error } = await svc.storage.from(BESKED_BUCKET).download(path);
   if (error || !data) {
-    return new NextResponse('Ikke fundet', { status: 404 });
+    return new NextResponse('Ikke fundet', { status: 404 }); // i18n-ok (HTTP-statustekst, ikke UI)
   }
 
   const type = data.type || 'application/octet-stream';
