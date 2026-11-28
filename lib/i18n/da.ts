@@ -753,9 +753,6 @@ export const da = {
     gemmer: 'Gemmer…',
     gemt: 'Gemt.',
     fjern: 'Fjern',
-    fjernSpoerg: 'Fjern bilen? Dens "mig med" forsvinder også.',
-    fjernJa: 'Ja, fjern',
-    fjernNej: 'Annullér',
     // Profilbillede
     profilbillede: 'Profilbillede',
     arbejder: 'Arbejder…',

@@ -37,9 +37,6 @@ export default function MinGarageForm({
   const [biler, setBiler] = useState<GarageBil[]>(initialCars);
   const [ny, setNy] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
   const [busy, setBusy] = useState(false);
-  // P44: to-trins fjern. Bilens "mig med" forsvinder med den (cascade), så et
-  // fejlklik må ikke kunne slette stemmer i ét hug.
-  const [bekraeftFjern, setBekraeftFjern] = useState<string | null>(null);
   // Noegle, ikke tekst: en synlig fejl skifter med sproget. Raa DB-fejl
   // (RLS/Postgres, engelsk) vises aldrig - de logges i konsollen.
   const [fejlN, setFejl] = useState<Fejl | null>(null);
@@ -111,7 +108,6 @@ export default function MinGarageForm({
   }
 
   async function fjern(carId: string) {
-    setBekraeftFjern(null);
     setFejl(null);
     setBusy(true);
     try {
@@ -120,8 +116,9 @@ export default function MinGarageForm({
         data: { user },
       } = await sb.auth.getUser();
       if (!user) throw new Error('ingen bruger'); // i18n-ok
-      // Bilens bekraeftelser forsvinder med den (cascade) - det er meningen:
-      // fjerner man bilen, taeller den ikke laengere i rapporterne.
+      // P44: bilens "mig med" bliver staaende (car_id -> null, migration
+      // 20261128160000) - en stemme er en reel stemme. Tilfoejer ejeren senere
+      // en bil af samme model, kobles de loese stemmer paa den igen (trigger).
       const { error } = await sb.from('cars').delete().eq('id', carId).eq('owner_id', user.id);
       if (error) throw error;
       await synkPrimaer(sb, user.id);
@@ -146,39 +143,19 @@ export default function MinGarageForm({
             {biler.map((b) => (
               <li
                 key={b.carId}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-grafit-200 bg-white px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-grafit-200 bg-white px-3 py-2"
               >
                 <span className="min-w-0 text-sm text-grafit-800">
                   <span className="font-medium">{b.modelName}</span>
                   {b.variantName && <span className="text-grafit-500"> · {b.variantName}</span>}
                 </span>
-                {bekraeftFjern === b.carId ? (
-                  <span className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-grafit-100 pt-2">
-                    <span className="text-xs text-grafit-600">{g.fjernSpoerg}</span>
-                    <button
-                      onClick={() => fjern(b.carId)}
-                      disabled={busy}
-                      className="btn-ghost !px-2.5 !py-1 text-xs font-semibold text-kobber-700"
-                    >
-                      {g.fjernJa}
-                    </button>
-                    <button
-                      onClick={() => setBekraeftFjern(null)}
-                      disabled={busy}
-                      className="btn-ghost !px-2.5 !py-1 text-xs"
-                    >
-                      {g.fjernNej}
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => setBekraeftFjern(b.carId)}
-                    disabled={busy}
-                    className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs text-kobber-700"
-                  >
-                    {g.fjern}
-                  </button>
-                )}
+                <button
+                  onClick={() => fjern(b.carId)}
+                  disabled={busy}
+                  className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs text-kobber-700"
+                >
+                  {g.fjern}
+                </button>
               </li>
             ))}
           </ul>
