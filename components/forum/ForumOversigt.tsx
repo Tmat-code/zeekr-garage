@@ -2,14 +2,10 @@ import Link from 'next/link';
 import { relativTid } from '@/lib/i18n/format';
 import ModelBadge from '@/components/forum/ModelBadge';
 import type { ForumGruppe } from '@/lib/types';
+import { ordbog, type UiSprog } from '@/lib/i18n';
 
-// Kort undertekst pr. gruppe (Polestar har gruppe-overskrift + undertekst).
-const GRUPPE_TEKST: Record<string, string> = {
-  Velkommen: 'Start her - sig hej og læs husreglerne.',
-  Modellerne: 'Ét forum pr. model - rygraden i fællesskabet.',
-  'Ejer-lounge': 'Livet som ejer: køb, test, billeder.',
-  Teknik: 'Software, opladning, tilbehør og app.',
-};
+// Kort undertekst pr. gruppe (Polestar har gruppe-overskrift + undertekst) -
+// bor i ordbogen (forum.gruppeTekst), keyet på gruppens danske DB-navn.
 
 function KategoriRaekke({
   slug,
@@ -22,6 +18,7 @@ function KategoriRaekke({
   sidstAktiv,
   isLocked,
   ejere,
+  sprog,
 }: {
   slug: string;
   icon: string | null;
@@ -33,7 +30,9 @@ function KategoriRaekke({
   sidstAktiv: string | null;
   isLocked: boolean;
   ejere: number;
+  sprog: UiSprog;
 }) {
+  const f = ordbog(sprog).forum;
   // Social proof paa model-fora: "N ejere" fra Min garage. Vises paa alle
   // skaerme (ogsaa mobil, hvor tal-kolonnerne er skjult), saa model-foraene
   // foeles levende selv uden traade. Skjult naar 0 ejere eller ikke-model.
@@ -58,7 +57,7 @@ function KategoriRaekke({
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold text-grafit-900">{name}</span>
           {isLocked && (
-            <span className="shrink-0 text-xs text-grafit-400" title="Kun moderatorer opretter tråde her">
+            <span className="shrink-0 text-xs text-grafit-400" title={f.kunModeratorerOpretter}>
               🔒
             </span>
           )}
@@ -69,7 +68,7 @@ function KategoriRaekke({
         {visEjere && (
           <div className="mt-1.5">
             <span className="chip bg-kobber-100 text-kobber-800">
-              {ejere} {ejere === 1 ? 'ejer' : 'ejere'}
+              {f.ejere(ejere)}
             </span>
           </div>
         )}
@@ -79,21 +78,21 @@ function KategoriRaekke({
       <div className="hidden shrink-0 items-center gap-6 text-right text-sm sm:flex">
         <div className="w-14">
           <div className="font-semibold tabular-nums text-grafit-800">{traade}</div>
-          <div className="text-xs text-grafit-400">{traade === 1 ? 'tråd' : 'tråde'}</div>
+          <div className="text-xs text-grafit-400">{f.traadeLabel(traade)}</div>
         </div>
         <div className="w-16">
           <div className="font-semibold tabular-nums text-grafit-800">{visninger}</div>
-          <div className="text-xs text-grafit-400">visninger</div>
+          <div className="text-xs text-grafit-400">{f.visningerLabel}</div>
         </div>
         <div className="w-24 text-grafit-500">
-          {sidstAktiv ? relativTid(sidstAktiv) : '-'}
+          {sidstAktiv ? relativTid(sidstAktiv, sprog) : '-'}
         </div>
       </div>
 
       {/* Kompakt tal på mobil */}
       <div className="shrink-0 text-right text-xs text-grafit-400 sm:hidden">
         <div className="font-semibold tabular-nums text-grafit-700">{traade}</div>
-        <div>{sidstAktiv ? relativTid(sidstAktiv) : 'ny'}</div>
+        <div>{sidstAktiv ? relativTid(sidstAktiv, sprog) : f.ny}</div>
       </div>
     </Link>
   );
@@ -102,7 +101,14 @@ function KategoriRaekke({
 // Grupperet kategori-oversigt (ren visning). Tråd-/indhold-søgning lever på
 // /forum/soeg (P4); kategori-filter-boksen er fjernet 23-11 (forvekslet med
 // søgefeltet - rum-listen er kort og grupperet i forvejen).
-export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
+export default function ForumOversigt({
+  grupper,
+  sprog = 'da',
+}: {
+  grupper: ForumGruppe[];
+  sprog?: UiSprog;
+}) {
+  const gruppeTekst = ordbog(sprog).forum.gruppeTekst;
   return (
     <div className="space-y-8">
       {grupper.map((g) => (
@@ -111,8 +117,8 @@ export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
             <h2 className="font-display text-lg font-bold tracking-tight text-grafit-900">
               {g.label}
             </h2>
-            {GRUPPE_TEKST[g.label] && (
-              <p className="text-sm text-grafit-500">{GRUPPE_TEKST[g.label]}</p>
+            {gruppeTekst[g.label] && (
+              <p className="text-sm text-grafit-500">{gruppeTekst[g.label]}</p>
             )}
           </div>
           <div className="divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
@@ -129,6 +135,7 @@ export default function ForumOversigt({ grupper }: { grupper: ForumGruppe[] }) {
                 sidstAktiv={k.sidstAktiv}
                 isLocked={k.isLocked}
                 ejere={k.ejere}
+                sprog={sprog}
               />
             ))}
           </div>

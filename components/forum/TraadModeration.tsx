@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saetFastgjort, saetLaast, modFjernTraad } from '@/app/forum/actions';
 import GrundVaelger from './GrundVaelger';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 export default function TraadModeration({
   threadId,
@@ -21,6 +22,8 @@ export default function TraadModeration({
   isLocked: boolean;
   feedbackUrl?: string;
 }) {
+  const t = useOrdbog();
+  const f = t.forum;
   const router = useRouter();
   const [fejl, setFejl] = useState<string | null>(null);
   const [fjerner, setFjerner] = useState(false);
@@ -32,7 +35,7 @@ export default function TraadModeration({
       try {
         await fn();
       } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
+        setFejl(e?.message ?? t.faellesFejl.nogetGikGalt);
       }
     });
   }
@@ -40,14 +43,14 @@ export default function TraadModeration({
   return (
     <div className="mt-6 rounded-xl border border-dashed border-grafit-300 bg-grafit-50 p-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium text-grafit-500">🔧 Moderering:</span>
+        <span className="font-medium text-grafit-500">{f.moderering}</span>
         {feedbackUrl && (
           <Link
             href={feedbackUrl}
             className="rounded-lg border border-kobber-300 bg-kobber-50 px-2.5 py-1.5 text-sm font-medium text-kobber-700 hover:bg-kobber-100"
-            title="Er det en rigtig fejl? Opret den som struktureret feedback til Zeekr."
+            title={f.opretSomFeedbackTitel}
           >
-            → Opret som feedback
+            {f.opretSomFeedback}
           </Link>
         )}
         <button
@@ -55,21 +58,21 @@ export default function TraadModeration({
           disabled={pending}
           onClick={() => koer(() => saetFastgjort(threadId, kategoriSlug, traadSlug, !isPinned))}
         >
-          {isPinned ? 'Fjern fastgørelse' : '📌 Fastgør'}
+          {isPinned ? f.fjernFastgoerelse : f.fastgoer}
         </button>
         <button
           className="btn-ghost !py-1.5 text-sm"
           disabled={pending}
           onClick={() => koer(() => saetLaast(threadId, kategoriSlug, traadSlug, !isLocked))}
         >
-          {isLocked ? 'Lås op' : '🔒 Lås'}
+          {isLocked ? f.laasOp : f.laas}
         </button>
         <button
           className="btn-ghost !py-1.5 text-sm hover:!border-kobber-600 hover:!text-kobber-700"
           disabled={pending}
           onClick={() => setFjerner((v) => !v)}
         >
-          🗑 Fjern tråd
+          {f.fjernTraad}
         </button>
         {fejl && <span className="text-kobber-700">{fejl}</span>}
       </div>
@@ -78,7 +81,7 @@ export default function TraadModeration({
       {fjerner && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Fjern tråd + giv besked"
+          submitLabel={f.fjernTraadBesked}
           onCancel={() => setFjerner(false)}
           onSubmit={(grund, fritekst) =>
             koer(async () => {

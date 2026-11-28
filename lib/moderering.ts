@@ -2,19 +2,27 @@
 // hvorfor) og af moderator-handlingerne (hvorfor en traad/indlaeg fjernes, eller
 // en bruger advares). Enum-værdierne SKAL matche check'ene i migrationerne
 // (mod_fjern_traad/mod_fjern_indlaeg/mod_advar_bruger + forum_reports).
-export const MOD_GRUNDE = [
-  { value: 'dublet', label: 'Dublet' },
-  { value: 'tone', label: 'Tone / personangreb' },
-  { value: 'off-topic', label: 'Off-topic' },
-  { value: 'spam', label: 'Spam' },
-  { value: 'andet', label: 'Andet' },
-] as const;
+//
+// U2: labels bor i ordbogen (`modGrund`). `label` her er den danske, så
+// endnu-ikke-oversatte kaldere (Værkstedet, U6) opfører sig som før; oversatte
+// flader bruger `grundLabel(v, sprog)`.
 
-export type ModGrund = (typeof MOD_GRUNDE)[number]['value'];
+import { da } from '@/lib/i18n/da';
+import { ordbog, type UiSprog } from '@/lib/i18n';
 
-export const MOD_GRUND_VALUES: string[] = MOD_GRUNDE.map((g) => g.value);
+const VAERDIER = ['dublet', 'tone', 'off-topic', 'spam', 'andet'] as const;
 
-export function grundLabel(v: string | null | undefined): string {
-  if (!v) return 'ukendt';
-  return MOD_GRUNDE.find((g) => g.value === v)?.label ?? v;
+export type ModGrund = (typeof VAERDIER)[number];
+
+export const MOD_GRUNDE: readonly { value: ModGrund; label: string }[] = VAERDIER.map((value) => ({
+  value,
+  label: da.modGrund[value],
+}));
+
+export const MOD_GRUND_VALUES: string[] = [...VAERDIER];
+
+export function grundLabel(v: string | null | undefined, sprog: UiSprog = 'da'): string {
+  const t = ordbog(sprog);
+  if (!v) return t.modGrundUkendt;
+  return (t.modGrund as Record<string, string>)[v] ?? v;
 }

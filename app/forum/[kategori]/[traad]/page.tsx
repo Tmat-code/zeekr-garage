@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getTraad, getIndlaeg } from '@/lib/forum';
-import { hentSprog } from '@/lib/i18n/server';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
+import { DATO_LOCALE } from '@/lib/i18n/format';
+import type { UiSprog } from '@/lib/i18n';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import { modelBadge } from '@/lib/model-badge';
 import ForumTraad from '@/components/forum/ForumTraad';
@@ -10,8 +12,8 @@ import VisningPing from '@/components/forum/VisningPing';
 
 export const dynamic = 'force-dynamic';
 
-function daDato(iso: string): string {
-  return new Date(iso).toLocaleDateString('da-DK', {
+function dato(iso: string, sprog: UiSprog): string {
+  return new Date(iso).toLocaleDateString(DATO_LOCALE[sprog], {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -24,7 +26,7 @@ export async function generateMetadata({
   params: { kategori: string; traad: string };
 }) {
   const t = await getTraad(params.traad);
-  return { title: t ? t.title : 'Tråd' };
+  return { title: t ? t.title : (await hentOrdbog()).forum.traadMetaFallback };
 }
 
 export default async function TraadSide({
@@ -44,6 +46,7 @@ export default async function TraadSide({
   // Accept-Language > da), saa knap og UI altid er enige. Styrer hvilke indlaeg
   // der faar en "Oversaet"-knap.
   const minSprog = await hentSprog();
+  const f = (await hentOrdbog()).forum;
 
   // Bro til Feedback: prefill /meld med trådens titel + åbnings-indlæg (kortet,
   // så URL'en ikke bliver for lang). Kun relevant for moderatorer (triage).
@@ -60,7 +63,7 @@ export default async function TraadSide({
       {/* Brødkrumme */}
       <nav className="flex flex-wrap items-center gap-1.5 text-sm text-grafit-500">
         <Link href="/forum" className="hover:text-kobber-700">
-          Forum
+          {f.titel}
         </Link>
         <span aria-hidden="true">/</span>
         <Link href={`/forum/${traad.kategori.slug}`} className="hover:text-kobber-700">
@@ -77,13 +80,12 @@ export default async function TraadSide({
 
       {/* Titel + meta */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {traad.isPinned && <span className="chip bg-kobber-100 text-kobber-800">📌 Fastgjort</span>}
-        {traad.isLocked && <span className="chip bg-grafit-100 text-grafit-600">🔒 Låst</span>}
+        {traad.isPinned && <span className="chip bg-kobber-100 text-kobber-800">{f.fastgjortChip}</span>}
+        {traad.isLocked && <span className="chip bg-grafit-100 text-grafit-600">{f.laastChip}</span>}
       </div>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-grafit-900">{traad.title}</h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Oprettet {daDato(traad.createdAt)} · {traad.replyCount}{' '}
-        {traad.replyCount === 1 ? 'svar' : 'svar'} · {traad.viewCount} visninger
+        {f.traadMeta(dato(traad.createdAt, minSprog), traad.replyCount, traad.viewCount)}
       </p>
 
       {erModerator && (

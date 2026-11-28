@@ -9,24 +9,28 @@ import ModelBadge from '@/components/forum/ModelBadge';
 import GarageBadge from '@/components/forum/GarageBadge';
 import Avatar from '@/components/forum/Avatar';
 import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { kategori: string } }) {
   const kat = await getKategori(params.kategori);
-  return { title: kat ? kat.name : 'Forum' };
+  return { title: kat ? kat.name : (await hentOrdbog()).forum.metaTitel };
 }
 
 export default async function KategoriSide({ params }: { params: { kategori: string } }) {
   const kat = await getKategori(params.kategori);
   if (!kat) notFound();
 
-  const [traade, ctx, ejerTal, otaHistorik] = await Promise.all([
+  const [traade, ctx, ejerTal, otaHistorik, sprog, t] = await Promise.all([
     getTraade(kat.id),
     adminKontekst(),
     kat.modelId ? getModelEjerTal() : Promise.resolve({} as Record<string, ModelEjerTal>),
     kat.modelId ? getSoftwareHistorikPerModel() : Promise.resolve([] as OtaModelHistorik[]),
+    hentSprog(),
+    hentOrdbog(),
   ]);
+  const f = t.forum;
   // Ejer-graf (P6) - kun model-fora. Social proof selv med 0 traade.
   const et = kat.modelId ? ejerTal[kat.modelId] : undefined;
   // "Nyeste OS"-note (P27 follow-up) - kun model-fora. Model-fora deler slug med
@@ -43,7 +47,7 @@ export default async function KategoriSide({ params }: { params: { kategori: str
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link href="/forum" className="text-sm text-grafit-500 hover:text-kobber-700">
-        ← Forum
+        {f.tilbageForum}
       </Link>
 
       {/* Kategori-header */}
@@ -66,16 +70,16 @@ export default async function KategoriSide({ params }: { params: { kategori: str
 
         {kanOprette ? (
           <Link href={nyUrl} className="btn-primary shrink-0">
-            Ny tråd
+            {f.nyTraad}
           </Link>
         ) : kat.isLocked ? (
-          <span className="shrink-0 self-center text-sm text-grafit-400">🔒 Kun moderatorer</span>
+          <span className="shrink-0 self-center text-sm text-grafit-400">{f.kunModeratorer}</span>
         ) : (
           <Link
             href={`/login?naeste=${encodeURIComponent(nyUrl)}`}
             className="btn-ghost shrink-0"
           >
-            Log ind for at skrive
+            {f.logIndForAtSkrive}
           </Link>
         )}
       </div>
@@ -86,17 +90,17 @@ export default async function KategoriSide({ params }: { params: { kategori: str
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
           {et.ejere > 0 && (
             <span className="chip bg-kobber-100 text-kobber-800">
-              {et.ejere} {et.ejere === 1 ? 'ejer' : 'ejere'} i Garagen
+              {f.ejereIGaragen(et.ejere)}
             </span>
           )}
           {et.biler > 0 && (
             <span className="chip bg-grafit-100 text-grafit-700">
-              {et.biler} {et.biler === 1 ? 'bil' : 'biler'}
+              {f.biler(et.biler)}
             </span>
           )}
           {et.bekraeftelser > 0 && (
             <span className="chip bg-grafit-100 text-grafit-700">
-              {et.bekraeftelser} {et.bekraeftelser === 1 ? 'bekræftelse' : 'bekræftelser'}
+              {f.bekraeftelser(et.bekraeftelser)}
             </span>
           )}
         </div>
@@ -112,61 +116,61 @@ export default async function KategoriSide({ params }: { params: { kategori: str
         >
           <span aria-hidden="true">📦</span>
           <span>
-            Nyeste OS: <span className="font-semibold">{nyesteOs}</span>
+            {f.nyesteOs} <span className="font-semibold">{nyesteOs}</span>
           </span>
-          <span className="ml-auto shrink-0 font-medium text-kobber-700">se historik →</span>
+          <span className="ml-auto shrink-0 font-medium text-kobber-700">{f.seHistorik}</span>
         </Link>
       )}
 
       {/* Søg i dette forum (scopet til rummet; udvid til alle fora på resultatsiden) */}
       <div className="mt-5">
-        <TraadSoegeForm scopeSlug={kat.slug} scopeNavn={kat.name} />
+        <TraadSoegeForm scopeSlug={kat.slug} scopeNavn={kat.name} sprog={sprog} />
       </div>
 
       {/* Trådliste */}
       <div className="mt-6">
         {traade.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-grafit-300 bg-white px-6 py-12 text-center">
-            <p className="text-grafit-500">Ingen tråde endnu.</p>
+            <p className="text-grafit-500">{f.ingenTraade}</p>
             {kanOprette && (
               <Link href={nyUrl} className="mt-3 inline-block font-medium text-kobber-700 hover:underline">
-                Vær den første til at starte en →
+                {f.vaerFoersteTraad}
               </Link>
             )}
           </div>
         ) : (
           <div className="divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
-            {traade.map((t) => (
+            {traade.map((tr) => (
               <Link
-                key={t.id}
-                href={`/forum/${kat.slug}/${t.slug}`}
+                key={tr.id}
+                href={`/forum/${kat.slug}/${tr.slug}`}
                 className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-grafit-50"
               >
-                <Avatar url={t.avatar} navn={t.forfatter} px={36} />
+                <Avatar url={tr.avatar} navn={tr.forfatter} px={36} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    {t.isPinned && <span className="shrink-0 text-xs" title="Fastgjort">📌</span>}
-                    {t.isLocked && <span className="shrink-0 text-xs" title="Låst">🔒</span>}
-                    <span className="truncate font-semibold text-grafit-900">{t.title}</span>
+                    {tr.isPinned && <span className="shrink-0 text-xs" title={f.fastgjort}>📌</span>}
+                    {tr.isLocked && <span className="shrink-0 text-xs" title={f.laast}>🔒</span>}
+                    <span className="truncate font-semibold text-grafit-900">{tr.title}</span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-grafit-400">
-                    <span>{t.forfatter || 'Ejer'}</span>
-                    <GarageBadge bil={t.bil} />
-                    <span>· {relativTid(t.lastPostAt)}</span>
+                    <span>{tr.forfatter || f.ejer}</span>
+                    <GarageBadge bil={tr.bil} />
+                    <span>· {relativTid(tr.lastPostAt, sprog)}</span>
                   </div>
                 </div>
                 <div className="hidden shrink-0 items-center gap-6 text-right text-sm sm:flex">
                   <div className="w-12">
-                    <div className="font-semibold tabular-nums text-grafit-800">{t.replyCount}</div>
-                    <div className="text-xs text-grafit-400">svar</div>
+                    <div className="font-semibold tabular-nums text-grafit-800">{tr.replyCount}</div>
+                    <div className="text-xs text-grafit-400">{f.svarLabel(tr.replyCount)}</div>
                   </div>
                   <div className="w-14">
-                    <div className="font-semibold tabular-nums text-grafit-800">{t.viewCount}</div>
-                    <div className="text-xs text-grafit-400">visninger</div>
+                    <div className="font-semibold tabular-nums text-grafit-800">{tr.viewCount}</div>
+                    <div className="text-xs text-grafit-400">{f.visningerLabel}</div>
                   </div>
                 </div>
                 <div className="shrink-0 text-right text-xs text-grafit-400 sm:hidden">
-                  💬 {t.replyCount}
+                  💬 {tr.replyCount}
                 </div>
               </Link>
             ))}

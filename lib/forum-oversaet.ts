@@ -51,7 +51,7 @@ async function ltForum(
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30000),
   });
-  if (!res.ok) throw new Error(`LibreTranslate svarede ${res.status} (auto->${maal})`);
+  if (!res.ok) throw new Error(`LibreTranslate svarede ${res.status} (auto->${maal})`); // i18n-ok (intern log-fejl)
   const data = (await res.json()) as {
     translatedText: string | string[];
     detectedLanguage?: { language?: string } | { language?: string }[];

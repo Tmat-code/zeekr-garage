@@ -325,5 +325,30 @@ lig('sv: generiske ord urørt', bs('A wide range of options for the cabin.').ers
 lig('sv: ingen lange tankestreger', Object.values(ro.EN_SV).filter((t) => /[\u2013\u2014]/.test(t)), []);
 
 fs.rmSync(TMP, { recursive: true, force: true });
+// --- U2: forum-UI ---
+lig('U2 da svar-label', da.forum.svarLabel(2), 'svar');
+lig('U2 en svar-label 1/2', [en.forum.svarLabel(1), en.forum.svarLabel(2)], ['reply', 'replies']);
+lig('U2 en visSvar 1', en.forum.visSvar(1), '▸ Show 1 reply');
+lig('U2 sv traadMeta', sv.forum.traadMeta('1 dec. 2026', 3, 1), 'Skapad 1 dec. 2026 · 3 svar · 1 visning');
+lig('U2 en traadMeta', en.forum.traadMeta('1 Dec 2026', 1, 5), 'Created 1 Dec 2026 · 1 reply · 5 views');
+lig('U2 da traadMeta', da.forum.traadMeta('1. dec. 2026', 2, 7), 'Oprettet 1. dec. 2026 · 2 svar · 7 visninger');
+lig('U2 en antalMatcher 1', en.forum.antalMatcher(1), '1 thread matches');
+lig('U2 sv tråde', [sv.forum.traadeLabel(1), sv.forum.traadeLabel(4)], ['tråd', 'trådar']);
+lig('U2 billed-tæller', sv.billeder.taeller(2, 5), '2/5 · max 5 MB');
+lig('U2 galleri aria', en.billeder.aabn(2, 'Image in post'), 'Open image in post 2');
+lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.profilbillede('Ida')], ['Profilbillede', "Ida's profile picture"]);
+{
+  // Grund-nøglerne skal være præcis DB-enum'en i lib/moderering.ts.
+  const mod = fs.readFileSync(path.join(ROD, 'lib/moderering.ts'), 'utf8');
+  const enumV = [...mod.match(/const VAERDIER = \[([^\]]+)\]/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    lig(`U2 ${navn}: modGrund == DB-enum`, Object.keys(o.modGrund).sort(), [...enumV].sort());
+  }
+  // Gruppe-undertekster er keyet på de seedede danske gruppenavne.
+  for (const g of ['Velkommen', 'Modellerne', 'Ejer-lounge', 'Teknik']) {
+    lig(`U2 gruppeTekst '${g}' på alle sprog`, [da, sv, en].every((o) => !!o.forum.gruppeTekst[g]), true);
+  }
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

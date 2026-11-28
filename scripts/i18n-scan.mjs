@@ -80,6 +80,42 @@ const SKIVER = {
     'lib/titel-oversaet.ts',
     'lib/titel-oversaet-kerne.ts',
   ],
+  // U2: forum-UI. Bevidst UDE: kategorinavne/-beskrivelser + forum-regler (DB-
+  // indhold, U7), Værkstedets brug af GrundVaelger/grundLabel (U6 - de følger
+  // med automatisk, men filerne hører til U6).
+  U2: [
+    'app/forum/page.tsx',
+    'app/forum/actions.ts',
+    'app/forum/[kategori]/page.tsx',
+    'app/forum/[kategori]/[traad]/page.tsx',
+    'app/forum/[kategori]/ny/page.tsx',
+    'app/forum/regler/page.tsx',
+    'app/forum/soeg/page.tsx',
+    'components/forum/ForumOversigt.tsx',
+    'components/forum/ForumTraad.tsx',
+    'components/forum/NyTraadForm.tsx',
+    'components/forum/TraadModeration.tsx',
+    'components/forum/TraadSoegeForm.tsx',
+    'components/forum/GrundVaelger.tsx',
+    'components/forum/RapporterKnap.tsx',
+    'components/forum/BilledeUpload.tsx',
+    'components/forum/Avatar.tsx',
+    'components/forum/GarageBadge.tsx',
+    'components/forum/ModelBadge.tsx',
+    'components/forum/Uddrag.tsx',
+    'components/forum/LinkPreviewKort.tsx',
+    'components/forum/AutolinkTekst.tsx',
+    'components/forum/ReglerIndhold.tsx',
+    'components/forum/VisningPing.tsx',
+    'components/BilledeGalleri.tsx',
+    'lib/moderering.ts',
+    'lib/forum.ts',
+    'lib/forum-oversaet.ts',
+    'lib/forum-sprog.ts',
+    'lib/forum-regler.ts',
+    'lib/forum-links.ts',
+    'lib/forum-enheder.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

@@ -50,7 +50,7 @@ function mapKategori(r: any): ForumKategori {
 }
 
 const KATEGORI_COLS =
-  'id, slug, name, description, icon, group_label, group_order, display_order, model_id, is_locked';
+  'id, slug, name, description, icon, group_label, group_order, display_order, model_id, is_locked'; // i18n-ok (kolonneliste)
 
 // --- Ejer-graf pr. model (P6) ---
 // Social proof paa model-foraene: "N ejere" kommer fra Min garage (cars), ikke

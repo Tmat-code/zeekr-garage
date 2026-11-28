@@ -1,16 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 // Billed-galleri med lightbox. Thumbnails åbner billedet i et overlay i selve
 // siden (ikke en ny fane), med kryds, luk på Esc og klik uden for billedet.
 export default function BilledeGalleri({
   billeder,
-  alt = 'Billede',
+  alt: altProp,
 }: {
   billeder: string[];
   alt?: string;
 }) {
+  const tb = useOrdbog().billeder;
+  const alt = altProp ?? tb.standardAlt;
   const [aaben, setAaben] = useState<number | null>(null);
 
   const luk = useCallback(() => setAaben(null), []);
@@ -41,7 +44,7 @@ export default function BilledeGalleri({
             type="button"
             onClick={() => setAaben(i)}
             className="overflow-hidden rounded-lg border border-grafit-200 transition hover:border-kobber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-kobber-400"
-            aria-label={`Åbn ${alt.toLowerCase()} ${i + 1}`}
+            aria-label={tb.aabn(i + 1, alt)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -65,7 +68,7 @@ export default function BilledeGalleri({
           <button
             type="button"
             onClick={luk}
-            aria-label="Luk billede"
+            aria-label={tb.luk}
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-xl font-semibold text-grafit-700 shadow-lg transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kobber-400"
           >
             ✕

@@ -8,6 +8,7 @@
 //  - ingen af delene   -> ren søgning i alt.
 import type { ForumKategori } from '@/lib/types';
 import { modelBadge } from '@/lib/model-badge';
+import { ordbog, type UiSprog } from '@/lib/i18n';
 
 export default function TraadSoegeForm({
   defaultValue = '',
@@ -15,13 +16,17 @@ export default function TraadSoegeForm({
   kategorier,
   scopeSlug = '',
   scopeNavn,
+  sprog = 'da',
 }: {
   defaultValue?: string;
   stor?: boolean;
   kategorier?: ForumKategori[];
   scopeSlug?: string;
   scopeNavn?: string;
+  // U2: UI-sproget fra siden (server-komponent - ingen hooks/async her).
+  sprog?: UiSprog;
 }) {
+  const f = ordbog(sprog).forum;
   // Grupper kategorierne til <optgroup> (bevarer rækkefølgen fra listen).
   const grupper: { label: string; kats: ForumKategori[] }[] = [];
   if (kategorier) {
@@ -35,7 +40,7 @@ export default function TraadSoegeForm({
     }
   }
 
-  const placeholder = scopeNavn ? `Søg i ${scopeNavn}…` : 'Søg i alle tråde…';
+  const placeholder = scopeNavn ? f.soegIPh(scopeNavn) : f.soegAllePh;
 
   return (
     <form action="/forum/soeg" method="get" role="search" className="flex flex-wrap gap-2">
@@ -51,7 +56,7 @@ export default function TraadSoegeForm({
           name="q"
           defaultValue={defaultValue}
           placeholder={placeholder}
-          aria-label={scopeNavn ? `Søg i ${scopeNavn}` : 'Søg i alle forum-tråde'}
+          aria-label={scopeNavn ? f.soegIAria(scopeNavn) : f.soegAlleAria}
           className={`input pl-9 ${stor ? 'py-3 text-base' : ''}`}
         />
       </div>
@@ -61,10 +66,10 @@ export default function TraadSoegeForm({
         <select
           name="kat"
           defaultValue={scopeSlug}
-          aria-label="Afgræns søgningen til et forum"
+          aria-label={f.afgraensAria}
           className="input w-auto shrink-0"
         >
-          <option value="">Alle fora</option>
+          <option value="">{f.alleFora}</option>
           {grupper.map((g) => (
             <optgroup key={g.label} label={g.label}>
               {g.kats.map((k) => (
@@ -81,7 +86,7 @@ export default function TraadSoegeForm({
       )}
 
       <button type="submit" className="btn-primary shrink-0">
-        Søg
+        {f.soeg}
       </button>
     </form>
   );

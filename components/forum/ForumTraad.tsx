@@ -23,7 +23,8 @@ import GrundVaelger from '@/components/forum/GrundVaelger';
 import RapporterKnap from '@/components/forum/RapporterKnap';
 import AutolinkTekst from '@/components/forum/AutolinkTekst';
 import LinkPreviewKort from '@/components/forum/LinkPreviewKort';
-import { gaetSprog, sprogNavn, type ForumSprog } from '@/lib/forum-sprog';
+import { gaetSprog, type ForumSprog } from '@/lib/forum-sprog';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 
 function IndlaegKort({
   p,
@@ -54,6 +55,9 @@ function IndlaegKort({
   fremhaevet: boolean;
   minSprog: ForumSprog;
 }) {
+  const t = useOrdbog();
+  const f = t.forum;
+  const uiSprog = useSprog();
   const [redigerer, setRedigerer] = useState(false);
   const [modFjerner, setModFjerner] = useState(false);
   const [modFjernerAvatar, setModFjernerAvatar] = useState(false);
@@ -64,6 +68,21 @@ function IndlaegKort({
   const [visOversat, setVisOversat] = useState(false);
   const [oversaetter, setOversaetter] = useState(false);
   const [oversaetFejl, setOversaetFejl] = useState(false);
+  // U2-fix: skifter læserens sprog midt i tråden (sprogvælgeren -> router.refresh),
+  // genbruges komponenten med sin state, så den forrige oversættelse (på det gamle
+  // sprog) hang ved med "Vis original". Nulstil ved minSprog-skift, så knappen
+  // står frisk på det nye sprog.
+  // `sprogRef` lader et svar der var i luften FØR skiftet blive ignoreret.
+  const sprogRef = useRef(minSprog);
+  useEffect(() => {
+    if (sprogRef.current === minSprog) return;
+    sprogRef.current = minSprog;
+    setOversat(null);
+    setOversatKilde(null);
+    setVisOversat(false);
+    setOversaetFejl(false);
+    setOversaetter(false);
+  }, [minSprog]);
   // Billed-redigering: paths markeret til fjernelse + netop uploadede nye paths.
   const [fjernede, setFjernede] = useState<string[]>([]);
   const [nyeBilleder, setNyeBilleder] = useState<string[]>([]);
@@ -119,8 +138,10 @@ function IndlaegKort({
     setOversaetter(true);
     // Eget kald (ikke `koer`): oversættelse er læse-only og må ikke blokere/forstyrre
     // trådens skrive-pending. Virker også for en anonym læser.
+    const bestiltPaa = minSprog;
     oversaetForumIndlaeg(p.id, minSprog)
       .then((r) => {
+        if (sprogRef.current !== bestiltPaa) return; // sproget er skiftet imens
         if (!r.oversat || r.uaendret) {
           // Intet reelt at oversætte (allerede på læserens sprog / tomt) - vis original.
           setOversaetFejl(!r.oversat);
@@ -133,8 +154,12 @@ function IndlaegKort({
         setOversatKilde(r.kildesprog);
         setVisOversat(true);
       })
-      .catch(() => setOversaetFejl(true))
-      .finally(() => setOversaetter(false));
+      .catch(() => {
+        if (sprogRef.current === bestiltPaa) setOversaetFejl(true);
+      })
+      .finally(() => {
+        if (sprogRef.current === bestiltPaa) setOversaetter(false);
+      });
   }
 
   function nulstilRedigering() {
@@ -154,18 +179,18 @@ function IndlaegKort({
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Avatar url={p.avatar} navn={p.forfatter} px={32} className="mr-0.5" />
-        <span className="font-medium text-grafit-900">{p.forfatter || 'Ejer'}</span>
+        <span className="font-medium text-grafit-900">{p.forfatter || f.ejer}</span>
         <GarageBadge bil={p.bil} />
         <span className="text-xs text-grafit-400">
-          {relativTid(p.createdAt)}
-          {p.edited && ' · redigeret'}
+          {relativTid(p.createdAt, uiSprog)}
+          {p.edited && ` · ${f.redigeret}`}
         </span>
       </div>
 
       {/* "@Navn" når dette undersvar svarer et andet undersvar */}
       {p.svarTilNavn && !redigerer && (
         <p className="mt-1 text-xs text-grafit-400">
-          svarer <span className="font-medium text-grafit-500">@{p.svarTilNavn}</span>
+          {f.svarer} <span className="font-medium text-grafit-500">@{p.svarTilNavn}</span>
         </p>
       )}
 
@@ -175,7 +200,7 @@ function IndlaegKort({
             className="input min-h-[100px]"
             value={tekst}
             onChange={(e) => setTekst(e.target.value)}
-            placeholder={p.isOpening ? 'Trådens tekst…' : 'Skriv et svar…'}
+            placeholder={p.isOpening ? f.traadTekstPh : f.svarPh}
           />
 
           {/* Eksisterende billeder - klik × for at markere til fjernelse */}
@@ -188,7 +213,7 @@ function IndlaegKort({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={forumBilledeUrl(path)}
-                      alt="Vedhæftet billede"
+                      alt={t.billeder.vedhaeftet}
                       className={`h-16 w-16 rounded-lg border border-grafit-200 object-cover transition ${
                         markeret ? 'opacity-30 grayscale' : ''
                       }`}
@@ -201,7 +226,7 @@ function IndlaegKort({
                         )
                       }
                       className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-grafit-900 text-xs leading-none text-white"
-                      aria-label={markeret ? 'Fortryd fjern billede' : 'Fjern billede'}
+                      aria-label={markeret ? t.billeder.fortrydFjern : t.billeder.fjern}
                     >
                       {markeret ? '↺' : '×'}
                     </button>
@@ -221,7 +246,7 @@ function IndlaegKort({
                 maksAntal={restPlads}
               />
             ) : (
-              <p className="text-xs text-grafit-400">Maks {MAKS_ANTAL} billeder pr. indlæg.</p>
+              <p className="text-xs text-grafit-400">{f.maksBilleder(MAKS_ANTAL)}</p>
             ))}
 
           <div className="flex items-center gap-2">
@@ -245,10 +270,10 @@ function IndlaegKort({
                 })
               }
             >
-              Gem
+              {f.gem}
             </button>
             <button className="btn-ghost !py-1.5 text-sm" onClick={nulstilRedigering}>
-              Annullér
+              {t.faellesFejl.annuller}
             </button>
           </div>
         </div>
@@ -268,15 +293,15 @@ function IndlaegKort({
                 disabled={oversaetter}
                 onClick={haandterOversaet}
               >
-                {oversaetter ? 'Oversætter…' : visOversat ? 'Vis original' : '🌐 Oversæt'}
+                {oversaetter ? f.oversaetter : visOversat ? f.visOriginal : f.oversaet}
               </button>
               {visOversat && oversatKilde && (
                 <span className="text-grafit-400">
-                  Oversat fra {sprogNavn(oversatKilde)} · maskinoversat
+                  {f.oversatFra(f.sprogNavne[oversatKilde.toLowerCase()] ?? oversatKilde)}
                 </span>
               )}
               {oversaetFejl && !visOversat && (
-                <span className="text-grafit-400">Kunne ikke oversætte lige nu</span>
+                <span className="text-grafit-400">{f.kunneIkkeOversaette}</span>
               )}
             </div>
           )}
@@ -288,7 +313,7 @@ function IndlaegKort({
 
       {!redigerer && p.billeder.length > 0 && (
         <div className="mt-2">
-          <BilledeGalleri billeder={p.billeder} alt="Billede i indlæg" />
+          <BilledeGalleri billeder={p.billeder} alt={f.billedeIIndlaeg} />
         </div>
       )}
 
@@ -300,7 +325,7 @@ function IndlaegKort({
               disabled={pending}
               onClick={onSvar}
             >
-              ↩ Svar
+              {f.svarKnap}
             </button>
           )}
           {kanRette && (
@@ -308,7 +333,7 @@ function IndlaegKort({
               className="text-grafit-500 hover:text-kobber-700"
               onClick={() => setRedigerer(true)}
             >
-              ✏️ Ret
+              {f.ret}
             </button>
           )}
           {kanEgenFjern && (
@@ -316,12 +341,12 @@ function IndlaegKort({
               className="text-grafit-500 hover:text-kobber-700"
               disabled={pending}
               onClick={() => {
-                if (confirm('Fjern dette indlæg?')) {
+                if (confirm(f.bekraeftFjern)) {
                   koer(() => fjernIndlaeg(p.id, kategoriSlug, traadSlug));
                 }
               }}
             >
-              🗑 Fjern
+              {f.fjern}
             </button>
           )}
           {kanModFjern && (
@@ -330,7 +355,7 @@ function IndlaegKort({
               disabled={pending}
               onClick={() => setModFjerner((v) => !v)}
             >
-              🗑 Fjern
+              {f.fjern}
             </button>
           )}
           {kanFjernAvatar && (
@@ -339,7 +364,7 @@ function IndlaegKort({
               disabled={pending}
               onClick={() => setModFjernerAvatar((v) => !v)}
             >
-              🧑 Fjern avatar
+              {f.fjernAvatar}
             </button>
           )}
           {kanSkrive && (
@@ -348,7 +373,7 @@ function IndlaegKort({
               disabled={pending}
               onClick={() => skrivTil(p.authorId!)}
             >
-              ✉️ Skriv
+              {f.skriv}
             </button>
           )}
           {kanRapportere && (
@@ -364,7 +389,7 @@ function IndlaegKort({
       {!redigerer && kanModFjern && modFjerner && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Fjern indlæg + giv besked"
+          submitLabel={f.fjernIndlaegBesked}
           onCancel={() => setModFjerner(false)}
           onSubmit={(grund, fritekst) =>
             koer(async () => {
@@ -379,7 +404,7 @@ function IndlaegKort({
       {!redigerer && kanFjernAvatar && modFjernerAvatar && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Fjern avatar + giv besked"
+          submitLabel={f.fjernAvatarBesked}
           onCancel={() => setModFjernerAvatar(false)}
           onSubmit={(grund, fritekst) =>
             koer(async () => {
@@ -416,6 +441,8 @@ export default function ForumTraad({
   naeste: string;
   minSprog: ForumSprog;
 }) {
+  const t = useOrdbog();
+  const f = t.forum;
   const [ny, setNy] = useState('');
   const [svarBilleder, setSvarBilleder] = useState<string[]>([]);
   const [billedNulstil, setBilledNulstil] = useState(0);
@@ -467,7 +494,7 @@ export default function ForumTraad({
       try {
         await fn();
       } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
+        setFejl(e?.message ?? t.faellesFejl.nogetGikGalt);
       }
     });
   }
@@ -480,7 +507,7 @@ export default function ForumTraad({
         const id = await startSamtaleMedBruger(authorId);
         router.push(`/beskeder/${id}`);
       } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke starte samtalen.');
+        setFejl(e?.message ?? f.kunneIkkeStarteSamtale);
       }
     });
   }
@@ -532,7 +559,7 @@ export default function ForumTraad({
       kanSvare={grundKanSvare}
       koer={koer}
       skrivTil={skrivTil}
-      onSvar={() => startSvar(p.id, p.forfatter || 'Ejer', p.parentId ?? p.id)}
+      onSvar={() => startSvar(p.id, p.forfatter || f.ejer, p.parentId ?? p.id)}
       pending={pending}
       fremhaevet={fremhaev === p.id}
       minSprog={minSprog}
@@ -558,7 +585,7 @@ export default function ForumTraad({
             })
           }
         >
-          {aaben ? '▾ Skjul svar' : `▸ Vis ${boern.length} svar`}
+          {aaben ? f.skjulSvar : f.visSvar(boern.length)}
         </button>
         {aaben && (
           <div className="space-y-3 border-l-2 border-grafit-100 pl-3 sm:pl-4">
@@ -585,7 +612,7 @@ export default function ForumTraad({
             <div key={t.id} className="space-y-3">
               {t.isRemoved ? (
                 <div className="rounded-xl border border-dashed border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-400">
-                  🚫 Svar fjernet
+                  {f.svarFjernet}
                 </div>
               ) : (
                 kort(t)
@@ -599,26 +626,26 @@ export default function ForumTraad({
       {/* Svar-felt */}
       <div className="mt-5">
         <h2 className="mb-2 text-sm font-semibold text-grafit-700">
-          {antalSvar === 0 ? 'Vær den første der svarer' : `Svar (${antalSvar})`}
+          {antalSvar === 0 ? f.vaerFoersteSvar : f.svarAntal(antalSvar)}
         </h2>
         {isLocked ? (
           <div className="rounded-xl border border-grafit-200 bg-grafit-50 px-4 py-3 text-sm text-grafit-500">
-            🔒 Tråden er låst - der kan ikke skrives flere svar.
+            {f.traadLaast}
           </div>
         ) : isLoggedIn ? (
           <div className="space-y-2">
             {svarTil && (
               <div className="flex items-center gap-2 rounded-lg border border-kobber-200 bg-kobber-50 px-3 py-1.5 text-sm text-grafit-700">
                 <span>
-                  Svarer <span className="font-medium">{svarTil.navn}</span>
+                  {f.svarerTil} <span className="font-medium">{svarTil.navn}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setSvarTil(null)}
                   className="ml-auto text-grafit-400 hover:text-kobber-700"
-                  aria-label="Annullér svar-mål"
+                  aria-label={f.annullerSvarMaal}
                 >
-                  × Svar til hele tråden
+                  {f.svarHeleTraaden}
                 </button>
               </div>
             )}
@@ -627,7 +654,7 @@ export default function ForumTraad({
               className="input min-h-[100px]"
               value={ny}
               onChange={(e) => setNy(e.target.value)}
-              placeholder={svarTil ? `Svar til ${svarTil.navn}…` : 'Skriv et svar…'}
+              placeholder={svarTil ? f.svarTilPh(svarTil.navn) : f.svarPh}
             />
             <BilledeUpload key={billedNulstil} onChange={setSvarBilleder} disabled={pending} />
             <div className="flex items-center gap-3">
@@ -636,7 +663,7 @@ export default function ForumTraad({
                 disabled={pending || (!ny.trim() && svarBilleder.length === 0)}
                 onClick={send}
               >
-                Send svar
+                {f.sendSvar}
               </button>
               {fejl && <span className="text-sm text-kobber-700">{fejl}</span>}
             </div>
@@ -647,9 +674,9 @@ export default function ForumTraad({
               href={`/login?naeste=${encodeURIComponent(naeste)}`}
               className="font-medium text-kobber-700 hover:underline"
             >
-              Log ind
+              {t.faellesFejl.logInd}
             </Link>{' '}
-            for at svare.
+            {f.forAtSvare}
           </div>
         )}
       </div>

@@ -11,6 +11,7 @@
 
 import type { IssueCategorySlug, IssueType, Severity, Status } from '@/lib/config';
 import type { Kildesprog } from '@/lib/kildesprog';
+import type { ModGrund } from '@/lib/moderering';
 
 export const da = {
   meta: {
@@ -432,6 +433,223 @@ export const da = {
     vaelgModel: 'Vælg model…',
     vaelgVariant: 'Vælg variant…',
     ejerIkke: 'Ejer ikke en Zeekr endnu',
+  },
+
+  // U2: forum-UI (oversigt, kategori, tråd, ny tråd, søgning, regler-rammen,
+  // moderering af tråde). Kategorinavne/-beskrivelser + forum-regler er DB-
+  // indhold og forbliver dansk til U7.
+  forum: {
+    // Oversigt (/forum)
+    metaTitel: 'Forum',
+    metaBeskrivelse:
+      'Fællesskabet for Zeekr-ejere i Norden - ét forum pr. model plus snak om opladning, software, tilbehør og livet som ejer.',
+    titel: 'Forum',
+    introFoer:
+      'Snak, spørgsmål og erfaringer - med et eget forum for hver model. Stødt på en rigtig fejl? Den hører hjemme på',
+    introLink: 'Feedback',
+    introEfter: ', hvor vi samler den struktureret til Zeekr.',
+    alleKanLaese: 'Alle kan læse. Login kræves kun for at oprette tråde og svare.',
+    nyHerLaes: 'Ny her? Læs',
+    reglerLink: 'forum-reglerne',
+    reglerEfter: '- sådan er tonen i Garagen.',
+    // Undertekst pr. gruppe - nøglen er gruppens (danske) navn fra DB'en.
+    gruppeTekst: {
+      Velkommen: 'Start her - sig hej og læs husreglerne.',
+      Modellerne: 'Ét forum pr. model - rygraden i fællesskabet.',
+      'Ejer-lounge': 'Livet som ejer: køb, test, billeder.',
+      Teknik: 'Software, opladning, tilbehør og app.',
+    } as Record<string, string>,
+    kunModeratorerOpretter: 'Kun moderatorer opretter tråde her',
+    ejere: (n: number) => `${n} ${n === 1 ? 'ejer' : 'ejere'}`,
+    traadeLabel: (n: number): string => (n === 1 ? 'tråd' : 'tråde'),
+    visningerLabel: 'visninger',
+    svarLabel: (_n: number): string => 'svar',
+    ny: 'ny',
+
+    // Kategori-side
+    tilbageForum: '← Forum',
+    nyTraad: 'Ny tråd',
+    kunModeratorer: '🔒 Kun moderatorer',
+    logIndForAtSkrive: 'Log ind for at skrive',
+    ejereIGaragen: (n: number) => `${n} ${n === 1 ? 'ejer' : 'ejere'} i Garagen`,
+    biler: (n: number) => `${n} ${n === 1 ? 'bil' : 'biler'}`,
+    bekraeftelser: (n: number) => `${n} ${n === 1 ? 'bekræftelse' : 'bekræftelser'}`,
+    nyesteOs: 'Nyeste OS:',
+    seHistorik: 'se historik →',
+    ingenTraade: 'Ingen tråde endnu.',
+    vaerFoersteTraad: 'Vær den første til at starte en →',
+    fastgjort: 'Fastgjort',
+    laast: 'Låst',
+    ejer: 'Ejer',
+
+    // Tråd-side
+    traadMetaFallback: 'Tråd',
+    fastgjortChip: '📌 Fastgjort',
+    laastChip: '🔒 Låst',
+    traadMeta: (dato: string, svar: number, visninger: number) =>
+      `Oprettet ${dato} · ${svar} svar · ${visninger} ${visninger === 1 ? 'visning' : 'visninger'}`,
+
+    // Ny tråd
+    nyTraadMeta: (kategori: string) => `Ny tråd - ${kategori}`,
+    nyTraadTitel: (kategori: string) => `Ny tråd i ${kategori}`,
+    nyTraadIntro: 'Hold en god, konstruktiv tone - vi er her for at hjælpe hinanden.',
+    titelLabel: 'Titel',
+    titelPh: (kategori: string) => `Hvad vil du tage op i ${kategori}?`,
+    ditIndlaeg: 'Dit indlæg',
+    indlaegPh: 'Skriv løs - spørgsmål, erfaring eller en god historie.',
+    billederValgfrit: 'Billeder (valgfrit)',
+    opretter: 'Opretter…',
+    opretTraad: 'Opret tråd',
+    kunneIkkeOprette: 'Kunne ikke oprette tråden.',
+
+    // Regler-siden (rammen - selve reglerne er DB-indhold)
+    reglerMetaTitel: 'Forum-regler',
+    reglerMetaBeskrivelse:
+      'Spilleregler og tone i Zeekr Garages forum - sådan holder vi en god stemning.',
+    reglerBroedkrumme: 'Regler',
+    reglerTitel: 'Forum-regler',
+    opdateret: (tid: string) => `Opdateret ${tid}`,
+    reglerTomme:
+      'Reglerne er ved at blive sat op. Kig forbi igen om lidt - i mellemtiden gælder god, almindelig fornuft: tal pænt, hold dig til emnet, og del ikke andres personlige oplysninger.',
+    reglerFejlFoer: 'Stødt på en rigtig fejl i stedet for et spørgsmål?',
+    reglerFejlLink: 'Opret den på Feedback',
+    reglerFejlEfter: ', så samler vi den struktureret til Zeekr.',
+
+    // Søgning
+    soegMeta: (q: string) => `Søg: ${q}`,
+    soegTitel: 'Søg i forummet',
+    soegIntro: 'Søger i både trådtitler og indlæg. Vælg et forum i feltet for at afgrænse søgningen.',
+    soegTom: 'Skriv et søgeord ovenfor for at finde tråde.',
+    ingenMatch: 'Ingen tråde matcher',
+    iScope: 'i',
+    proevAndetScope: 'Prøv et andet søgeord - eller',
+    soegAlleFora: 'søg i alle fora',
+    proevAndet: 'Prøv et andet eller kortere søgeord - eller',
+    gennemse: 'gennemse kategorierne',
+    antalMatcher: (n: number) => `${n} ${n === 1 ? 'tråd' : 'tråde'} matcher`,
+    soegIPh: (navn: string) => `Søg i ${navn}…`,
+    soegAllePh: 'Søg i alle tråde…',
+    soegIAria: (navn: string) => `Søg i ${navn}`,
+    soegAlleAria: 'Søg i alle forum-tråde',
+    afgraensAria: 'Afgræns søgningen til et forum',
+    alleFora: 'Alle fora',
+    soeg: 'Søg',
+
+    // Indlæg + svar (ForumTraad)
+    redigeret: 'redigeret',
+    svarer: 'svarer',
+    traadTekstPh: 'Trådens tekst…',
+    svarPh: 'Skriv et svar…',
+    svarTilPh: (navn: string) => `Svar til ${navn}…`,
+    maksBilleder: (n: number) => `Maks ${n} billeder pr. indlæg.`,
+    gem: 'Gem',
+    oversaetter: 'Oversætter…',
+    oversaet: '🌐 Oversæt',
+    visOriginal: 'Vis original',
+    oversatFra: (sprog: string) => `Oversat fra ${sprog} · maskinoversat`,
+    kunneIkkeOversaette: 'Kunne ikke oversætte lige nu',
+    // Kildesprog fra LibreTranslate kan være andet end da/sv/en (fx norsk).
+    sprogNavne: {
+      da: 'dansk',
+      sv: 'svensk',
+      en: 'engelsk',
+      no: 'norsk',
+      nb: 'norsk',
+      nn: 'norsk',
+      de: 'tysk',
+      fi: 'finsk',
+    } as Record<string, string>,
+    billedeIIndlaeg: 'Billede i indlæg',
+    svarKnap: '↩ Svar',
+    ret: '✏️ Ret',
+    bekraeftFjern: 'Fjern dette indlæg?',
+    fjern: '🗑 Fjern',
+    fjernAvatar: '🧑 Fjern avatar',
+    skriv: '✉️ Skriv',
+    fjernIndlaegBesked: 'Fjern indlæg + giv besked',
+    fjernAvatarBesked: 'Fjern avatar + giv besked',
+    kunneIkkeStarteSamtale: 'Kunne ikke starte samtalen.',
+    skjulSvar: '▾ Skjul svar',
+    visSvar: (n: number) => `▸ Vis ${n} svar`,
+    svarFjernet: '🚫 Svar fjernet',
+    vaerFoersteSvar: 'Vær den første der svarer',
+    svarAntal: (n: number) => `Svar (${n})`,
+    traadLaast: '🔒 Tråden er låst - der kan ikke skrives flere svar.',
+    svarerTil: 'Svarer',
+    annullerSvarMaal: 'Annullér svar-mål',
+    svarHeleTraaden: '× Svar til hele tråden',
+    sendSvar: 'Send svar',
+    forAtSvare: 'for at svare.',
+
+    // Moderering af tråd (TraadModeration)
+    moderering: '🔧 Moderering:',
+    opretSomFeedbackTitel: 'Er det en rigtig fejl? Opret den som struktureret feedback til Zeekr.',
+    opretSomFeedback: '→ Opret som feedback',
+    fjernFastgoerelse: 'Fjern fastgørelse',
+    fastgoer: '📌 Fastgør',
+    laasOp: 'Lås op',
+    laas: '🔒 Lås',
+    fjernTraad: '🗑 Fjern tråd',
+    fjernTraadBesked: 'Fjern tråd + giv besked',
+
+    // Grund-vælger + rapportér
+    bekraeft: 'Bekræft',
+    dubletPh: 'Link til original (valgfrit)',
+    uddybPh: 'Uddyb (valgfrit)',
+    fortryd: 'Fortryd',
+    rapporteret: '⚑ Rapporteret - tak',
+    rapporter: '⚑ Rapportér',
+    sendRapport: 'Send rapport',
+    kunneIkkeSendeRapport: 'Kunne ikke sende rapporten.',
+
+    // Server-fejl (app/forum/actions.ts)
+    logIndOpret: 'Log ind for at oprette en tråd.',
+    sigendeTitel: 'Giv tråden en sigende titel.',
+    titelForLang: 'Titlen er for lang (maks. 160 tegn).',
+    skrivAabning: 'Skriv et åbnings-indlæg.',
+    indlaegForLangt: 'Indlægget er for langt.',
+    kategoriFindesIkke: 'Kategorien findes ikke.',
+    logIndSvar: 'Log ind for at svare.',
+    skrivSvarEllerBillede: 'Skriv et svar eller vedhæft et billede.',
+    svarForLangt: 'Svaret er for langt.',
+    svarMaalFindesIkke: 'Svar-målet findes ikke i tråden.',
+    logIndRet: 'Log ind for at rette.',
+    indlaegFindesIkke: 'Indlægget findes ikke.',
+    aabningSkalHaveTekst: 'Åbnings-indlægget skal have tekst.',
+    skrivNogetEllerBehold: 'Skriv noget eller behold mindst ét billede.',
+    kunModerator: 'Kun moderator/admin.',
+    logIndRapporter: 'Log ind for at rapportere.',
+    ingenReference: 'Ingen reference at rapportere.',
+    ugyldigGrund: 'Ugyldig grund.',
+  },
+
+  // U2: moderings-grunde (lib/moderering.ts - bruges af rapportér-knappen og
+  // moderator-handlingerne). Nøglerne = enum-værdierne i DB'en.
+  modGrund: {
+    dublet: 'Dublet',
+    tone: 'Tone / personangreb',
+    'off-topic': 'Off-topic',
+    spam: 'Spam',
+    andet: 'Andet',
+  } satisfies Record<ModGrund, string>,
+  modGrundUkendt: 'ukendt',
+
+  // U2: billed-upload + galleri (forum, /meld, beskeder).
+  billeder: {
+    logIndUpload: 'Log ind for at uploade billeder.',
+    kunBilleder: 'Kun billeder (JPG, PNG, WebP, GIF).',
+    forStort: 'Billedet er for stort (maks 5 MB).',
+    uploadFejlede: (fejl: string) => `Upload fejlede: ${fejl}`,
+    uploader: 'Uploader…',
+    tilfoej: 'Tilføj billede',
+    taeller: (n: number, maks: number) => `${n}/${maks} · maks 5 MB`,
+    vedhaeftet: 'Vedhæftet billede',
+    fjern: 'Fjern billede',
+    fortrydFjern: 'Fortryd fjern billede',
+    standardAlt: 'Billede',
+    aabn: (nr: number, alt: string) => `Åbn ${alt.toLowerCase()} ${nr}`,
+    luk: 'Luk billede',
+    profilbillede: (navn: string | null) => (navn ? `${navn}s profilbillede` : 'Profilbillede'),
   },
 };
 

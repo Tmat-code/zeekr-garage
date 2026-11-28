@@ -7,11 +7,22 @@ import { MAKS_ANTAL, FORUM_BUCKET } from '@/lib/billeder';
 import { MOD_GRUND_VALUES } from '@/lib/moderering';
 import { foersteUrl, normaliserUrl } from '@/lib/forum-links';
 import { hentLinkPreview } from '@/lib/link-preview';
+import { hentOrdbog } from '@/lib/i18n/server';
 import {
   oversaetIndlaeg as _oversaetIndlaeg,
   sletIndlaegOversaettelser,
   type ForumOversaettelse,
 } from '@/lib/forum-oversaet';
+
+// U2: fejltekster på læserens sprog. Ukendte DB-/RPC-fejl (RLS, raise exception
+// på dansk i SQL) vises som den oversatte generiske tekst; originalen logges.
+async function ft() {
+  return (await hentOrdbog()).forum;
+}
+async function dbFejl(error: { message?: string } | null | undefined): Promise<never> {
+  console.error('[forum] DB-fejl:', error?.message);
+  throw new Error((await hentOrdbog()).faellesFejl.nogetGikGalt);
+}
 
 // Trin 3 (nordisk i18n): on-demand GIST-oversaettelse af ÉT forum-indlaeg til
 // laeserens sprog (FB-stil "Oversaet"-knap). Kaldes fra ForumTraad ved klik.
@@ -68,7 +79,7 @@ async function tilfoejBilleder(
   if (rene.length === 0) return;
   const rows = rene.map((path, i) => ({ post_id: postId, path, display_order: offset + i }));
   const { error } = await sb.from('forum_post_images').insert(rows);
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
 }
 
 // Dansk-venlig slug: æøå -> ae/oe/aa, resten normaliseres.
@@ -106,21 +117,22 @@ export async function opretTraad(
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind for at oprette en tråd.');
+  const f = await ft();
+  if (!user) throw new Error(f.logIndOpret);
 
   const t = title.trim();
   const b = body.trim();
-  if (t.length < 3) throw new Error('Giv tråden en sigende titel.');
-  if (t.length > 160) throw new Error('Titlen er for lang (maks. 160 tegn).');
-  if (!b) throw new Error('Skriv et åbnings-indlæg.');
-  if (b.length > 10000) throw new Error('Indlægget er for langt.');
+  if (t.length < 3) throw new Error(f.sigendeTitel);
+  if (t.length > 160) throw new Error(f.titelForLang);
+  if (!b) throw new Error(f.skrivAabning);
+  if (b.length > 10000) throw new Error(f.indlaegForLangt);
 
   const { data: kat } = await sb
     .from('forum_categories')
     .select('id, is_locked')
     .eq('slug', kategoriSlug)
     .single();
-  if (!kat) throw new Error('Kategorien findes ikke.');
+  if (!kat) throw new Error(f.kategoriFindesIkke);
 
   const slug = `${slugify(t)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -129,7 +141,7 @@ export async function opretTraad(
     .insert({ category_id: kat.id, author_id: user.id, title: t, slug })
     .select('id, slug')
     .single();
-  if (error || !traad) throw new Error(error?.message ?? 'Kunne ikke oprette tråden.');
+  if (error || !traad) return dbFejl(error);
 
   const { data: aabning, error: pe } = await sb
     .from('forum_posts')
@@ -139,7 +151,7 @@ export async function opretTraad(
   if (pe || !aabning) {
     // Ryd op, så vi ikke efterlader en tom tråd (RLS: egen tråd).
     await sb.from('forum_threads').delete().eq('id', traad.id);
-    throw new Error(pe?.message ?? 'Kunne ikke oprette indlægget.');
+    return dbFejl(pe);
   }
 
   await tilfoejBilleder(sb, aabning.id, user.id, billeder);
@@ -162,11 +174,12 @@ export async function svar(
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind for at svare.');
+  const f = await ft();
+  if (!user) throw new Error(f.logIndSvar);
   const b = body.trim();
   const harBilleder = (billeder ?? []).length > 0;
-  if (!b && !harBilleder) throw new Error('Skriv et svar eller vedhæft et billede.');
-  if (b.length > 10000) throw new Error('Svaret er for langt.');
+  if (!b && !harBilleder) throw new Error(f.skrivSvarEllerBillede);
+  if (b.length > 10000) throw new Error(f.svarForLangt);
 
   // Ét niveau (FB-stil): fladebalancér målet til et top-niveau-anker, så svaret
   // lander indrykket lige under det, man svarer på.
@@ -181,7 +194,7 @@ export async function svar(
       .eq('id', svarTilPostId)
       .single();
     if (!maal || maal.thread_id !== threadId) {
-      throw new Error('Svar-målet findes ikke i tråden.');
+      throw new Error(f.svarMaalFindesIkke);
     }
     if (!maal.parent_id) {
       parentId = maal.id; // åbning eller top-svar: anker = målet
@@ -202,7 +215,7 @@ export async function svar(
     })
     .select('id')
     .single();
-  if (error || !post) throw new Error(error?.message ?? 'Kunne ikke sende svaret.');
+  if (error || !post) return dbFejl(error);
 
   await tilfoejBilleder(sb, post.id, user.id, billeder);
   await opdaterLinkPreview(sb, b);
@@ -225,10 +238,11 @@ export async function retIndlaeg(
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind for at rette.');
+  const f = await ft();
+  if (!user) throw new Error(f.logIndRet);
 
   const b = body.trim();
-  if (b.length > 10000) throw new Error('Indlægget er for langt.');
+  if (b.length > 10000) throw new Error(f.indlaegForLangt);
 
   // Hent indlægget + dets nuværende billeder (til at validere resulterende antal
   // og til at beregne display_order-offset for de tilføjede).
@@ -237,7 +251,7 @@ export async function retIndlaeg(
     .select('is_opening, forum_post_images ( path )')
     .eq('id', postId)
     .maybeSingle();
-  if (!post) throw new Error('Indlægget findes ikke.');
+  if (!post) throw new Error(f.indlaegFindesIkke);
 
   const nuvaerende: string[] = ((post as any).forum_post_images ?? []).map((i: any) => i.path);
   const tilFjernelse = (fjernPaths ?? []).filter((p) => nuvaerende.includes(p));
@@ -248,15 +262,15 @@ export async function retIndlaeg(
   const tilfoejes = (nyeBilleder ?? []).slice(0, plads);
   const resterende = beholdte.length + tilfoejes.length;
 
-  if ((post as any).is_opening && !b) throw new Error('Åbnings-indlægget skal have tekst.');
-  if (!b && resterende === 0) throw new Error('Skriv noget eller behold mindst ét billede.');
+  if ((post as any).is_opening && !b) throw new Error(f.aabningSkalHaveTekst);
+  if (!b && resterende === 0) throw new Error(f.skrivNogetEllerBehold);
 
   // 1) Tekst (edited-markering).
   const { error: ue } = await sb
     .from('forum_posts')
     .update({ body: b, edited: true })
     .eq('id', postId);
-  if (ue) throw new Error(ue.message);
+  if (ue) return dbFejl(ue);
 
   // 2) Fjern valgte eksisterende billeder: først DB-rækken (RLS: eget/moderator),
   //    derefter best-effort selve storage-filen (forældreløse filer ryddes i P9).
@@ -266,7 +280,7 @@ export async function retIndlaeg(
       .delete()
       .eq('post_id', postId)
       .in('path', tilFjernelse);
-    if (de) throw new Error(de.message);
+    if (de) return dbFejl(de);
     try {
       await sb.storage.from(FORUM_BUCKET).remove(tilFjernelse);
     } catch {
@@ -298,7 +312,7 @@ export async function fjernIndlaeg(
 ): Promise<void> {
   const sb = supabaseServer();
   const { error } = await sb.from('forum_posts').update({ is_removed: true }).eq('id', postId);
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   // Slet-ved-fjern: ryd evt. cachede oversaettelser af indlaegget (best-effort).
   await sletIndlaegOversaettelser(postId);
   revalider(kategoriSlug, traadSlug);
@@ -311,10 +325,10 @@ export async function saetFastgjort(
   traadSlug: string,
   vaerd: boolean,
 ): Promise<void> {
-  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+  if (!(await erModerator())) throw new Error((await ft()).kunModerator);
   const sb = supabaseServer();
   const { error } = await sb.from('forum_threads').update({ is_pinned: vaerd }).eq('id', threadId);
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalider(kategoriSlug, traadSlug);
 }
 
@@ -324,10 +338,10 @@ export async function saetLaast(
   traadSlug: string,
   vaerd: boolean,
 ): Promise<void> {
-  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+  if (!(await erModerator())) throw new Error((await ft()).kunModerator);
   const sb = supabaseServer();
   const { error } = await sb.from('forum_threads').update({ is_locked: vaerd }).eq('id', threadId);
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalider(kategoriSlug, traadSlug);
 }
 
@@ -349,9 +363,10 @@ export async function rapporterForum(
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) throw new Error('Log ind for at rapportere.');
-  if (!threadId && !postId) throw new Error('Ingen reference at rapportere.');
-  if (!MOD_GRUND_VALUES.includes(reason)) throw new Error('Ugyldig grund.');
+  const f = await ft();
+  if (!user) throw new Error(f.logIndRapporter);
+  if (!threadId && !postId) throw new Error(f.ingenReference);
+  if (!MOD_GRUND_VALUES.includes(reason)) throw new Error(f.ugyldigGrund);
 
   const { error } = await sb.from('forum_reports').insert({
     reporter_id: user.id,
@@ -359,7 +374,7 @@ export async function rapporterForum(
     post_id: postId,
     reason,
   });
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalidatePath('/admin/forum');
 }
 
@@ -379,7 +394,7 @@ export async function modFjernTraad(
     p_fritekst: fritekst ?? null,
     p_report_id: reportId ?? null,
   });
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalider(kategoriSlug);
 }
 
@@ -399,7 +414,7 @@ export async function modFjernIndlaeg(
     p_fritekst: fritekst ?? null,
     p_report_id: reportId ?? null,
   });
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   // Slet-ved-fjern: ryd evt. cachede oversaettelser af indlaegget (best-effort).
   await sletIndlaegOversaettelser(postId);
   revalider(kategoriSlug, traadSlug);
@@ -422,7 +437,7 @@ export async function modFjernAvatar(
     p_fritekst: fritekst ?? null,
     p_report_id: reportId ?? null,
   });
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalider(kategoriSlug, traadSlug);
 }
 
@@ -440,15 +455,15 @@ export async function modAdvarBruger(
     p_fritekst: fritekst ?? null,
     p_report_id: reportId ?? null,
   });
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalidatePath('/admin/forum');
 }
 
 // Moderator: afvis en rapport (markér håndteret uden en indholds-handling).
 export async function afvisRapport(reportId: string): Promise<void> {
-  if (!(await erModerator())) throw new Error('Kun moderator/admin.');
+  if (!(await erModerator())) throw new Error((await ft()).kunModerator);
   const sb = supabaseServer();
   const { error } = await sb.from('forum_reports').update({ handled: true }).eq('id', reportId);
-  if (error) throw new Error(error.message);
+  if (error) return dbFejl(error);
   revalidatePath('/admin/forum');
 }

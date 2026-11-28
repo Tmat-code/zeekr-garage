@@ -5,13 +5,15 @@ import { modelBadge } from '@/lib/model-badge';
 import GarageBadge from '@/components/forum/GarageBadge';
 import TraadSoegeForm from '@/components/forum/TraadSoegeForm';
 import Uddrag from '@/components/forum/Uddrag';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
-export function generateMetadata({ searchParams }: { searchParams: { q?: string } }) {
+export async function generateMetadata({ searchParams }: { searchParams: { q?: string } }) {
   const q = (searchParams.q ?? '').trim();
+  const f = (await hentOrdbog()).forum;
   return {
-    title: q ? `Søg: ${q}` : 'Søg i forummet',
+    title: q ? f.soegMeta(q) : f.soegTitel,
     // Soegeresultat-sider skal ikke indekseres (tyndt/dubleret indhold).
     robots: { index: false, follow: true },
   };
@@ -25,7 +27,8 @@ export default async function ForumSoegSide({
   const q = (searchParams.q ?? '').trim();
   const kat = (searchParams.kat ?? '').trim();
 
-  const kategorier = await getKategoriListe();
+  const [kategorier, sprog, t] = await Promise.all([getKategoriListe(), hentSprog(), hentOrdbog()]);
+  const f = t.forum;
   // Validér scope mod kategori-listen -> send kun en kendt slug til RPC'en
   // (ukendt/manipuleret slug nulstilles til "alle fora").
   const scope = kat ? kategorier.find((k) => k.slug === kat) ?? null : null;
@@ -35,48 +38,48 @@ export default async function ForumSoegSide({
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link href="/forum" className="text-sm text-grafit-500 hover:text-kobber-700">
-        ← Forum
+        {f.tilbageForum}
       </Link>
 
       <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-grafit-900">
-        Søg i forummet
+        {f.soegTitel}
       </h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Søger i både trådtitler og indlæg. Vælg et forum i feltet for at afgrænse søgningen.
+        {f.soegIntro}
       </p>
 
       <div className="mt-5">
-        <TraadSoegeForm defaultValue={q} stor kategorier={kategorier} scopeSlug={scopeSlug} />
+        <TraadSoegeForm defaultValue={q} stor kategorier={kategorier} scopeSlug={scopeSlug} sprog={sprog} />
       </div>
 
       {/* Tilstande: ingen søgning endnu / ingen match / resultater */}
       {!q ? (
         <p className="mt-10 text-center text-grafit-400">
-          Skriv et søgeord ovenfor for at finde tråde.
+          {f.soegTom}
         </p>
       ) : resultater.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-grafit-300 bg-white px-6 py-12 text-center">
           <p className="text-grafit-600">
-            Ingen tråde matcher <span className="font-semibold">“{q}”</span>
-            {scope && <> i <span className="font-semibold">{scope.name}</span></>}.
+            {f.ingenMatch} <span className="font-semibold">“{q}”</span>
+            {scope && <> {f.iScope} <span className="font-semibold">{scope.name}</span></>}.
           </p>
           <p className="mt-2 text-sm text-grafit-400">
             {scope ? (
               <>
-                Prøv et andet søgeord - eller{' '}
+                {f.proevAndetScope}{' '}
                 <Link
                   href={`/forum/soeg?q=${encodeURIComponent(q)}`}
                   className="font-medium text-kobber-700 hover:underline"
                 >
-                  søg i alle fora
+                  {f.soegAlleFora}
                 </Link>
                 .
               </>
             ) : (
               <>
-                Prøv et andet eller kortere søgeord - eller{' '}
+                {f.proevAndet}{' '}
                 <Link href="/forum" className="font-medium text-kobber-700 hover:underline">
-                  gennemse kategorierne
+                  {f.gennemse}
                 </Link>
                 .
               </>
@@ -86,8 +89,8 @@ export default async function ForumSoegSide({
       ) : (
         <>
           <p className="mt-6 text-sm text-grafit-400">
-            {resultater.length} {resultater.length === 1 ? 'tråd' : 'tråde'} matcher “{q}”
-            {scope && <> i {scope.name}</>}
+            {f.antalMatcher(resultater.length)} “{q}”
+            {scope && <> {f.iScope} {scope.name}</>}
           </p>
           <div className="mt-3 divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">
             {resultater.map((r) => (
@@ -113,12 +116,12 @@ export default async function ForumSoegSide({
                 {/* Titel */}
                 <div className="mt-1.5 flex items-center gap-2">
                   {r.isPinned && (
-                    <span className="shrink-0 text-xs" title="Fastgjort">
+                    <span className="shrink-0 text-xs" title={f.fastgjort}>
                       📌
                     </span>
                   )}
                   {r.isLocked && (
-                    <span className="shrink-0 text-xs" title="Låst">
+                    <span className="shrink-0 text-xs" title={f.laast}>
                       🔒
                     </span>
                   )}
@@ -130,9 +133,9 @@ export default async function ForumSoegSide({
 
                 {/* Forfatter + garage-badge + aktivitet + tal */}
                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-grafit-400">
-                  <span>{r.forfatter || 'Ejer'}</span>
+                  <span>{r.forfatter || f.ejer}</span>
                   <GarageBadge bil={r.bil} />
-                  <span>· {relativTid(r.lastPostAt)}</span>
+                  <span>· {relativTid(r.lastPostAt, sprog)}</span>
                   <span>· 💬 {r.replyCount}</span>
                   <span className="hidden sm:inline">· 👁 {r.viewCount}</span>
                 </div>

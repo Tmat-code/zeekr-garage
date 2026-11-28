@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { getKategori } from '@/lib/forum';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import NyTraadForm from '@/components/forum/NyTraadForm';
+import { hentOrdbog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { kategori: string } }) {
   const kat = await getKategori(params.kategori);
-  return { title: kat ? `Ny tråd - ${kat.name}` : 'Ny tråd' };
+  const f = (await hentOrdbog()).forum;
+  return { title: kat ? f.nyTraadMeta(kat.name) : f.nyTraad };
 }
 
 export default async function NyTraadSide({ params }: { params: { kategori: string } }) {
@@ -17,6 +19,7 @@ export default async function NyTraadSide({ params }: { params: { kategori: stri
 
   const ctx = await adminKontekst();
   const erModerator = rolleErModerator(ctx.rolle);
+  const f = (await hentOrdbog()).forum;
 
   if (!ctx.user) redirect(`/login?naeste=${encodeURIComponent(`/forum/${kat.slug}/ny`)}`);
   // Låste kategorier (fx regler): kun moderatorer kan starte tråde.
@@ -28,10 +31,10 @@ export default async function NyTraadSide({ params }: { params: { kategori: stri
         ← {kat.name}
       </Link>
       <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-grafit-900">
-        Ny tråd i {kat.name}
+        {f.nyTraadTitel(kat.name)}
       </h1>
       <p className="mt-1 text-sm text-grafit-500">
-        Hold en god, konstruktiv tone - vi er her for at hjælpe hinanden.
+        {f.nyTraadIntro}
       </p>
       <NyTraadForm kategoriSlug={kat.slug} kategoriNavn={kat.name} />
     </div>

@@ -2,6 +2,12 @@
 // (foerste bogstav af visningsnavnet). Genbrugt overalt hvor en forfatter vises
 // (forum-traade/svar, traadliste, kommentarer, garage-badge-kontekst, beskeder).
 // Rent praesentationelt - faar en faerdig offentlig URL (avatarUrl) eller null.
+// U2: klient-komponent, saa alt-teksten kan slaa op i ordbogen (virker baade
+// fra server- og klient-komponenter).
+'use client';
+
+import { useOrdbog } from '@/lib/i18n/klient';
+
 export default function Avatar({
   url,
   navn,
@@ -13,6 +19,7 @@ export default function Avatar({
   px?: number;
   className?: string;
 }) {
+  const t = useOrdbog();
   const initial = (navn?.trim()?.[0] ?? '?').toUpperCase();
   const style = { width: px, height: px };
 
@@ -21,7 +28,7 @@ export default function Avatar({
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={url}
-        alt={navn ? `${navn}s profilbillede` : 'Profilbillede'}
+        alt={t.billeder.profilbillede(navn)}
         style={style}
         className={`shrink-0 rounded-full border border-grafit-200 object-cover ${className}`}
       />

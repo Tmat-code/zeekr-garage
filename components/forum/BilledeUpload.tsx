@@ -9,6 +9,7 @@ import {
   MAKS_ANTAL,
   forumBilledeUrl,
 } from '@/lib/billeder';
+import { useOrdbog } from '@/lib/i18n/klient';
 
 type Item = { path: string; url: string };
 
@@ -30,6 +31,7 @@ export default function BilledeUpload({
   urlFor?: (path: string) => string;
   maksAntal?: number;
 }) {
+  const tb = useOrdbog().billeder;
   const [items, setItems] = useState<Item[]>([]);
   const [uploader, setUploader] = useState(false);
   const [fejl, setFejl] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function BilledeUpload({
       data: { user },
     } = await sb.auth.getUser();
     if (!user) {
-      setFejl('Log ind for at uploade billeder.');
+      setFejl(tb.logIndUpload);
       setUploader(false);
       return;
     }
@@ -54,11 +56,11 @@ export default function BilledeUpload({
     const nye: Item[] = [];
     for (const f of valgte) {
       if (!TILLADTE_TYPER.includes(f.type)) {
-        setFejl('Kun billeder (JPG, PNG, WebP, GIF).');
+        setFejl(tb.kunBilleder);
         continue;
       }
       if (f.size > MAKS_BYTES) {
-        setFejl('Billedet er for stort (maks 5 MB).');
+        setFejl(tb.forStort);
         continue;
       }
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
@@ -67,7 +69,7 @@ export default function BilledeUpload({
         .from(bucket)
         .upload(path, f, { contentType: f.type, upsert: false });
       if (error) {
-        setFejl('Upload fejlede: ' + error.message);
+        setFejl(tb.uploadFejlede(error.message));
         continue;
       }
       nye.push({ path, url: urlFor(path) });
@@ -101,10 +103,10 @@ export default function BilledeUpload({
           disabled={disabled || uploader || items.length >= maksAntal}
           onClick={() => inputRef.current?.click()}
         >
-          📷 {uploader ? 'Uploader…' : 'Tilføj billede'}
+          📷 {uploader ? tb.uploader : tb.tilfoej}
         </button>
         <span className="text-xs text-grafit-400">
-          {items.length}/{maksAntal} · maks 5 MB
+          {tb.taeller(items.length, maksAntal)}
         </span>
         <input
           ref={inputRef}
@@ -123,14 +125,14 @@ export default function BilledeUpload({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={i.url}
-                alt="Vedhæftet billede"
+                alt={tb.vedhaeftet}
                 className="h-16 w-16 rounded-lg border border-grafit-200 object-cover"
               />
               <button
                 type="button"
                 onClick={() => fjern(i.path)}
                 className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-grafit-900 text-xs leading-none text-white"
-                aria-label="Fjern billede"
+                aria-label={tb.fjern}
               >
                 ×
               </button>
