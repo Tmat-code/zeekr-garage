@@ -32,11 +32,12 @@ export default function TraadSoegeForm({
   if (kategorier) {
     const idx = new Map<string, number>();
     for (const k of kategorier) {
-      if (!idx.has(k.groupLabel)) {
-        idx.set(k.groupLabel, grupper.length);
+      // U7: grupperet på den danske nøgle, vist med label på læserens sprog.
+      if (!idx.has(k.groupKey)) {
+        idx.set(k.groupKey, grupper.length);
         grupper.push({ label: k.groupLabel, kats: [] });
       }
-      grupper[idx.get(k.groupLabel)!].kats.push(k);
+      grupper[idx.get(k.groupKey)!].kats.push(k);
     }
   }
 

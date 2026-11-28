@@ -1,5 +1,7 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { STATUSES, type IssueType, type Status } from '@/lib/config';
+import { getKategoriNavnPrSlug } from '@/lib/forum';
+import { hentSprog } from '@/lib/i18n/server';
 
 // =========================================================================
 // Overblik - tal til stat-tiles
@@ -145,13 +147,16 @@ export async function getForumAktivitet(graense = 12): Promise<AktivitetPost[]> 
   ]);
 
   const feed: AktivitetPost[] = [];
+  // U7: kategorinavnet på moderatorens sprog (slug-opslag).
+  const sprog = await hentSprog();
+  const navne = sprog === 'da' ? null : await getKategoriNavnPrSlug(sprog);
 
   for (const r of (traade.data ?? []) as any[]) {
     const kat = r.kategori;
     feed.push({
       kind: 'forum_traad',
       titel: r.title,
-      detalje: kat?.name ?? null,
+      detalje: (kat?.slug && navne?.get(kat.slug)) || kat?.name || null,
       created_at: r.created_at,
       href: kat?.slug ? `/forum/${kat.slug}/${r.slug}` : null,
     });
@@ -230,12 +235,15 @@ export async function getForumModTraade(f: ForumModFiltre = {}): Promise<ForumMo
     p_offset: f.offset ?? 0,
   });
   const rows = (data ?? []) as any[];
+  // U7: RPC'en giver det danske kategorinavn - vis det på moderatorens sprog.
+  const sprog = await hentSprog();
+  const navne = sprog === 'da' || rows.length === 0 ? null : await getKategoriNavnPrSlug(sprog);
   return {
     traade: rows.map((r) => ({
       id: r.id,
       slug: r.slug,
       kategoriSlug: r.kategori_slug ?? '',
-      kategoriNavn: r.kategori_navn ?? '',
+      kategoriNavn: navne?.get(r.kategori_slug) ?? r.kategori_navn ?? '',
       title: r.title,
       forfatter: r.forfatter ?? null,
       lastPostAt: r.last_post_at,

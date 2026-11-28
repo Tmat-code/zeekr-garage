@@ -22,7 +22,7 @@ export default async function Forside() {
     getModels(),
     getIssues(),
     getCurrentUser(),
-    getForsideBesked(),
+    hentSprog().then((s) => getForsideBesked(s)),
     hentOrdbog(),
   ]);
   const f = t.forside;

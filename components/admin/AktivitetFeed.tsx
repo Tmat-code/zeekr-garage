@@ -13,8 +13,8 @@ const IKON: Record<AktivitetPost['kind'], string> = {
 
 function tekst(a: AktivitetPost, sprog: UiSprog): JSX.Element {
   const t = vordbog(sprog).aktivitetFeed;
-  // Typen af en ny melding (Fejl/Ønske) oversættes; øvrige detaljer er
-  // DB-navne (kategori/model) og står som de er.
+  // Typen af en ny melding (Fejl/Ønske) oversættes; kategorinavne slås op på
+  // moderatorens sprog i getForumAktivitet (U7); modelnavne står som de er.
   const detalje = a.type ? ordbog(sprog).config.type[a.type].badge : a.detalje;
   const meta = detalje && <span className="text-grafit-400"> · {detalje}</span>;
   switch (a.kind) {

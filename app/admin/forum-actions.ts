@@ -3,6 +3,18 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erModerator, erAdmin } from '@/lib/admin';
+import {
+  rensOversaettelser,
+  OVERSAETTELSE_MAKS_KATEGORI,
+  OVERSAETTELSE_MAKS_REGLER,
+  type Oversaettelser,
+} from '@/lib/i18n/indhold';
+
+// U7: kategoriens egne felter (gruppe-labelen sættes for hele gruppen via
+// saetGruppeOversaettelser).
+type KatOv = Oversaettelser<'name' | 'description'>;
+const rensKatOv = (v: unknown): KatOv =>
+  rensOversaettelser(v, ['name', 'description'] as const, OVERSAETTELSE_MAKS_KATEGORI);
 
 function slugify(s: string): string {
   const base = s
@@ -24,7 +36,11 @@ function revalider() {
 }
 
 // Gem de fælles forum-regler (singleton). Moderator/admin.
-export async function gemForumRegler(content: string): Promise<void> {
+// U7: `oversaettelser` = sv/en ({sv:{content}, en:{content}}); undefined = røres ikke.
+export async function gemForumRegler(
+  content: string,
+  oversaettelser?: Oversaettelser<'content'>,
+): Promise<void> {
   await kraevModerator();
   const sb = supabaseServer();
   const {
@@ -36,6 +52,9 @@ export async function gemForumRegler(content: string): Promise<void> {
       content: content.trim() || null,
       updated_at: new Date().toISOString(),
       updated_by: user?.id ?? null,
+      ...(oversaettelser !== undefined
+        ? { oversaettelser: rensOversaettelser(oversaettelser, ['content'], OVERSAETTELSE_MAKS_REGLER) }
+        : {}),
     })
     .eq('id', 1);
   if (error) throw new Error(error.message);
@@ -148,6 +167,7 @@ export async function opretKategori(input: {
   groupLabel: string;
   icon?: string;
   description?: string;
+  oversaettelser?: KatOv;
 }): Promise<void> {
   await kraevModerator();
   const navn = input.name.trim();
@@ -188,6 +208,8 @@ export async function opretKategori(input: {
     group_label: gruppe,
     group_order: groupOrder,
     display_order: displayOrder,
+    // Gruppens sv/en-label arves af DB-triggeren fra de andre i gruppen.
+    ...(input.oversaettelser ? { oversaettelser: rensKatOv(input.oversaettelser) } : {}),
   });
   if (error) throw new Error(error.message);
   revalider();
@@ -196,7 +218,7 @@ export async function opretKategori(input: {
 // Ret navn/beskrivelse/ikon (slug holdes stabil for ikke at bryde URL'er).
 export async function retKategori(
   id: string,
-  patch: { name?: string; description?: string | null; icon?: string },
+  patch: { name?: string; description?: string | null; icon?: string; oversaettelser?: KatOv },
 ): Promise<void> {
   await kraevModerator();
   const data: Record<string, any> = {};
@@ -209,6 +231,20 @@ export async function retKategori(
   if (patch.icon !== undefined) data.icon = patch.icon.trim() || '💬';
 
   const sb = supabaseServer();
+  if (patch.oversaettelser !== undefined) {
+    // Flet: navn/beskrivelse erstattes, gruppe-labelen (fælles for gruppen) bevares.
+    const { data: nu } = await sb.from('forum_categories').select('oversaettelser').eq('id', id).maybeSingle();
+    const gammel = ((nu as any)?.oversaettelser ?? {}) as Record<string, Record<string, string>>;
+    const ny = rensKatOv(patch.oversaettelser);
+    const flettet: Record<string, Record<string, string>> = {};
+    for (const s of ['sv', 'en'] as const) {
+      const obj: Record<string, string> = { ...(ny[s] ?? {}) };
+      const g = gammel?.[s]?.group_label;
+      if (typeof g === 'string' && g.trim()) obj.group_label = g;
+      if (Object.keys(obj).length > 0) flettet[s] = obj;
+    }
+    data.oversaettelser = flettet;
+  }
   const { error } = await sb.from('forum_categories').update(data).eq('id', id);
   if (error) throw new Error(error.message);
   revalider();
@@ -337,6 +373,22 @@ export async function flytGruppe(label: string, retning: 'op' | 'ned'): Promise<
     .update({ group_order: mig.order })
     .eq('group_label', nabo.label);
   if (r2.error) throw new Error(r2.error.message);
+  revalider();
+}
+
+// U7: en gruppes sv/en-label på ALLE gruppens kategorier (gruppe-labelen er
+// denormaliseret pr. række). Atomisk RPC, moderator-gated i DB'en.
+export async function saetGruppeOversaettelser(
+  label: string,
+  oversaettelser: Oversaettelser<'group_label'>,
+): Promise<void> {
+  await kraevModerator();
+  const sb = supabaseServer();
+  const { error } = await sb.rpc('forum_saet_gruppe_oversaettelser', {
+    p_label: label,
+    p_oversaettelser: rensOversaettelser(oversaettelser, ['group_label'], OVERSAETTELSE_MAKS_KATEGORI),
+  });
+  if (error) throw new Error(error.message);
   revalider();
 }
 

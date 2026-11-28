@@ -76,6 +76,11 @@ export type Kommentar = {
 // =========================================================================
 
 // En forum-kategori (model-forum hvis modelId != null, ellers tvaergaaende).
+// U7: felter i forum_categories.oversaettelser (sv/en). Dansk står i selve
+// kolonnerne; tomt felt = dansk fallback.
+export type KategoriFelt = 'name' | 'description' | 'group_label';
+export type KategoriOversaettelser = Partial<Record<'sv' | 'en', Partial<Record<KategoriFelt, string>>>>;
+
 export type ForumKategori = {
   id: string;
   slug: string;
@@ -87,6 +92,11 @@ export type ForumKategori = {
   displayOrder: number;
   modelId: string | null;
   isLocked: boolean;
+  // U7: raa oversaettelser (editoren). Paa offentlige sider er name/description/
+  // groupLabel allerede slaaet op paa laeserens sprog; groupKey er altid den
+  // DANSKE gruppe-label (gruppering, ordbogens gruppeTekst, editor-handlinger).
+  oversaettelser: KategoriOversaettelser;
+  groupKey: string;
 };
 
 // Ejer-graf pr. model (P6 social proof). Kommer fra Min garage (cars), ikke
@@ -111,7 +121,8 @@ export type ForumKategoriStat = ForumKategori & {
 };
 
 // En gruppe af kategorier (gruppe-overskrift + raekker).
-export type ForumGruppe = { label: string; kategorier: ForumKategoriStat[] };
+// U7: `label` = vist (laeserens sprog), `noegle` = den danske DB-label.
+export type ForumGruppe = { label: string; noegle: string; kategorier: ForumKategoriStat[] };
 
 // En traad-raekke i en kategori-liste.
 export type ForumTraadRow = {

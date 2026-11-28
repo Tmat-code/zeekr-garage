@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import type { ForumGruppe, ForumKategoriStat } from '@/lib/types';
+import type { ForumGruppe, ForumKategoriStat, KategoriOversaettelser } from '@/lib/types';
 import ModelBadge from '@/components/forum/ModelBadge';
+import OversaettelsesFelter from '@/components/admin/OversaettelsesFelter';
+import { INDHOLD_SPROG, OVERSAETTELSE_MAKS_KATEGORI, type Oversaettelser } from '@/lib/i18n/indhold';
 import {
   opretKategori,
   retKategori,
@@ -11,7 +13,33 @@ import {
   flytKategoriTilGruppe,
   flytGruppe,
   sletKategori,
+  saetGruppeOversaettelser,
 } from '@/app/admin/forum-actions';
+
+// U7: kategoriens egne sv/en-felter (navn + beskrivelse). Gruppe-labelen
+// oversættes ved gruppe-overskriften og gælder hele gruppen.
+type KatOv = Oversaettelser<'name' | 'description'>;
+type GruppeOv = Oversaettelser<'group_label'>;
+
+function kunFelter<F extends string>(ov: KategoriOversaettelser, felter: readonly F[]): Oversaettelser<F> {
+  const ud: Oversaettelser<F> = {};
+  for (const s of INDHOLD_SPROG) {
+    const obj: Partial<Record<F, string>> = {};
+    for (const f of felter) {
+      const v = (ov[s] as Record<string, string> | undefined)?.[f];
+      if (v) obj[f] = v;
+    }
+    if (Object.keys(obj).length) ud[s] = obj;
+  }
+  return ud;
+}
+
+// Mangler der sv/en for et felt med dansk tekst? (markør i listen)
+function manglerOversaettelse(dansk: Record<string, string | null>, ov: KategoriOversaettelser): boolean {
+  return INDHOLD_SPROG.some((s) =>
+    Object.entries(dansk).some(([f, d]) => !!d?.trim() && !(ov[s] as Record<string, string> | undefined)?.[f]?.trim()),
+  );
+}
 
 function useKoer() {
   const [pending, start] = useTransition();
@@ -47,6 +75,13 @@ function KategoriRaekke({
   const [navn, setNavn] = useState(k.name);
   const [ikon, setIkon] = useState(k.icon ?? '💬');
   const [beskrivelse, setBeskrivelse] = useState(k.description ?? '');
+  const startOv = kunFelter(k.oversaettelser, ['name', 'description'] as const);
+  const [ov, setOv] = useState<KatOv>(startOv);
+  // Model-fora: navnet er modelnavnet (ens på alle sprog) - kun beskrivelsen tæller.
+  const mangler = manglerOversaettelse(
+    erModelForum ? { description: k.description } : { name: k.name, description: k.description },
+    k.oversaettelser,
+  );
 
   return (
     <div className={`rounded-xl border border-grafit-200 bg-white p-3 ${pending ? 'opacity-60' : ''}`}>
@@ -73,13 +108,32 @@ function KategoriRaekke({
             onChange={(e) => setBeskrivelse(e.target.value)}
             placeholder="Beskrivelse"
           />
+          <OversaettelsesFelter
+            felter={[
+              { felt: 'name', label: 'Navn', dansk: navn, maks: OVERSAETTELSE_MAKS_KATEGORI },
+              {
+                felt: 'description',
+                label: 'Beskrivelse',
+                dansk: beskrivelse,
+                flerlinjet: true,
+                maks: OVERSAETTELSE_MAKS_KATEGORI,
+              },
+            ]}
+            vaerdi={ov}
+            onChange={setOv}
+          />
           <div className="flex gap-2">
             <button
               className="btn-primary !py-1.5 text-sm"
               disabled={pending || !navn.trim()}
               onClick={() =>
                 koer(async () => {
-                  await retKategori(k.id, { name: navn, icon: ikon, description: beskrivelse });
+                  await retKategori(k.id, {
+                    name: navn,
+                    icon: ikon,
+                    description: beskrivelse,
+                    oversaettelser: ov,
+                  });
                   setRedigerer(false);
                 })
               }
@@ -92,6 +146,7 @@ function KategoriRaekke({
                 setNavn(k.name);
                 setIkon(k.icon ?? '💬');
                 setBeskrivelse(k.description ?? '');
+                setOv(startOv);
                 setRedigerer(false);
               }}
             >
@@ -112,6 +167,11 @@ function KategoriRaekke({
               <span className="truncate font-medium text-grafit-900">{k.name}</span>
               {k.isLocked && <span className="text-xs text-grafit-400" title="Låst">🔒</span>}
               <span className="shrink-0 text-xs text-grafit-400">{k.traade} tråde</span>
+              {mangler && (
+                <span className="shrink-0 text-xs font-medium text-kobber-700" title="Svensk eller engelsk mangler - den danske tekst vises">
+                  🌐 mangler sv/en
+                </span>
+              )}
             </div>
             {k.description && <p className="truncate text-xs text-grafit-500">{k.description}</p>}
           </div>
@@ -211,6 +271,7 @@ function NyKategori({ grupper, fastGruppe }: { grupper?: ForumGruppe[]; fastGrup
   const [gruppe, setGruppe] = useState('');
   const [ikon, setIkon] = useState('💬');
   const [beskrivelse, setBeskrivelse] = useState('');
+  const [ov, setOv] = useState<KatOv>({});
 
   const aktivGruppe = erFast ? fastGruppe! : gruppe;
 
@@ -257,7 +318,7 @@ function NyKategori({ grupper, fastGruppe }: { grupper?: ForumGruppe[]; fastGrup
           />
           <datalist id="forum-grupper">
             {(grupper ?? []).map((g) => (
-              <option key={g.label} value={g.label} />
+              <option key={g.noegle} value={g.noegle} />
             ))}
           </datalist>
         </div>
@@ -268,6 +329,27 @@ function NyKategori({ grupper, fastGruppe }: { grupper?: ForumGruppe[]; fastGrup
         onChange={(e) => setBeskrivelse(e.target.value)}
         placeholder="Kort beskrivelse (valgfri)"
       />
+      <div className="mt-2">
+        <OversaettelsesFelter
+          felter={[
+            { felt: 'name', label: 'Navn', dansk: navn, maks: OVERSAETTELSE_MAKS_KATEGORI },
+            {
+              felt: 'description',
+              label: 'Beskrivelse',
+              dansk: beskrivelse,
+              flerlinjet: true,
+              maks: OVERSAETTELSE_MAKS_KATEGORI,
+            },
+          ]}
+          vaerdi={ov}
+          onChange={setOv}
+        />
+      </div>
+      {!erFast && (
+        <p className="mt-2 text-xs text-grafit-400">
+          Gruppens svenske og engelske navn sætter du ved gruppe-overskriften, når den er oprettet.
+        </p>
+      )}
       <div className="mt-2 flex items-center gap-2">
         <button
           className="btn-primary !py-1.5 text-sm"
@@ -279,9 +361,11 @@ function NyKategori({ grupper, fastGruppe }: { grupper?: ForumGruppe[]; fastGrup
                 groupLabel: aktivGruppe,
                 icon: ikon,
                 description: beskrivelse,
+                oversaettelser: ov,
               });
               setNavn('');
               setBeskrivelse('');
+              setOv({});
               if (!erFast) setGruppe('');
               setAaben(false);
             })
@@ -312,6 +396,17 @@ function GruppeBlok({
   erModelGruppe: boolean;
 }) {
   const { pending, fejl, koer } = useKoer();
+  // U7: gruppens sv/en-label (DB'en holder den ens på alle gruppens rækker;
+  // vis den første der har en).
+  const startOv: GruppeOv = {};
+  for (const s of INDHOLD_SPROG) {
+    const v = g.kategorier.map((k) => k.oversaettelser[s]?.group_label).find((x) => x?.trim());
+    if (v) startOv[s] = { group_label: v };
+  }
+  const [ov, setOv] = useState<GruppeOv>(startOv);
+  const [gemtOv, setGemtOv] = useState(JSON.stringify(startOv));
+  const [ovGemt, setOvGemt] = useState(false);
+  const ovAendret = JSON.stringify(ov) !== gemtOv;
   return (
     <div>
       <div className="mb-2 flex items-center gap-1">
@@ -322,7 +417,7 @@ function GruppeBlok({
           className="rounded px-1.5 py-1 text-grafit-400 hover:bg-grafit-100 hover:text-grafit-700 disabled:opacity-30"
           disabled={pending || erForstGruppe}
           title="Flyt gruppen op"
-          onClick={() => koer(() => flytGruppe(g.label, 'op'))}
+          onClick={() => koer(() => flytGruppe(g.noegle, 'op'))}
         >
           ↑
         </button>
@@ -330,10 +425,38 @@ function GruppeBlok({
           className="rounded px-1.5 py-1 text-grafit-400 hover:bg-grafit-100 hover:text-grafit-700 disabled:opacity-30"
           disabled={pending || erSidstGruppe}
           title="Flyt gruppen ned"
-          onClick={() => koer(() => flytGruppe(g.label, 'ned'))}
+          onClick={() => koer(() => flytGruppe(g.noegle, 'ned'))}
         >
           ↓
         </button>
+      </div>
+      <div className="mb-2 flex flex-wrap items-start gap-2">
+        <div className="min-w-[14rem] flex-1">
+          <OversaettelsesFelter
+            felter={[{ felt: 'group_label', label: 'Gruppe', dansk: g.noegle, maks: OVERSAETTELSE_MAKS_KATEGORI }]}
+            vaerdi={ov}
+            onChange={(v) => {
+              setOv(v);
+              setOvGemt(false);
+            }}
+          />
+        </div>
+        {ovAendret && (
+          <button
+            className="btn-primary !py-1.5 text-sm"
+            disabled={pending}
+            onClick={() =>
+              koer(async () => {
+                await saetGruppeOversaettelser(g.noegle, ov);
+                setGemtOv(JSON.stringify(ov));
+                setOvGemt(true);
+              })
+            }
+          >
+            Gem gruppe-navn
+          </button>
+        )}
+        {ovGemt && !ovAendret && !fejl && <span className="self-center text-xs text-loest">Gemt.</span>}
       </div>
       {fejl && <p className="mb-2 text-xs text-kobber-700">{fejl}</p>}
       <div className="space-y-2">
@@ -353,7 +476,7 @@ function GruppeBlok({
             Model-fora tilføjes ikke her - de er koblet til en bil-model.
           </p>
         ) : (
-          <NyKategori fastGruppe={g.label} />
+          <NyKategori fastGruppe={g.noegle} />
         )}
       </div>
     </div>
@@ -364,21 +487,21 @@ export default function KategoriStyring({ grupper }: { grupper: ForumGruppe[] })
   // Grupper der rummer model-fora ("Modellerne") - rygraden, holdes adskilt:
   // man kan ikke flytte en kategori ind i dem.
   const modelGrupper = new Set(
-    grupper.filter((g) => g.kategorier.some((k) => k.modelId != null)).map((g) => g.label),
+    grupper.filter((g) => g.kategorier.some((k) => k.modelId != null)).map((g) => g.noegle),
   );
 
   return (
     <div className="space-y-6">
       {grupper.map((g, i) => (
         <GruppeBlok
-          key={g.label}
+          key={g.noegle}
           g={g}
           erForstGruppe={i === 0}
           erSidstGruppe={i === grupper.length - 1}
-          erModelGruppe={modelGrupper.has(g.label)}
+          erModelGruppe={modelGrupper.has(g.noegle)}
           flytMaal={grupper
-            .map((x) => x.label)
-            .filter((l) => l !== g.label && !modelGrupper.has(l))}
+            .map((x) => x.noegle)
+            .filter((l) => l !== g.noegle && !modelGrupper.has(l))}
         />
       ))}
       <div className="border-t border-grafit-200 pt-4">

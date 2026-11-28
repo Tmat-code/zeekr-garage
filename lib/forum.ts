@@ -1,6 +1,9 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { forumBilledeUrl, avatarUrl } from '@/lib/billeder';
 import { foersteUrl, normaliserUrl } from '@/lib/forum-links';
+import { laesKategoriOversaettelser, lokaliserKategori, gruppeLabel } from '@/lib/forum-kategori-i18n';
+import type { UiSprog } from '@/lib/i18n/sprog';
+import { oversatFelt } from '@/lib/i18n/indhold';
 import type {
   ForumGruppe,
   ForumKategori,
@@ -46,11 +49,32 @@ function mapKategori(r: any): ForumKategori {
     displayOrder: r.display_order,
     modelId: r.model_id ?? null,
     isLocked: r.is_locked ?? false,
+    oversaettelser: laesKategoriOversaettelser(r.oversaettelser),
+    groupKey: r.group_label,
   };
 }
 
-const KATEGORI_COLS =
-  'id, slug, name, description, icon, group_label, group_order, display_order, model_id, is_locked'; // i18n-ok (kolonneliste)
+const KATEGORI_COLS_U = 'id, slug, name, description, icon, group_label, group_order, display_order, model_id, is_locked'; // i18n-ok (kolonneliste)
+const KATEGORI_COLS = `${KATEGORI_COLS_U}, oversaettelser`; // i18n-ok (kolonneliste)
+
+// U7: forum_categories-select med oversaettelser - og uden, hvis kolonnen endnu
+// ikke findes (koden deployet før migrationen): så vises alt på dansk i stedet
+// for at forummet vælter. `byg` får kolonnelisten og returnerer forespørgslen.
+async function medKategoriKolonner<T>(
+  byg: (cols: string) => PromiseLike<{ data: T | null; error: any }>,
+): Promise<T | null> {
+  const r = await byg(KATEGORI_COLS);
+  if (!r.error) return r.data;
+  if (!String(r.error?.message ?? '').includes('oversaettelser')) return r.data;
+  return (await byg(KATEGORI_COLS_U)).data;
+}
+
+// U7: slug -> kategorinavn på læserens sprog (til lister der kun har slug/dansk
+// navn fra en RPC: søgning, forum-moderering, aktivitet).
+export async function getKategoriNavnPrSlug(sprog: UiSprog): Promise<Map<string, string>> {
+  const liste = await getKategoriListe(sprog);
+  return new Map(liste.map((k) => [k.slug, k.name]));
+}
 
 // --- Ejer-graf pr. model (P6) ---
 // Social proof paa model-foraene: "N ejere" kommer fra Min garage (cars), ikke
@@ -100,14 +124,17 @@ export async function getModelEjerTal(): Promise<Record<string, ModelEjerTal>> {
 }
 
 // --- Forummets forside: kategorier grupperet + optalte tal ---
-export async function getForumGrupper(): Promise<ForumGruppe[]> {
+// sprog: læserens sprog ('da' = rå danske navne + oversaettelser, til editoren).
+export async function getForumGrupper(sprog: UiSprog = 'da'): Promise<ForumGruppe[]> {
   const sb = supabaseServer();
-  const [{ data: kats }, { data: stats }, ejerTal] = await Promise.all([
-    sb
-      .from('forum_categories')
-      .select(KATEGORI_COLS)
-      .order('group_order', { ascending: true })
-      .order('display_order', { ascending: true }),
+  const [kats, { data: stats }, ejerTal] = await Promise.all([
+    medKategoriKolonner<any[]>((cols) =>
+      sb
+        .from('forum_categories')
+        .select(cols)
+        .order('group_order', { ascending: true })
+        .order('display_order', { ascending: true }),
+    ),
     sb
       .from('forum_threads')
       .select('category_id, reply_count, view_count, last_post_at')
@@ -146,31 +173,48 @@ export async function getForumGrupper(): Promise<ForumGruppe[]> {
       biler: et?.biler ?? 0,
       bekraeftelser: et?.bekraeftelser ?? 0,
     };
-    if (!idx.has(k.groupLabel)) {
-      idx.set(k.groupLabel, grupper.length);
-      grupper.push({ label: k.groupLabel, kategorier: [] });
+    if (!idx.has(k.groupKey)) {
+      idx.set(k.groupKey, grupper.length);
+      grupper.push({ label: k.groupKey, noegle: k.groupKey, kategorier: [] });
     }
-    grupper[idx.get(k.groupLabel)!].kategorier.push(stat);
+    grupper[idx.get(k.groupKey)!].kategorier.push(stat);
   }
-  return grupper;
+  if (sprog === 'da') return grupper;
+  return grupper.map((g) => ({
+    ...g,
+    label: gruppeLabel(g.noegle, g.kategorier, sprog),
+    kategorier: g.kategorier.map((k) => lokaliserKategori(k, sprog)),
+  }));
 }
 
 // --- Enkelt kategori (slug) ---
-export async function getKategori(slug: string): Promise<ForumKategori | null> {
+export async function getKategori(slug: string, sprog: UiSprog = 'da'): Promise<ForumKategori | null> {
   const sb = supabaseServer();
-  const { data } = await sb.from('forum_categories').select(KATEGORI_COLS).eq('slug', slug).single();
-  return data ? mapKategori(data) : null;
+  const data = await medKategoriKolonner<any>((cols) =>
+    sb.from('forum_categories').select(cols).eq('slug', slug).maybeSingle(),
+  );
+  return data ? lokaliserKategori(mapKategori(data), sprog) : null;
 }
 
 // --- Flad, ordnet kategori-liste (til scope-dropdown i søgningen) ---
-export async function getKategoriListe(): Promise<ForumKategori[]> {
+export async function getKategoriListe(sprog: UiSprog = 'da'): Promise<ForumKategori[]> {
   const sb = supabaseServer();
-  const { data } = await sb
-    .from('forum_categories')
-    .select(KATEGORI_COLS)
-    .order('group_order', { ascending: true })
-    .order('display_order', { ascending: true });
-  return ((data ?? []) as any[]).map(mapKategori);
+  const data = await medKategoriKolonner<any[]>((cols) =>
+    sb
+      .from('forum_categories')
+      .select(cols)
+      .order('group_order', { ascending: true })
+      .order('display_order', { ascending: true }),
+  );
+  const liste = ((data ?? []) as any[]).map(mapKategori);
+  if (sprog === 'da') return liste;
+  // Gruppe-labelen slås op for hele gruppen (samme regel som forum-oversigten).
+  const perGruppe = new Map<string, ForumKategori[]>();
+  for (const k of liste) perGruppe.set(k.groupKey, [...(perGruppe.get(k.groupKey) ?? []), k]);
+  return liste.map((k) => ({
+    ...lokaliserKategori(k, sprog),
+    groupLabel: gruppeLabel(k.groupKey, perGruppe.get(k.groupKey) ?? [k], sprog),
+  }));
 }
 
 // --- Tråde i en kategori (fastgjorte først, derefter seneste aktivitet) ---
@@ -207,17 +251,21 @@ export async function getTraade(categoryId: string): Promise<ForumTraadRow[]> {
 }
 
 // --- Enkelt tråd (slug) med dens kategori ---
-export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | null> {
+export async function getTraad(traadSlug: string, sprog: UiSprog = 'da'): Promise<ForumTraadDetalje | null> {
   const sb = supabaseServer();
-  const { data } = await sb
-    .from('forum_threads')
-    .select(
-      `id, slug, title, created_at, is_pinned, is_locked, view_count, reply_count, is_removed,
-       kategori:forum_categories ( slug, name, icon, is_locked, model_id )`,
-    )
-    .eq('slug', traadSlug)
-    .limit(1)
-    .maybeSingle();
+  const byg = (ekstra: string) =>
+    sb
+      .from('forum_threads')
+      .select(
+        `id, slug, title, created_at, is_pinned, is_locked, view_count, reply_count, is_removed,
+       kategori:forum_categories ( slug, name, icon, is_locked, model_id${ekstra} )`,
+      )
+      .eq('slug', traadSlug)
+      .limit(1)
+      .maybeSingle();
+  let { data, error } = await byg(', oversaettelser'); // i18n-ok (kolonne)
+  // U7: før migrationen findes kolonnen ikke -> hent uden (dansk navn).
+  if (error && String(error.message ?? '').includes('oversaettelser')) ({ data } = await byg(''));
 
   if (!data || (data as any).is_removed) return null;
   const k = (data as any).kategori;
@@ -232,7 +280,7 @@ export async function getTraad(traadSlug: string): Promise<ForumTraadDetalje | n
     replyCount: (data as any).reply_count ?? 0,
     kategori: {
       slug: k?.slug ?? '',
-      name: k?.name ?? '',
+      name: oversatFelt(k?.name ?? '', laesKategoriOversaettelser(k?.oversaettelser), sprog, 'name') ?? '',
       icon: k?.icon ?? null,
       modelId: k?.model_id ?? null,
       isLocked: k?.is_locked ?? false,
@@ -248,6 +296,7 @@ export async function getForumSoeg(
   q: string,
   kategoriSlug?: string | null,
   maks = 50,
+  sprog: UiSprog = 'da',
 ): Promise<ForumSoegeResultat[]> {
   const soegeord = (q ?? '').trim();
   if (!soegeord) return [];
@@ -259,6 +308,8 @@ export async function getForumSoeg(
     p_maks: maks,
   });
   if (error || !data) return [];
+  // U7: RPC'en giver det danske kategorinavn - slå op på læserens sprog via slug.
+  const navne = sprog === 'da' ? null : await getKategoriNavnPrSlug(sprog);
 
   return (data as any[]).map((r) => {
     const modelNavn = r.bil_model ?? null;
@@ -269,7 +320,7 @@ export async function getForumSoeg(
       slug: r.slug,
       title: r.title,
       kategoriSlug: r.kategori_slug,
-      kategoriNavn: r.kategori_navn,
+      kategoriNavn: navne?.get(r.kategori_slug) ?? r.kategori_navn,
       kategoriIcon: r.kategori_icon ?? null,
       modelId: r.model_id ?? null,
       forfatter: r.forfatter ?? null,

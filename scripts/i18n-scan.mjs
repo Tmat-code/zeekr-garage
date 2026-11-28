@@ -204,6 +204,29 @@ const SKIVER = {
     'lib/vaerksted-fejl.ts',
     'lib/queries-admin.ts',
   ],
+  // U7: DB-indhold (kategorinavne/-beskrivelser/gruppe-label, forum-regler,
+  // forside-besked) paa laeserens sprog. Bevidst UDE: lib/forum-oversaettelser.ts
+  // (data - danske kilde-tekster med sv/en ved siden af) og editorerne i
+  // Vaerkstedet (KategoriStyring, ForumReglerEditor, ForsideBeskedEditor,
+  // OversaettelsesFelter: admin-agtige struktur-editorer = dansk UI). lib/queries.ts
+  // er ikke med (U3-filer i forvejen; kun kolonnelister roert).
+  U7: [
+    'lib/forum-kategori-i18n.ts',
+    'lib/forum.ts',
+    'lib/forum-regler.ts',
+    'lib/queries-admin.ts',
+    'app/page.tsx',
+    'app/forum/page.tsx',
+    'app/forum/[kategori]/page.tsx',
+    'app/forum/[kategori]/ny/page.tsx',
+    'app/forum/[kategori]/[traad]/page.tsx',
+    'app/forum/soeg/page.tsx',
+    'app/forum/regler/page.tsx',
+    'components/forum/ForumOversigt.tsx',
+    'components/forum/TraadSoegeForm.tsx',
+    'components/admin/ForumModerering.tsx',
+    'components/admin/AktivitetFeed.tsx',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

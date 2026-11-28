@@ -3,18 +3,18 @@ import Link from 'next/link';
 import { getKategori } from '@/lib/forum';
 import { adminKontekst, rolleErModerator } from '@/lib/admin';
 import NyTraadForm from '@/components/forum/NyTraadForm';
-import { hentOrdbog } from '@/lib/i18n/server';
+import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { kategori: string } }) {
-  const kat = await getKategori(params.kategori);
+  const kat = await getKategori(params.kategori, await hentSprog());
   const f = (await hentOrdbog()).forum;
   return { title: kat ? f.nyTraadMeta(kat.name) : f.nyTraad };
 }
 
 export default async function NyTraadSide({ params }: { params: { kategori: string } }) {
-  const kat = await getKategori(params.kategori);
+  const kat = await getKategori(params.kategori, await hentSprog());
   if (!kat) notFound();
 
   const ctx = await adminKontekst();

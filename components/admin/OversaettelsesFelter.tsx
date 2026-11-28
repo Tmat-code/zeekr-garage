@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { INDHOLD_SPROG, type IndholdSprog, type Oversaettelser } from '@/lib/i18n/indhold';
 
-// U1b: genbrugelige felter pr. sprog til DB-indhold (links nu, U7 kategorier/
-// regler/forside-besked senere). Dansk står i editorens egne felter og er altid
+// U1b: genbrugelige felter pr. sprog til DB-indhold (links, og U7 kategorier/
+// grupper/regler/forside-besked). Dansk står i editorens egne felter og er altid
 // kilden; her skrives svensk + engelsk. Tomt felt = dansk fallback på siden.
 // Admin-flade => editor-teksterne er bevidst danske (design 27-11, valg 2).
 
@@ -14,6 +14,9 @@ export type OversaetFelt<F extends string> = {
   felt: F;
   label: string;
   dansk: string; // vises som placeholder = det læseren ser hvis feltet er tomt
+  flerlinjet?: boolean; // U7: textarea (regler, forside-besked, beskrivelser)
+  maks?: number; // default 300 (som DB-rensningen for feltet)
+  hoejde?: string; // tailwind min-h for textarea, fx 'min-h-[220px]'
 };
 
 export default function OversaettelsesFelter<F extends string>({
@@ -75,13 +78,23 @@ export default function OversaettelsesFelter<F extends string>({
                     <span className="sr-only">
                       {f.label} ({SPROG_LABEL[s].toLowerCase()})
                     </span>
-                    <input
-                      className="input !py-1.5 text-sm"
-                      value={vaerdi[s]?.[f.felt] ?? ''}
-                      maxLength={300}
-                      onChange={(e) => saet(s, f.felt, e.target.value)}
-                      placeholder={`${f.label}: ${f.dansk}`}
-                    />
+                    {f.flerlinjet ? (
+                      <textarea
+                        className={`input text-sm leading-relaxed ${f.hoejde ?? 'min-h-[70px]'}`}
+                        value={vaerdi[s]?.[f.felt] ?? ''}
+                        maxLength={f.maks ?? 300}
+                        onChange={(e) => saet(s, f.felt, e.target.value)}
+                        placeholder={`${f.label}: ${f.dansk}`}
+                      />
+                    ) : (
+                      <input
+                        className="input !py-1.5 text-sm"
+                        value={vaerdi[s]?.[f.felt] ?? ''}
+                        maxLength={f.maks ?? 300}
+                        onChange={(e) => saet(s, f.felt, e.target.value)}
+                        placeholder={`${f.label}: ${f.dansk}`}
+                      />
+                    )}
                   </label>
                 ))}
               </div>

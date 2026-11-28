@@ -12,11 +12,8 @@ export async function generateMetadata() {
 export const dynamic = 'force-dynamic';
 
 export default async function ForumReglerSide() {
-  const [{ content, updatedAt }, sprog, t] = await Promise.all([
-    getForumRegler(),
-    hentSprog(),
-    hentOrdbog(),
-  ]);
+  const sprog = await hentSprog();
+  const [{ content, updatedAt }, t] = await Promise.all([getForumRegler(sprog), hentOrdbog()]);
   const f = t.forum;
   const harIndhold = content.trim().length > 0;
 

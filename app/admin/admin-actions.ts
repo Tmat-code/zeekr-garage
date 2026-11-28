@@ -8,6 +8,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { erAdmin, erSuperadmin } from '@/lib/admin';
+import { rensOversaettelser, OVERSAETTELSE_MAKS_BESKED, type Oversaettelser } from '@/lib/i18n/indhold';
 import type { AlleBruger } from '@/lib/queries-admin';
 import { supabaseService } from '@/lib/supabase/service';
 import {
@@ -145,7 +146,12 @@ export async function rydForaeldreloeseFiler(): Promise<OprydTal> {
 }
 
 // --- Forside-besked (kun admin) ---
-export async function gemForsideBesked(message: string, active: boolean): Promise<void> {
+// U7: `oversaettelser` = sv/en ({sv:{message}, en:{message}}); undefined = røres ikke.
+export async function gemForsideBesked(
+  message: string,
+  active: boolean,
+  oversaettelser?: Oversaettelser<'message'>,
+): Promise<void> {
   if (!(await erAdmin())) throw new Error('Kun admin kan ændre forside-beskeden.');
   const sb = supabaseServer();
   const {
@@ -158,6 +164,9 @@ export async function gemForsideBesked(message: string, active: boolean): Promis
       active,
       updated_at: new Date().toISOString(),
       updated_by: user?.id ?? null,
+      ...(oversaettelser !== undefined
+        ? { oversaettelser: rensOversaettelser(oversaettelser, ['message'], OVERSAETTELSE_MAKS_BESKED) }
+        : {}),
     })
     .eq('id', 1);
   if (error) throw new Error(error.message);

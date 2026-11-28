@@ -13,11 +13,11 @@ export async function generateMetadata() {
 export const dynamic = 'force-dynamic';
 
 export default async function ForumSide() {
-  const [grupper, kategorier, user, sprog, t] = await Promise.all([
-    getForumGrupper(),
-    getKategoriListe(),
+  const sprog = await hentSprog();
+  const [grupper, kategorier, user, t] = await Promise.all([
+    getForumGrupper(sprog),
+    getKategoriListe(sprog),
     getCurrentUser(),
-    hentSprog(),
     hentOrdbog(),
   ]);
   const f = t.forum;

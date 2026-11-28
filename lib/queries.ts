@@ -2,6 +2,9 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { MODEL_FALLBACK, type Severity, type Status, type IssueType } from '@/lib/config';
 import { meldBilledeUrl, avatarUrl } from '@/lib/billeder';
 import { erKildesprog } from '@/lib/kildesprog';
+import { lokaliserTekst } from '@/lib/forum-kategori-i18n';
+import { rensOversaettelser, OVERSAETTELSE_MAKS_BESKED, type Oversaettelser } from '@/lib/i18n/indhold';
+import type { UiSprog } from '@/lib/i18n/sprog';
 import type { IssueRow, Model, Kommentar, VariantMap, MinBil, GarageBil } from '@/lib/types';
 
 // Fælles select + mapper, så board og detalje-side viser det samme.
@@ -296,21 +299,32 @@ export async function getCurrentUser() {
 }
 
 // --- Forside-besked (banner) ---
-export type ForsideBesked = { message: string; active: boolean };
+// U7: sv/en i `oversaettelser` ({sv:{message}, en:{message}}), tomt = dansk.
+export type ForsideBesked = {
+  message: string;
+  active: boolean;
+  oversaettelser: Oversaettelser<'message'>;
+};
 
-// Til admin-editoren: raa raekke uanset active.
+// Til admin-editoren: raa raekke uanset active. Uden U7-kolonnen (migration
+// ikke koert) hentes uden - saa virker banneret paa dansk.
 export async function getForsideBeskedRaw(): Promise<ForsideBesked> {
   const sb = supabaseServer();
-  const { data } = await sb
-    .from('site_announcement')
-    .select('message, active')
-    .eq('id', 1)
-    .single();
-  return { message: data?.message ?? '', active: data?.active ?? false };
+  const hent = (cols: string) => sb.from('site_announcement').select(cols).eq('id', 1).maybeSingle();
+  let { data, error } = await hent('message, active, oversaettelser'); // i18n-ok (kolonner)
+  if (error && String(error.message ?? '').includes('oversaettelser')) ({ data } = await hent('message, active')); // i18n-ok (kolonner)
+  const r = (data ?? {}) as any;
+  return {
+    message: r.message ?? '',
+    active: r.active ?? false,
+    oversaettelser: rensOversaettelser(r.oversaettelser, ['message'], OVERSAETTELSE_MAKS_BESKED),
+  };
 }
 
-// Til forsiden: kun hvis aktiv + har tekst, ellers null (intet banner).
-export async function getForsideBesked(): Promise<string | null> {
-  const { message, active } = await getForsideBeskedRaw();
-  return active && message.trim() ? message : null;
+// Til forsiden: kun hvis aktiv + har (dansk) tekst, ellers null (intet banner).
+// Teksten paa laeserens sprog; tomt sv/en-felt = dansk.
+export async function getForsideBesked(sprog: UiSprog = 'da'): Promise<string | null> {
+  const b = await getForsideBeskedRaw();
+  if (!b.active || !b.message.trim()) return null;
+  return lokaliserTekst(b.message, b.oversaettelser, 'message', sprog, OVERSAETTELSE_MAKS_BESKED);
 }

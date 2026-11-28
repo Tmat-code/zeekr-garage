@@ -14,20 +14,20 @@ import { hentOrdbog, hentSprog } from '@/lib/i18n/server';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { kategori: string } }) {
-  const kat = await getKategori(params.kategori);
+  const kat = await getKategori(params.kategori, await hentSprog());
   return { title: kat ? kat.name : (await hentOrdbog()).forum.metaTitel };
 }
 
 export default async function KategoriSide({ params }: { params: { kategori: string } }) {
-  const kat = await getKategori(params.kategori);
+  const sprog = await hentSprog();
+  const kat = await getKategori(params.kategori, sprog);
   if (!kat) notFound();
 
-  const [traade, ctx, ejerTal, otaHistorik, sprog, t] = await Promise.all([
+  const [traade, ctx, ejerTal, otaHistorik, t] = await Promise.all([
     getTraade(kat.id),
     adminKontekst(),
     kat.modelId ? getModelEjerTal() : Promise.resolve({} as Record<string, ModelEjerTal>),
     kat.modelId ? getSoftwareHistorikPerModel() : Promise.resolve([] as OtaModelHistorik[]),
-    hentSprog(),
     hentOrdbog(),
   ]);
   const f = t.forum;

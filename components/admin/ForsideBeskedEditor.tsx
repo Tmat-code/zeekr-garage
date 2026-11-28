@@ -3,10 +3,14 @@
 import { useState, useTransition } from 'react';
 import type { ForsideBesked } from '@/lib/queries';
 import { gemForsideBesked } from '@/app/admin/admin-actions';
+import OversaettelsesFelter from '@/components/admin/OversaettelsesFelter';
+import { OVERSAETTELSE_MAKS_BESKED, type Oversaettelser } from '@/lib/i18n/indhold';
 
 export default function ForsideBeskedEditor({ initial }: { initial: ForsideBesked }) {
   const [message, setMessage] = useState(initial.message);
   const [active, setActive] = useState(initial.active);
+  // U7: svensk + engelsk udgave (tomt = den danske vises).
+  const [ov, setOv] = useState<Oversaettelser<'message'>>(initial.oversaettelser);
   const [pending, start] = useTransition();
   const [fejl, setFejl] = useState<string | null>(null);
   const [gemt, setGemt] = useState(false);
@@ -16,7 +20,7 @@ export default function ForsideBeskedEditor({ initial }: { initial: ForsideBeske
     setGemt(false);
     start(async () => {
       try {
-        await gemForsideBesked(message, nyAktiv);
+        await gemForsideBesked(message, nyAktiv, ov);
         setActive(nyAktiv);
         setGemt(true);
       } catch (e: any) {
@@ -45,6 +49,19 @@ export default function ForsideBeskedEditor({ initial }: { initial: ForsideBeske
         }}
         placeholder="Fx: Vi er flyttet til zeekr-garage.dk - tak for alle meldinger!"
       />
+
+      <div className="mt-2">
+        <OversaettelsesFelter
+          felter={[
+            { felt: 'message', label: 'Besked', dansk: message, flerlinjet: true, maks: OVERSAETTELSE_MAKS_BESKED },
+          ]}
+          vaerdi={ov}
+          onChange={(v) => {
+            setOv(v);
+            setGemt(false);
+          }}
+        />
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <span

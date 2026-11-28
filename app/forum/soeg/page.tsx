@@ -27,13 +27,14 @@ export default async function ForumSoegSide({
   const q = (searchParams.q ?? '').trim();
   const kat = (searchParams.kat ?? '').trim();
 
-  const [kategorier, sprog, t] = await Promise.all([getKategoriListe(), hentSprog(), hentOrdbog()]);
+  const sprog = await hentSprog();
+  const [kategorier, t] = await Promise.all([getKategoriListe(sprog), hentOrdbog()]);
   const f = t.forum;
   // Validér scope mod kategori-listen -> send kun en kendt slug til RPC'en
   // (ukendt/manipuleret slug nulstilles til "alle fora").
   const scope = kat ? kategorier.find((k) => k.slug === kat) ?? null : null;
   const scopeSlug = scope ? scope.slug : '';
-  const resultater = q ? await getForumSoeg(q, scopeSlug || null) : [];
+  const resultater = q ? await getForumSoeg(q, scopeSlug || null, 50, sprog) : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

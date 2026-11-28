@@ -34,7 +34,9 @@ export default async function TraadSide({
 }: {
   params: { kategori: string; traad: string };
 }) {
-  const traad = await getTraad(params.traad);
+  // U7: kategorinavnet i brødkrummen på læserens sprog.
+  const minSprog = await hentSprog();
+  const traad = await getTraad(params.traad, minSprog);
   // Tråden skal høre til den kategori URL'en peger på.
   if (!traad || traad.kategori.slug !== params.kategori) notFound();
 
@@ -44,8 +46,7 @@ export default async function TraadSide({
   const naeste = `/forum/${params.kategori}/${traad.slug}`;
   // Trin 3 + U1: laeserens maalsprog = UI-sproget (profil > cookie >
   // Accept-Language > da), saa knap og UI altid er enige. Styrer hvilke indlaeg
-  // der faar en "Oversaet"-knap.
-  const minSprog = await hentSprog();
+  // der faar en "Oversaet"-knap. (minSprog hentes øverst.)
   const f = (await hentOrdbog()).forum;
 
   // Bro til Feedback: prefill /meld med trådens titel + åbnings-indlæg (kortet,

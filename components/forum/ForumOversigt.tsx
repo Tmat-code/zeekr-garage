@@ -5,7 +5,8 @@ import type { ForumGruppe } from '@/lib/types';
 import { ordbog, type UiSprog } from '@/lib/i18n';
 
 // Kort undertekst pr. gruppe (Polestar har gruppe-overskrift + undertekst) -
-// bor i ordbogen (forum.gruppeTekst), keyet på gruppens danske DB-navn.
+// bor i ordbogen (forum.gruppeTekst), keyet på gruppens danske DB-navn
+// (g.noegle - g.label er på læserens sprog, U7).
 
 function KategoriRaekke({
   slug,
@@ -112,13 +113,13 @@ export default function ForumOversigt({
   return (
     <div className="space-y-8">
       {grupper.map((g) => (
-        <section key={g.label}>
+        <section key={g.noegle}>
           <div className="mb-2 px-1">
             <h2 className="font-display text-lg font-bold tracking-tight text-grafit-900">
               {g.label}
             </h2>
-            {gruppeTekst[g.label] && (
-              <p className="text-sm text-grafit-500">{gruppeTekst[g.label]}</p>
+            {gruppeTekst[g.noegle] && (
+              <p className="text-sm text-grafit-500">{gruppeTekst[g.noegle]}</p>
             )}
           </div>
           <div className="divide-y divide-grafit-100 overflow-hidden rounded-2xl border border-grafit-200 bg-white">

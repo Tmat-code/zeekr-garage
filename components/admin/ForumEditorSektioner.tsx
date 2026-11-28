@@ -1,7 +1,7 @@
 // Forum-fanens STRUKTUR-editorer: kategorier, model-administration (admin) og
 // forum-regler. Forbliver DANSKE (afklaret med Torben 28-11 under U6: kategori-
-// /model-editoren er admin-kun i designet, og regel-editoren redigerer dansk
-// DB-tekst indtil U7). Udskilt fra app/admin/forum/page.tsx, så siden selv kan
+// /model-editoren er admin-kun i designet). U7: editorerne har felter pr. sprog
+// (svensk + engelsk) til selve indholdet; editorens egen UI er stadig dansk. Udskilt fra app/admin/forum/page.tsx, så siden selv kan
 // oversættes, mens denne fil bevidst står uden for U6-scanneren.
 
 import KategoriStyring from '@/components/admin/KategoriStyring';
@@ -81,7 +81,11 @@ export default function ForumEditorSektioner({
           De fælles spilleregler for forummet. Rediger her, så slår de igennem på{' '}
           <span className="font-mono text-grafit-600">/forum/regler</span> med det samme.
         </p>
-        <ForumReglerEditor initial={regler.content} updatedAt={regler.updatedAt} />
+        <ForumReglerEditor
+          initial={regler.contentDa}
+          initialOversaettelser={regler.oversaettelser}
+          updatedAt={regler.updatedAt}
+        />
       </section>
     </>
   );

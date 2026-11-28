@@ -595,5 +595,81 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   }
 }
 
+// --- U7: DB-indhold (kategorier/grupper/regler/forside-besked) ---
+{
+  fs.mkdirSync(TMP, { recursive: true }); // TMP er ryddet ovenfor - genskab til U7
+  await transpiler('lib/i18n/indhold.ts', 'indhold');
+  // forum-kategori-i18n importerer ./i18n/indhold -> peg på den transpilerede kopi.
+  const kilde = fs.readFileSync(path.join(ROD, 'lib/forum-kategori-i18n.ts'), 'utf8');
+  const ud = ts.transpileModule(kilde, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText.replace(/from '\.\/i18n\/indhold'/g, "from './indhold.mjs'");
+  fs.writeFileSync(path.join(TMP, 'fki.mjs'), ud);
+  const KI = await import(path.join(TMP, 'fki.mjs'));
+  const fo = await transpiler('lib/forum-oversaettelser.ts', 'forum-ov');
+
+  lig('U7 rens maks', [R({ en: { content: 'a'.repeat(25000) } }, ['content'], 20000).en.content.length, R({ en: { navn: 'a'.repeat(400) } }, ['navn']).en.navn.length], [20000, 300]);
+  lig('U7 laes kategori-ov', KI.laesKategoriOversaettelser({ sv: { name: ' Teknik ', x: 'y' }, de: {} }), { sv: { name: 'Teknik' } });
+  lig('U7 laes kategori-ov null', KI.laesKategoriOversaettelser(undefined), {});
+
+  const k = {
+    id: '1', slug: 'diy-faq', name: 'DIY & FAQ', description: 'Gør-det-selv', icon: null, groupLabel: 'Teknik',
+    groupOrder: 4, displayOrder: 1, modelId: null, isLocked: false, groupKey: 'Teknik',
+    oversaettelser: { en: { name: 'DIY & FAQ', description: 'Do it yourself', group_label: 'Tech' }, sv: { description: 'Gör-det-själv' } },
+  };
+  lig('U7 lokaliser da = urørt', KI.lokaliserKategori(k, 'da'), k);
+  const ken = KI.lokaliserKategori(k, 'en');
+  lig('U7 lokaliser en', [ken.name, ken.description, ken.groupLabel, ken.groupKey], ['DIY & FAQ', 'Do it yourself', 'Tech', 'Teknik']);
+  const ksv = KI.lokaliserKategori(k, 'sv');
+  lig('U7 lokaliser sv: tomt navn/gruppe -> dansk', [ksv.name, ksv.description, ksv.groupLabel], ['DIY & FAQ', 'Gör-det-själv', 'Teknik']);
+  lig('U7 lokaliser null-beskrivelse', KI.lokaliserKategori({ ...k, description: null }, 'en').description, null);
+  lig('U7 gruppeLabel første med oversættelse', KI.gruppeLabel('Teknik', [{ oversaettelser: {} }, { oversaettelser: { en: { group_label: 'Tech' } } }], 'en'), 'Tech');
+  lig('U7 gruppeLabel ingen -> dansk', [KI.gruppeLabel('Ny', [{ oversaettelser: {} }], 'sv'), KI.gruppeLabel('Teknik', [k], 'da')], ['Ny', 'Teknik']);
+  lig('U7 lokaliserTekst', [
+    KI.lokaliserTekst('Hej', { sv: { message: 'Hej!' } }, 'message', 'sv', 4000),
+    KI.lokaliserTekst('Hej', { sv: { message: 'Hej!' } }, 'message', 'en', 4000),
+    KI.lokaliserTekst('Hej', { sv: { message: 'Hej!' } }, 'message', 'da', 4000),
+    KI.lokaliserTekst('Hej', null, 'message', 'en', 4000),
+    KI.lokaliserTekst('', { en: { message: 'Orphan' } }, 'message', 'en', 4000),
+  ], ['Hej!', 'Hej', 'Hej', 'Hej', '']);
+
+  // Seed i migrationen == kode-tabellen (hver triple står i SQL'en) + antal.
+  const SQL7 = fs.readFileSync(path.join(ROD, 'supabase/migrations/20261128090000_u7_db_indhold_i18n.sql'), 'utf8');
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const mangler7 = [];
+  for (const tabel of [fo.GRUPPE_LABELS, fo.KATEGORI_NAVNE, fo.KATEGORI_BESKRIVELSER]) {
+    for (const [daT, { sv: s, en: e }] of Object.entries(tabel)) {
+      const re = new RegExp(`\\(${[daT, s, e].map(sqlStr).map(esc).join(',\\s*')}\\)`);
+      if (!re.test(SQL7)) mangler7.push(daT);
+    }
+  }
+  lig('U7 seed i migration == kode-tabel', mangler7, []);
+  lig('U7 seed antal', (SQL7.match(/^\s+\('[^']*(?:''[^']*)*',\s+'/gm) ?? []).length,
+    Object.keys(fo.GRUPPE_LABELS).length + Object.keys(fo.KATEGORI_NAVNE).length + Object.keys(fo.KATEGORI_BESKRIVELSER).length);
+  // Reglerne: DA == den oprindelige seed, sv/en/da står ordret i U7-migrationen.
+  const gammel = fs.readFileSync(path.join(ROD, 'supabase/migrations/20261122150000_forum_regler.sql'), 'utf8').match(/\$rules\$([\s\S]*?)\$rules\$/)[1];
+  lig('U7 REGLER_DA == oprindelig seed', fo.REGLER_DA === gammel, true);
+  lig('U7 regler sv/en/da i migrationen', [fo.REGLER_DA, fo.REGLER_SV, fo.REGLER_EN].map((x) => SQL7.includes(`$regler$${x}$regler$`)), [true, true, true]);
+  const struktur = (x) => x.split('\n').map((l) => (l.startsWith('## ') ? 'H' : l.startsWith('- ') ? 'P' : l.trim() ? 'T' : '_')).join('');
+  lig('U7 regler samme struktur som dansk (linje for linje)', [fo.REGLER_SV, fo.REGLER_EN].map(struktur), [struktur(fo.REGLER_DA), struktur(fo.REGLER_DA)]);
+  // Model-skabelonen i triggeren == kode-skabelonen.
+  const navn = '§';
+  const skab = (f) => f(navn).split(navn);
+  const [svFoer, svEfter] = skab(fo.MODEL_BESKRIVELSE.sv);
+  const [enFoer, enEfter] = skab(fo.MODEL_BESKRIVELSE.en);
+  const [daFoer, daEfter] = skab(fo.MODEL_BESKRIVELSE.da);
+  lig('U7 model-skabelon i trigger', [
+    SQL7.includes(`'${daFoer}' || new.name || '${daEfter}'`),
+    SQL7.includes(`'${svFoer}' || new.name || '${svEfter}'`),
+    SQL7.includes(`'${enFoer}' || new.name || '${enEfter}'`),
+  ], [true, true, true]);
+  const alle7 = [fo.GRUPPE_LABELS, fo.KATEGORI_NAVNE, fo.KATEGORI_BESKRIVELSER].flatMap((t) => Object.entries(t).flatMap(([d, p]) => [d, p.sv, p.en]))
+    .concat([fo.REGLER_SV, fo.REGLER_EN, fo.MODEL_BESKRIVELSE.sv('X'), fo.MODEL_BESKRIVELSE.en('X')]);
+  lig('U7 ingen lange tankestreger (tabel + migration)', [alle7.filter((x) => /[–—]/.test(x)), /[–—]/.test(SQL7)], [[], false]);
+  // Gruppe-teksterne i ordbogen er keyet på de danske labels, som stadig findes.
+  lig('U7 gruppeTekst-nøgler er kendte gruppe-labels', Object.keys(da.forum.gruppeTekst).filter((g) => !fo.GRUPPE_LABELS[g]), []);
+  fs.rmSync(TMP, { recursive: true, force: true });
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);
