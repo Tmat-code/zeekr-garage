@@ -146,14 +146,14 @@ export default function MinGarageForm({
             {biler.map((b) => (
               <li
                 key={b.carId}
-                className="flex items-center justify-between gap-3 rounded-lg border border-grafit-200 bg-white px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-grafit-200 bg-white px-3 py-2"
               >
                 <span className="min-w-0 text-sm text-grafit-800">
                   <span className="font-medium">{b.modelName}</span>
                   {b.variantName && <span className="text-grafit-500"> · {b.variantName}</span>}
                 </span>
                 {bekraeftFjern === b.carId ? (
-                  <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <span className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-grafit-100 pt-2">
                     <span className="text-xs text-grafit-600">{g.fjernSpoerg}</span>
                     <button
                       onClick={() => fjern(b.carId)}
