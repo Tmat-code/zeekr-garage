@@ -68,7 +68,7 @@ export const vsv: VOrdbog = {
     ny: 'Ny',
     ejer: 'Ägare',
     enEjer: 'En ägare',
-    fortryd: 'Ångra',
+    fortryd: 'Avbryt',
     bekraeftSlet: 'Bekräfta borttagning',
     soeg: 'Sök',
     alle: 'Alla',

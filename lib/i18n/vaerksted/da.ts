@@ -88,7 +88,7 @@ export const vda = {
     ny: 'Ny',
     ejer: 'Ejer',
     enEjer: 'En ejer',
-    fortryd: 'Fortryd',
+    fortryd: 'Annullér',
     bekraeftSlet: 'Bekræft slet',
     soeg: 'Søg',
     alle: 'Alle',

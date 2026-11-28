@@ -4,6 +4,8 @@ import { getRapportOverblik, getRapportLog, getRapportFejl } from '@/lib/rapport
 import RapportPanel from '@/components/admin/RapportPanel';
 
 export const dynamic = 'force-dynamic';
+// P44: egen fanetitel (admin-kun, dansk som resten af fanen).
+export const metadata = { title: 'Zeekr-rapport - Værkstedet' };
 
 function daTid(iso: string): string {
   return new Date(iso).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' });

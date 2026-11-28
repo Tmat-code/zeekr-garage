@@ -5,6 +5,8 @@ import { getAuditAktoerer, getAuditSeneste } from '@/lib/queries-admin';
 import AuditFlade from '@/components/admin/AuditFlade';
 
 export const dynamic = 'force-dynamic';
+// P44: egen fanetitel (admin-kun, dansk som resten af fanen).
+export const metadata = { title: 'Audit-log - Værkstedet' };
 
 export default async function AuditSide() {
   const { rolle } = await adminKontekst();
