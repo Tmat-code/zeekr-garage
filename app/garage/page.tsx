@@ -12,22 +12,26 @@ import VisningsnavnForm from '@/components/VisningsnavnForm';
 import AvatarUpload from '@/components/AvatarUpload';
 import SkiftMailForm from '@/components/SkiftMailForm';
 import SprogFelt from '@/components/SprogFelt';
-import { hentProfilSprog } from '@/lib/i18n/server';
+import { hentOrdbog, hentProfilSprog } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Min garage' };
+export async function generateMetadata() {
+  const t = await hentOrdbog();
+  return { title: t.garage.metaTitel };
+}
 
 export default async function GarageSide() {
   const user = await getCurrentUser();
   if (!user) redirect('/login?naeste=/garage');
 
-  const [models, varianter, biler, mitNavn, mitAvatar, profilSprog] = await Promise.all([
+  const [models, varianter, biler, mitNavn, mitAvatar, profilSprog, t] = await Promise.all([
     getModels(),
     getVarianter(),
     getMyCars(),
     getMitNavn(),
     getMitAvatar(),
     hentProfilSprog(),
+    hentOrdbog(),
   ]);
 
   // Layout: på mobil én kolonne (kortene stakker i rækkefølgen avatar -> navn
@@ -38,11 +42,8 @@ export default async function GarageSide() {
   // gap (ingen dobbelt-margin); items-start holder kolonnerne top-justeret.
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">🚗 Min garage</h1>
-      <p className="mt-1 max-w-2xl text-grafit-600">
-        Dit navn og dine Zeekr - navnet vises som forfatter, bilerne bruges til &quot;mig
-        med&quot;. Ejer du flere, kan du tilføje dem alle.
-      </p>
+      <h1 className="text-2xl font-semibold tracking-tight text-grafit-900">{t.garage.titel}</h1>
+      <p className="mt-1 max-w-2xl text-grafit-600">{t.garage.intro}</p>
 
       <div className="grid gap-x-6 md:grid-cols-2 md:items-start">
         <div>

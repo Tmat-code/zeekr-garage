@@ -12,6 +12,7 @@
 import type { IssueCategorySlug, IssueType, Severity, Status } from '@/lib/config';
 import type { Kildesprog } from '@/lib/kildesprog';
 import type { ModGrund } from '@/lib/moderering';
+import type { GotrueFejl } from '@/lib/gotrue-fejl';
 
 export const da = {
   meta: {
@@ -650,6 +651,189 @@ export const da = {
     aabn: (nr: number, alt: string) => `Åbn ${alt.toLowerCase()} ${nr}`,
     luk: 'Luk billede',
     profilbillede: (navn: string | null) => (navn ? `${navn}s profilbillede` : 'Profilbillede'),
+  },
+  // U4: konto - log ind + opret bruger (LoginForm), nulstil password, GoTrue-
+  // fejl mappet via lib/gotrue-fejl.ts, beskeder efter klik på mail-links.
+  konto: {
+    loginMetaTitel: 'Log ind',
+    loginTitel: 'Log ind',
+    loginIntro: 'For at melde, bekræfte og kommentere.',
+    fanLogInd: 'Log ind',
+    fanOpret: 'Opret konto',
+    tilbageTilLogin: '← Tilbage til login',
+    visningsnavn: 'Visningsnavn',
+    visningsnavnPh: "Sådan vises du i community'et",
+    dinBil: 'Din bil',
+    hvorforBil:
+      'Hvorfor spørger vi? Din bil knytter dine "mig med"-stemmer til en rigtig model og variant, så fejl-rapporterne til Zeekr bliver præcise. Ejer du ikke en Zeekr endnu, kan du stadig læse og følge med - du kan bare ikke stemme, før din bil er registreret. Du kan altid rette den under Min garage.',
+    email: 'E-mail',
+    emailPh: 'dig@eksempel.dk',
+    adgangskode: 'Adgangskode',
+    adgangskodePh: 'Mindst 6 tegn',
+    glemt: 'Glemt password?',
+    vent: 'Vent…',
+    opretKonto: 'Opret konto',
+    sendNulstil: 'Send nulstillingslink',
+    logInd: 'Log ind',
+    kunForAtBidrage: 'Du behøver kun en konto for at bidrage. Læsning er altid fri.',
+    // Kvitteringer
+    nulstilSendt:
+      'Hvis der findes en konto på den mail, har vi sendt et nulstillingslink. Tjek din indbakke.',
+    kontoOprettet:
+      'Konto oprettet. Vi har sendt en bekræftelsesmail - klik linket i den for at aktivere din konto. Tjek også din spam-mappe.',
+    // Validering (klient)
+    ugyldigMail: 'Skriv en gyldig e-mail.',
+    kodeForKort: 'Adgangskode skal være mindst 6 tegn.',
+    vaelgModelEllerEjerIkke: 'Vælg din model - eller markér "Ejer ikke en Zeekr endnu".',
+    vaelgVariant: 'Vælg din variant.',
+    // Fallbacks når GoTrue-fejlen er ukendt
+    kunneIkkeLogge: 'Kunne ikke logge ind. Prøv igen.',
+    kunneIkkeOprette: 'Kunne ikke oprette kontoen. Prøv igen.',
+    kunneIkkeSendeNulstil: 'Kunne ikke sende nulstillingslink. Prøv igen.',
+    // /login?fejl=... efter et udløbet/brugt mail-link (/auth/confirm, /auth/callback)
+    linkFejl: {
+      bekraeft:
+        'Bekræftelseslinket er udløbet eller allerede brugt. Log ind, eller opret kontoen igen.',
+      reset: 'Nulstillingslinket er udløbet eller allerede brugt. Bed om et nyt via "Glemt password".',
+      mail: 'Linket til at skifte e-mail er udløbet eller allerede brugt. Log ind og prøv igen fra Min garage.',
+      link: 'Linket er udløbet eller ugyldigt. Prøv igen.',
+    },
+    // GoTrue-fejl (nøgler = GotrueFejl i lib/gotrue-fejl.ts)
+    gotrue: {
+      forkertLogin: 'Forkert e-mail eller adgangskode.',
+      ikkeBekraeftet:
+        'Din e-mail er ikke bekræftet endnu. Klik linket i bekræftelsesmailen (tjek også spam-mappen).',
+      findesAllerede: 'Der findes allerede en konto med den e-mail. Log ind i stedet.',
+      svagKode: 'Adgangskoden er for svag. Vælg en længere og mindre almindelig adgangskode.',
+      mailUgyldig: 'E-mailadressen er ugyldig.',
+      forMange: 'Der er sendt for mange forsøg - prøv igen om lidt.',
+      opretLukket: 'Det er ikke muligt at oprette nye konti lige nu.',
+      sammeKode: 'Det nye password skal være forskelligt fra det gamle.',
+      sammeMail: 'Det er din nuværende mail.',
+      linkUdloebet: 'Linket er udløbet eller allerede brugt.',
+    } satisfies Record<GotrueFejl, string>,
+    // /nulstil
+    nulstilMetaTitel: 'Vælg nyt password',
+    nulstilTitel: 'Vælg nyt password',
+    nulstilIntro: 'Skriv et nyt password til din konto.',
+    etOejeblik: 'Et øjeblik…',
+    nulstilLinkUdloebet: 'Linket er udløbet eller ugyldigt.',
+    nytPassword: 'Nyt password',
+    gentagPassword: 'Gentag password',
+    gentagPh: 'Skriv det igen',
+    gemNytPassword: 'Gem nyt password',
+    passwordForKort: 'Password skal være mindst 6 tegn.',
+    ikkeEns: 'De to felter er ikke ens.',
+    passwordOpdateret: 'Dit password er opdateret. Sender dig videre…',
+    kunneIkkeOpdatere:
+      'Kunne ikke opdatere password. Linket kan være udløbet - bed om et nyt fra login-siden.',
+  },
+
+  // U4: Min garage (siden + profilbillede, navn, biler, skift e-mail).
+  garage: {
+    metaTitel: 'Min garage',
+    titel: '🚗 Min garage',
+    intro:
+      'Dit navn og dine Zeekr - navnet vises som forfatter, bilerne bruges til "mig med". Ejer du flere, kan du tilføje dem alle.',
+    gemmer: 'Gemmer…',
+    gemt: 'Gemt.',
+    fjern: 'Fjern',
+    // Profilbillede
+    profilbillede: 'Profilbillede',
+    arbejder: 'Arbejder…',
+    skiftBillede: 'Skift billede',
+    tilfoejBillede: 'Tilføj billede',
+    avatarHjaelp:
+      'Vises som dit ansigt på tråde, svar, kommentarer og beskeder. Billedet beskæres kvadratisk og gøres mindre automatisk. Har du intet billede, vises dit forbogstav.',
+    kunneIkkeBehandle: 'Kunne ikke behandle billedet.',
+    kunneIkkeGemmeBillede: 'Kunne ikke gemme billedet.',
+    kunneIkkeFjerneBillede: 'Kunne ikke fjerne billedet.',
+    logIndForBillede: 'Log ind for at skifte profilbillede.',
+    // Visningsnavn
+    ditNavn: 'Dit navn',
+    navnPh: 'Fx Venø',
+    navnHjaelp:
+      'Sådan vises du overalt - på tråde, svar og meldinger. Din mail vises aldrig offentligt. Ændrer du navnet, slår det igennem alle steder med det samme.',
+    gemNavn: 'Gem navn',
+    navnForKort: (min: number) => `Navnet skal være mindst ${min} tegn.`,
+    navnForLangt: (maks: number) => `Navnet må højst være ${maks} tegn.`,
+    kunneIkkeGemme: 'Kunne ikke gemme.',
+    // Biler
+    dineBiler: 'Dine biler',
+    ingenBiler:
+      'Du har ingen biler registreret endnu. Tilføj din Zeekr nedenfor for at kunne bekræfte fejl og ønsker - ellers kan du læse og kommentere.',
+    tilfoejEnBil: 'Tilføj en bil',
+    flereBilerHjaelp:
+      'Ejer du flere Zeekr, så tilføj dem alle - en melding der rammer flere af dine modeller tæller så som én bekræftet bil pr. ramt bil, så rapporterne til Zeekr bliver præcise.',
+    tilfoejBil: 'Tilføj bil',
+    vaelgModel: 'Vælg din model.',
+    vaelgVariant: 'Vælg din variant.',
+    kunneIkkeTilfoeje: 'Kunne ikke tilføje bilen.',
+    kunneIkkeFjerne: 'Kunne ikke fjerne bilen.',
+    // Skift e-mail
+    email: 'E-mail',
+    nuvaerende: 'Nuværende:',
+    nyMailPh: 'ny@mail.dk',
+    mailSendtFoer: 'Vi har sendt et bekræftelses-link til din ',
+    mailSendtNye: 'nye',
+    mailSendtEfter: ' adresse. Mailen skifter først når du har klikket linket. Tjek evt. spam.',
+    mailHjaelp:
+      'Af sikkerhed skifter mailen ikke med det samme: du får et bekræftelses-link på din nye adresse, og mailen skifter først når du har klikket det. Du er stadig logget ind imens.',
+    sender: 'Sender…',
+    skiftMail: 'Skift e-mail',
+    ugyldigMail: 'Skriv en gyldig e-mailadresse.',
+    mailIBrug: 'Den e-mailadresse er allerede i brug.',
+    kunneIkkeSendeBekraeftelse: 'Kunne ikke sende bekræftelse. Prøv igen.',
+  },
+
+  // U4: notifikations-siden + klokkens ramme. Selve notifikations-teksterne
+  // (notifications.tekst) bygges på dansk i DB-triggerne og oversættes i U8.
+  notif: {
+    metaTitel: 'Notifikationer',
+    titel: '🔔 Notifikationer',
+    intro:
+      'Alt du er blevet prajet om - nyeste først. Klik for at gå til indlægget; slet dem du er færdig med.',
+    notifikationer: 'Notifikationer',
+    klokkeAria: (n: number) => (n > 0 ? `Notifikationer (${n} ulæste)` : 'Notifikationer'),
+    markerAlle: 'Markér alle læst',
+    rydLaeste: 'Ryd læste',
+    henter: 'Henter …',
+    ingenEndnuKlokke: 'Ingen notifikationer endnu.',
+    ingenEndnuSide: 'Du har ingen notifikationer endnu.',
+    ingen: 'Ingen notifikationer',
+    viser: (vist: number, total: number) => `viser ${vist} af ${total}`,
+    ulaest: (n: number) => `${n} ulæst`,
+    seAlle: 'Se alle',
+    visFlere: 'Vis flere',
+    slet: 'Slet',
+    sletAria: 'Slet notifikation',
+    kunneIkkeHente: 'Kunne ikke hente notifikationer.',
+    kunneIkkeSlette: 'Kunne ikke slette - prøv igen.',
+    kunneIkkeRydde: 'Kunne ikke rydde de læste - prøv igen.',
+  },
+
+  // U4 (rykket frem fra U8): GoTrue-mailene for bekræft konto + nulstil password.
+  // Skabelonen (app/auth/*-email) indeholder alle tre sprog og vælger via
+  // {{ .Data.sprog }} (user_metadata, sat ved signup/sprogvalg); emnet sættes i
+  // Coolify (MAILER_SUBJECTS_*) - se HANDOVER "## UI-i18n U4". Ren tekst/HTML-
+  // fri; skabelonen escaper ikke selv, så ingen < > & i teksterne.
+  mail: {
+    kopierLink: 'Virker knappen ikke, så kopiér dette link ind i din browser:',
+    bekraeft: {
+      emne: 'Bekræft din konto - Zeekr Garage',
+      titel: 'Bekræft din konto',
+      intro: 'Velkommen til Zeekr Garage. Klik på knappen for at bekræfte din e-mail og aktivere din konto:',
+      knap: 'Bekræft min konto',
+      ignorer:
+        'Har du ikke selv oprettet en konto hos Zeekr Garage, kan du roligt ignorere mailen - der sker ikke noget.',
+    },
+    nulstil: {
+      emne: 'Nulstil dit password - Zeekr Garage',
+      titel: 'Nulstil dit password',
+      intro: 'Du har bedt om at nulstille passwordet til din Zeekr Garage-konto. Klik på knappen for at vælge et nyt:',
+      knap: 'Vælg nyt password',
+      ignorer: 'Har du ikke selv bedt om dette, kan du roligt ignorere mailen - dit password bliver ikke ændret.',
+    },
   },
 };
 

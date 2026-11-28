@@ -116,6 +116,31 @@ const SKIVER = {
     'lib/forum-links.ts',
     'lib/forum-enheder.ts',
   ],
+  // U4: konto (login + opret bruger, nulstil, Min garage, notifikations-side +
+  // klokkens ramme, landings-/fejl-redirects efter mail-links) + bekræft-/
+  // nulstil-mailskabelonerne (rykket frem fra U8). Bevidst UDE: selve
+  // notifikations-teksterne (DB, U8), mail-skift-mailen (U8), BilVaelger (U3).
+  U4: [
+    'app/login/page.tsx',
+    'app/nulstil/page.tsx',
+    'app/garage/page.tsx',
+    'app/notifikationer/page.tsx',
+    'app/auth/confirm/route.ts',
+    'app/auth/callback/route.ts',
+    'app/auth/confirm-email/route.ts',
+    'app/auth/recovery-email/route.ts',
+    'components/LoginForm.tsx',
+    'components/NulstilForm.tsx',
+    'components/MinGarageForm.tsx',
+    'components/VisningsnavnForm.tsx',
+    'components/SkiftMailForm.tsx',
+    'components/AvatarUpload.tsx',
+    'components/NotifikationerListe.tsx',
+    'components/NotifBell.tsx',
+    'lib/gotrue-fejl.ts',
+    'lib/mail-skabelon.ts',
+    'lib/notifikationer.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

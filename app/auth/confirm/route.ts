@@ -22,8 +22,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(next, publicOrigin(request)));
     }
   }
-  // Ugyldigt/udloebet link -> tilbage til login med en venlig besked. Signup og
-  // recovery faar hver sin tekst (en ny bruger skal ikke se "nulstil"-ordlyd).
-  const fejl = type === 'signup' ? 'bekraeft' : 'reset';
+  // Ugyldigt/udloebet link -> tilbage til login med en venlig besked. Hver
+  // link-type faar sin egen tekst (en ny bruger skal ikke se "nulstil"-ordlyd).
+  // Kun en kode i URL'en - selve teksten slaas op i ordbogen paa /login (U4),
+  // saa beskeden kommer paa laeserens UI-sprog.
+  const fejl =
+    type === 'signup' || type === 'invite'
+      ? 'bekraeft'
+      : type === 'recovery'
+        ? 'reset'
+        : type === 'email_change'
+          ? 'mail'
+          : 'link';
   return NextResponse.redirect(new URL(`/login?fejl=${fejl}`, publicOrigin(request)));
 }

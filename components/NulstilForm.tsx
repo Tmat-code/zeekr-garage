@@ -3,17 +3,32 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { useOrdbog } from '@/lib/i18n/klient';
+import { gotrueFejl, type GotrueFejl } from '@/lib/gotrue-fejl';
+
+type Besked =
+  | 'passwordForKort'
+  | 'ikkeEns'
+  | 'passwordOpdateret'
+  | 'kunneIkkeOpdatere'
+  | { gotrue: GotrueFejl };
 
 // Brugeren lander her efter at have klikket reset-linket i mailen:
 // /auth/callback har byttet koden til en (recovery-)session, saa her kan vi
 // saette et nyt password med updateUser.
 export default function NulstilForm() {
   const router = useRouter();
+  const k = useOrdbog().konto;
   const [harSession, setHarSession] = useState<boolean | null>(null);
   const [kode, setKode] = useState('');
   const [kode2, setKode2] = useState('');
-  const [fejl, setFejl] = useState('');
-  const [info, setInfo] = useState('');
+  // Noegler (ikke faerdig tekst), saa en synlig besked skifter med sproget.
+  const [fejlN, setFejl] = useState<Besked | null>(null);
+  const [infoN, setInfo] = useState<Besked | null>(null);
+  const tekst = (b: Besked | null) =>
+    b === null ? '' : typeof b === 'string' ? k[b] : k.gotrue[b.gotrue];
+  const fejl = tekst(fejlN);
+  const info = tekst(infoN);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -23,39 +38,42 @@ export default function NulstilForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setFejl('');
-    if (kode.length < 6) return setFejl('Password skal være mindst 6 tegn.');
-    if (kode !== kode2) return setFejl('De to felter er ikke ens.');
+    setFejl(null);
+    if (kode.length < 6) return setFejl('passwordForKort');
+    if (kode !== kode2) return setFejl('ikkeEns');
 
     setBusy(true);
     try {
       const sb = supabaseBrowser();
       const { error } = await sb.auth.updateUser({ password: kode });
       if (error) throw error;
-      setInfo('Dit password er opdateret. Sender dig videre…');
+      setInfo('passwordOpdateret');
       setTimeout(() => {
         router.push('/');
         router.refresh();
       }, 1200);
-    } catch {
-      setFejl('Kunne ikke opdatere password. Linket kan være udløbet - bed om et nyt fra login-siden.');
+    } catch (err: any) {
+      // Kendte GoTrue-fejl (fx samme password som foer, for svagt) faar deres
+      // egen tekst; alt andet den generiske "linket kan vaere udloebet".
+      const n = gotrueFejl(err);
+      setFejl(n && n !== 'forkertLogin' ? { gotrue: n } : 'kunneIkkeOpdatere');
       setBusy(false);
     }
   }
 
   if (harSession === null) {
-    return <p className="mt-6 text-sm text-grafit-500">Et øjeblik…</p>;
+    return <p className="mt-6 text-sm text-grafit-500">{k.etOejeblik}</p>;
   }
 
   if (!harSession) {
     return (
       <div className="kort mt-6 p-6">
-        <p className="text-grafit-700">Linket er udløbet eller ugyldigt.</p>
+        <p className="text-grafit-700">{k.nulstilLinkUdloebet}</p>
         <a
           href="/login"
           className="mt-3 inline-block text-sm font-medium text-kobber-700 hover:underline"
         >
-          Tilbage til login
+          {k.tilbageTilLogin}
         </a>
       </div>
     );
@@ -64,19 +82,19 @@ export default function NulstilForm() {
   return (
     <form onSubmit={submit} className="kort mt-6 flex flex-col gap-4 p-6">
       <div>
-        <label htmlFor="kode" className="label">Nyt password</label>
-        <input id="kode" type="password" value={kode} onChange={(e) => setKode(e.target.value)} placeholder="Mindst 6 tegn" className="input" />
+        <label htmlFor="kode" className="label">{k.nytPassword}</label>
+        <input id="kode" type="password" value={kode} onChange={(e) => setKode(e.target.value)} placeholder={k.adgangskodePh} className="input" />
       </div>
       <div>
-        <label htmlFor="kode2" className="label">Gentag password</label>
-        <input id="kode2" type="password" value={kode2} onChange={(e) => setKode2(e.target.value)} placeholder="Skriv det igen" className="input" />
+        <label htmlFor="kode2" className="label">{k.gentagPassword}</label>
+        <input id="kode2" type="password" value={kode2} onChange={(e) => setKode2(e.target.value)} placeholder={k.gentagPh} className="input" />
       </div>
 
       {fejl && <p className="text-sm font-medium text-kobber-700">{fejl}</p>}
       {info && <p className="text-sm font-medium text-loest">{info}</p>}
 
       <button type="submit" disabled={busy} className="btn-primary">
-        {busy ? 'Vent…' : 'Gem nyt password'}
+        {busy ? k.vent : k.gemNytPassword}
       </button>
     </form>
   );

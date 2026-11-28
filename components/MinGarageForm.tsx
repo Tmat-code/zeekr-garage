@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { Model, VariantMap, GarageBil } from '@/lib/types';
 import BilVaelger, { type BilValg } from '@/components/BilVaelger';
+import { useOrdbog } from '@/lib/i18n/klient';
+
+type Fejl = 'vaelgModel' | 'vaelgVariant' | 'kunneIkkeTilfoeje' | 'kunneIkkeFjerne';
 
 // Afled visningsnavne lokalt (undgaar en ekstra forespoergsel efter navne).
 function navne(
@@ -30,10 +33,14 @@ export default function MinGarageForm({
   initialCars: GarageBil[];
 }) {
   const router = useRouter();
+  const g = useOrdbog().garage;
   const [biler, setBiler] = useState<GarageBil[]>(initialCars);
   const [ny, setNy] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
   const [busy, setBusy] = useState(false);
-  const [fejl, setFejl] = useState('');
+  // Noegle, ikke tekst: en synlig fejl skifter med sproget. Raa DB-fejl
+  // (RLS/Postgres, engelsk) vises aldrig - de logges i konsollen.
+  const [fejlN, setFejl] = useState<Fejl | null>(null);
+  const fejl = fejlN ? g[fejlN] : '';
 
   // Saet profilens primaere bil (den der vises i garage-badget) til den
   // tidligste tilbagevaerende bil - eller ryd den, hvis garagen er tom.
@@ -72,17 +79,17 @@ export default function MinGarageForm({
   }
 
   async function tilfoej() {
-    setFejl('');
+    setFejl(null);
     const vs = ny.modelId ? (varianter[ny.modelId] ?? []) : [];
-    if (!ny.modelId) return setFejl('Vælg din model.');
-    if (vs.length > 1 && !ny.variantId) return setFejl('Vælg din variant.');
+    if (!ny.modelId) return setFejl('vaelgModel');
+    if (vs.length > 1 && !ny.variantId) return setFejl('vaelgVariant');
     setBusy(true);
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('ingen bruger');
+      if (!user) throw new Error('ingen bruger'); // i18n-ok
       const variant_id = ny.variantId || vs[0]?.id || null;
       const { error } = await sb
         .from('cars')
@@ -93,21 +100,22 @@ export default function MinGarageForm({
       setNy({ modelId: '', variantId: '', ejerIkke: false });
       router.refresh();
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke tilføje bilen.');
+      console.error('Tilføj bil:', e?.message ?? e);
+      setFejl('kunneIkkeTilfoeje');
     } finally {
       setBusy(false);
     }
   }
 
   async function fjern(carId: string) {
-    setFejl('');
+    setFejl(null);
     setBusy(true);
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('ingen bruger');
+      if (!user) throw new Error('ingen bruger'); // i18n-ok
       // Bilens bekraeftelser forsvinder med den (cascade) - det er meningen:
       // fjerner man bilen, taeller den ikke laengere i rapporterne.
       const { error } = await sb.from('cars').delete().eq('id', carId).eq('owner_id', user.id);
@@ -116,7 +124,8 @@ export default function MinGarageForm({
       setBiler(await hentBiler(sb, user.id));
       router.refresh();
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke fjerne bilen.');
+      console.error('Fjern bil:', e?.message ?? e);
+      setFejl('kunneIkkeFjerne');
     } finally {
       setBusy(false);
     }
@@ -125,12 +134,9 @@ export default function MinGarageForm({
   return (
     <div className="kort mt-6 space-y-5 p-6">
       <div>
-        <label className="label">Dine biler</label>
+        <label className="label">{g.dineBiler}</label>
         {biler.length === 0 ? (
-          <p className="mt-1 text-sm text-grafit-500">
-            Du har ingen biler registreret endnu. Tilføj din Zeekr nedenfor for at kunne
-            bekræfte fejl og ønsker - ellers kan du læse og kommentere.
-          </p>
+          <p className="mt-1 text-sm text-grafit-500">{g.ingenBiler}</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {biler.map((b) => (
@@ -147,7 +153,7 @@ export default function MinGarageForm({
                   disabled={busy}
                   className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs text-kobber-700"
                 >
-                  Fjern
+                  {g.fjern}
                 </button>
               </li>
             ))}
@@ -156,7 +162,7 @@ export default function MinGarageForm({
       </div>
 
       <div className="border-t border-grafit-200 pt-4">
-        <label className="label">Tilføj en bil</label>
+        <label className="label">{g.tilfoejEnBil}</label>
         <div className="mt-2">
           <BilVaelger
             models={models}
@@ -166,14 +172,10 @@ export default function MinGarageForm({
             skjulEjerIkke
           />
         </div>
-        <p className="mt-2 text-xs text-grafit-500">
-          Ejer du flere Zeekr, så tilføj dem alle - en melding der rammer flere af dine
-          modeller tæller så som én bekræftet bil pr. ramt bil, så rapporterne til Zeekr bliver
-          præcise.
-        </p>
+        <p className="mt-2 text-xs text-grafit-500">{g.flereBilerHjaelp}</p>
         <div className="mt-3 flex items-center gap-3">
           <button className="btn-primary" disabled={busy} onClick={tilfoej}>
-            {busy ? 'Gemmer…' : 'Tilføj bil'}
+            {busy ? g.gemmer : g.tilfoejBil}
           </button>
           {fejl && <span className="text-sm text-kobber-700">{fejl}</span>}
         </div>

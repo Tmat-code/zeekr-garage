@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { Model, VariantMap } from '@/lib/types';
 import BilVaelger, { type BilValg } from '@/components/BilVaelger';
-import { useSprog } from '@/lib/i18n/klient';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
+import { gotrueFejl } from '@/lib/gotrue-fejl';
 import { synkSprogVedLogin } from '@/app/sprog-actions';
 
 type Mode = 'ind' | 'opret' | 'glemt';
@@ -21,36 +22,45 @@ export default function LoginForm({
   const params = useSearchParams();
   const naeste = params.get('naeste') || '/';
   const sprog = useSprog();
+  const t = useOrdbog();
+  const k = t.konto;
 
-  // Udloebet/brugt mail-link lander paa /login?fejl=... - vis en venlig besked.
+  // Udloebet/brugt mail-link lander paa /login?fejl=... (fra /auth/confirm og
+  // /auth/callback) - vis en venlig besked. Kun kendte koder; alt andet ignoreres.
   const fejlParam = params.get('fejl');
-  const fejlInit =
-    fejlParam === 'bekraeft'
-      ? 'Bekræftelseslinket er udløbet eller allerede brugt. Log ind, eller opret kontoen igen.'
-      : fejlParam === 'reset'
-        ? 'Nulstillingslinket er udløbet eller allerede brugt. Bed om et nyt via "Glemt password".'
-        : '';
+  const fejlKode =
+    fejlParam === 'bekraeft' || fejlParam === 'reset' || fejlParam === 'mail' || fejlParam === 'link'
+      ? fejlParam
+      : null;
 
   const [mode, setMode] = useState<Mode>('ind');
   const [email, setEmail] = useState('');
   const [kode, setKode] = useState('');
   const [navn, setNavn] = useState('');
   const [bil, setBil] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
-  const [fejl, setFejl] = useState(fejlInit);
-  const [info, setInfo] = useState('');
+  // Fejl gemmes som en "sprog-loes" vaelger, saa en synlig fejl skifter med,
+  // hvis brugeren skifter sprog midt i formularen.
+  const [fejlFn, setFejlFn] = useState<((o: typeof k) => string) | null>(() =>
+    fejlKode ? (o: typeof k) => o.linkFejl[fejlKode] : null,
+  );
+  const [infoFn, setInfoFn] = useState<((o: typeof k) => string) | null>(null);
+  const fejl = fejlFn ? fejlFn(k) : '';
+  const info = infoFn ? infoFn(k) : '';
+  const setFejl = (f: ((o: typeof k) => string) | null) => setFejlFn(() => f);
+  const setInfo = (f: ((o: typeof k) => string) | null) => setInfoFn(() => f);
   const [busy, setBusy] = useState(false);
 
   function skift(m: Mode) {
     setMode(m);
-    setFejl('');
-    setInfo('');
+    setFejl(null);
+    setInfo(null);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setFejl('');
-    setInfo('');
-    if (!email.includes('@')) return setFejl('Skriv en gyldig e-mail.');
+    setFejl(null);
+    setInfo(null);
+    if (!email.includes('@')) return setFejl((o) => o.ugyldigMail);
 
     setBusy(true);
     try {
@@ -62,14 +72,14 @@ export default function LoginForm({
         });
         if (error) throw error;
         // Neutral besked - afsloerer ikke om mailen findes.
-        setInfo('Hvis der findes en konto på den mail, har vi sendt et nulstillingslink. Tjek din indbakke.');
+        setInfo((o) => o.nulstilSendt);
         setBusy(false);
         return;
       }
 
       if (kode.length < 6) {
         setBusy(false);
-        return setFejl('Adgangskode skal være mindst 6 tegn.');
+        return setFejl((o) => o.kodeForKort);
       }
 
       if (mode === 'opret') {
@@ -78,11 +88,11 @@ export default function LoginForm({
         if (!bil.ejerIkke) {
           if (!bil.modelId) {
             setBusy(false);
-            return setFejl('Vælg din model - eller markér "Ejer ikke en Zeekr endnu".');
+            return setFejl((o) => o.vaelgModelEllerEjerIkke);
           }
           if (varianterForModel.length > 1 && !bil.variantId) {
             setBusy(false);
-            return setFejl('Vælg din variant.');
+            return setFejl((o) => o.vaelgVariant);
           }
         }
 
@@ -111,9 +121,7 @@ export default function LoginForm({
         if (!data.session) {
           // Double opt-in: ingen session. Bilen gemmes af triggeren ud fra
           // metadata ovenfor.
-          setInfo(
-            'Konto oprettet. Vi har sendt en bekræftelsesmail - klik linket i den for at aktivere din konto. Tjek også din spam-mappe.',
-          );
+          setInfo((o) => o.kontoOprettet);
           setBusy(false);
           return;
         }
@@ -145,12 +153,17 @@ export default function LoginForm({
       router.push(naeste);
       router.refresh();
     } catch (err: any) {
-      setFejl(
-        err?.message?.includes('Invalid login')
-          ? 'Forkert e-mail eller adgangskode.'
+      // GoTrue svarer paa engelsk -> stabil noegle -> ordbogen. Ukendt fejl:
+      // kontekst-fallback (aldrig den raa engelske tekst).
+      const noegle = gotrueFejl(err);
+      setFejl((o) =>
+        noegle
+          ? o.gotrue[noegle]
           : mode === 'glemt'
-            ? 'Kunne ikke sende nulstillingslink. Prøv igen.'
-            : 'Kunne ikke logge ind. Prøv igen.',
+            ? o.kunneIkkeSendeNulstil
+            : mode === 'opret'
+              ? o.kunneIkkeOprette
+              : o.kunneIkkeLogge,
       );
       setBusy(false);
     }
@@ -165,14 +178,14 @@ export default function LoginForm({
             onClick={() => skift('ind')}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'ind' ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'}`}
           >
-            Log ind
+            {k.fanLogInd}
           </button>
           <button
             type="button"
             onClick={() => skift('opret')}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'opret' ? 'bg-white text-grafit-900 shadow-sm' : 'text-grafit-500'}`}
           >
-            Opret konto
+            {k.fanOpret}
           </button>
         </div>
       ) : (
@@ -181,46 +194,41 @@ export default function LoginForm({
           onClick={() => skift('ind')}
           className="self-start text-sm font-medium text-grafit-500 hover:text-kobber-700"
         >
-          ← Tilbage til login
+          {k.tilbageTilLogin}
         </button>
       )}
 
       {mode === 'opret' && (
         <>
           <div>
-            <label htmlFor="navn" className="label">Visningsnavn</label>
-            <input id="navn" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder="Sådan vises du i community'et" className="input" />
+            <label htmlFor="navn" className="label">{k.visningsnavn}</label>
+            <input id="navn" value={navn} onChange={(e) => setNavn(e.target.value)} placeholder={k.visningsnavnPh} className="input" />
           </div>
 
           <div>
-            <label className="label">Din bil</label>
+            <label className="label">{k.dinBil}</label>
             <BilVaelger models={models} varianter={varianter} value={bil} onChange={setBil} />
-            <p className="mt-2 text-xs text-grafit-500">
-              Hvorfor spørger vi? Din bil knytter dine &quot;mig med&quot;-stemmer til en rigtig
-              model og variant, så fejl-rapporterne til Zeekr bliver præcise. Ejer du ikke en Zeekr
-              endnu, kan du stadig læse og følge med - du kan bare ikke stemme, før din bil er
-              registreret. Du kan altid rette den under Min garage.
-            </p>
+            <p className="mt-2 text-xs text-grafit-500">{k.hvorforBil}</p>
           </div>
         </>
       )}
 
       <div>
-        <label htmlFor="email" className="label">E-mail</label>
-        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="dig@eksempel.dk" className="input" />
+        <label htmlFor="email" className="label">{k.email}</label>
+        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={k.emailPh} className="input" />
       </div>
 
       {mode !== 'glemt' && (
         <div>
-          <label htmlFor="kode" className="label">Adgangskode</label>
-          <input id="kode" type="password" value={kode} onChange={(e) => setKode(e.target.value)} placeholder="Mindst 6 tegn" className="input" />
+          <label htmlFor="kode" className="label">{k.adgangskode}</label>
+          <input id="kode" type="password" value={kode} onChange={(e) => setKode(e.target.value)} placeholder={k.adgangskodePh} className="input" />
           {mode === 'ind' && (
             <button
               type="button"
               onClick={() => skift('glemt')}
               className="mt-2 text-xs font-medium text-grafit-500 hover:text-kobber-700"
             >
-              Glemt password?
+              {k.glemt}
             </button>
           )}
         </div>
@@ -230,12 +238,10 @@ export default function LoginForm({
       {info && <p className="text-sm font-medium text-loest">{info}</p>}
 
       <button type="submit" disabled={busy} className="btn-primary">
-        {busy ? 'Vent…' : mode === 'opret' ? 'Opret konto' : mode === 'glemt' ? 'Send nulstillingslink' : 'Log ind'}
+        {busy ? k.vent : mode === 'opret' ? k.opretKonto : mode === 'glemt' ? k.sendNulstil : k.logInd}
       </button>
       {mode !== 'glemt' && (
-        <p className="text-xs text-grafit-400">
-          Du behøver kun en konto for at bidrage. Læsning er altid fri.
-        </p>
+        <p className="text-xs text-grafit-400">{k.kunForAtBidrage}</p>
       )}
     </form>
   );

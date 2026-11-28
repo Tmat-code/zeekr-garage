@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/i18n/format';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import type { Notifikation } from '@/lib/types';
 import type { NotifikationSide } from '@/lib/notifikationer';
 
@@ -36,6 +37,8 @@ function ikonFor(type: string): string {
       return '🛡';
     case 'forum_rapport':
       return '🚩';
+    case 'kontakt':
+      return '📨';
     case 'ota':
       return '📦';
     default:
@@ -62,11 +65,16 @@ type Props = { userId: string; initial: NotifikationSide };
 
 export default function NotifikationerListe({ userId, initial }: Props) {
   const router = useRouter();
+  const sprog = useSprog();
+  const nt = useOrdbog().notif;
   const [items, setItems] = useState<Notifikation[]>(initial.items);
   const [total, setTotal] = useState(initial.total);
   const [ulaest, setUlaest] = useState(initial.ulaest);
   const [henter, setHenter] = useState(false);
-  const [fejl, setFejl] = useState<string | null>(null);
+  // Noegle, ikke tekst - en synlig fejl skifter med sproget. Raa DB-fejl
+  // logges i konsollen og vises aldrig.
+  const [fejlN, setFejl] = useState<'kunneIkkeHente' | 'kunneIkkeSlette' | 'kunneIkkeRydde' | null>(null);
+  const fejl = fejlN ? nt[fejlN] : null;
 
   // Fortael klokken (og evt. andre faner-instanser) at noget aendrede sig, saa
   // dens badge/liste opfriskes. Best-effort.
@@ -110,7 +118,8 @@ export default function NotifikationerListe({ userId, initial }: Props) {
         setTotal(count ?? 0);
         setUlaest(ulaestCount ?? 0);
       } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente notifikationer.');
+        console.error('Hent notifikationer:', e?.message ?? e);
+        setFejl('kunneIkkeHente');
       } finally {
         setHenter(false);
       }
@@ -189,7 +198,8 @@ export default function NotifikationerListe({ userId, initial }: Props) {
       if (error) throw error;
       pingKlokke();
     } catch (e: any) {
-      setFejl('Kunne ikke slette - prøv igen.');
+      console.error('Slet notifikation:', e?.message ?? e);
+      setFejl('kunneIkkeSlette');
       void hentSide(true); // bring listen i sync igen
     }
   }
@@ -222,7 +232,8 @@ export default function NotifikationerListe({ userId, initial }: Props) {
       if (error) throw error;
       pingKlokke();
     } catch (e: any) {
-      setFejl('Kunne ikke rydde de læste - prøv igen.');
+      console.error('Ryd læste:', e?.message ?? e);
+      setFejl('kunneIkkeRydde');
     }
     await hentSide(true);
   }
@@ -234,25 +245,25 @@ export default function NotifikationerListe({ userId, initial }: Props) {
       {/* Handlinger */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-grafit-500">
-          {total === 0 ? 'Ingen notifikationer' : `viser ${items.length} af ${total}`}
-          {ulaest > 0 && ` · ${ulaest} ulæst`}
+          {total === 0 ? nt.ingen : nt.viser(items.length, total)}
+          {ulaest > 0 && ` · ${nt.ulaest(ulaest)}`}
         </span>
         <span className="flex-1" />
         {ulaest > 0 && (
           <button type="button" onClick={markerAlle} className="btn-ghost !py-1.5 text-sm">
-            Markér alle læst
+            {nt.markerAlle}
           </button>
         )}
         {harLaeste && (
           <button type="button" onClick={rydLaeste} className="btn-ghost !py-1.5 text-sm">
-            Ryd læste
+            {nt.rydLaeste}
           </button>
         )}
       </div>
 
       {items.length === 0 ? (
         <p className="rounded-xl border border-grafit-200 bg-white px-4 py-10 text-center text-sm text-grafit-400">
-          Du har ingen notifikationer endnu.
+          {nt.ingenEndnuSide}
         </p>
       ) : (
         <ul className="divide-y divide-grafit-100 overflow-hidden rounded-xl border border-grafit-200 bg-white">
@@ -279,14 +290,14 @@ export default function NotifikationerListe({ userId, initial }: Props) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm leading-snug text-grafit-800">{n.tekst}</span>
-                  <span className="mt-0.5 block text-xs text-grafit-400">{relativTid(n.createdAt)}</span>
+                  <span className="mt-0.5 block text-xs text-grafit-400">{relativTid(n.createdAt, sprog)}</span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => slet(n)}
-                aria-label="Slet notifikation"
-                title="Slet"
+                aria-label={nt.sletAria}
+                title={nt.slet}
                 className="mt-2 mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-grafit-400 hover:bg-grafit-100 hover:text-kobber-700"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -300,7 +311,7 @@ export default function NotifikationerListe({ userId, initial }: Props) {
 
       {items.length < total && (
         <button className="btn-ghost mt-4 !py-1.5 text-sm" disabled={henter} onClick={() => hentSide(false)}>
-          {henter ? 'Henter …' : 'Vis flere'}
+          {henter ? nt.henter : nt.visFlere}
         </button>
       )}
 

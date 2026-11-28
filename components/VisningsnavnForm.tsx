@@ -3,32 +3,38 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { useOrdbog } from '@/lib/i18n/klient';
+
+type Fejl = 'navnForKort' | 'navnForLangt' | 'kunneIkkeGemme';
 
 const MIN = 2;
 const MAX = 40;
 
 export default function VisningsnavnForm({ initial }: { initial: string }) {
   const router = useRouter();
+  const g = useOrdbog().garage;
   const [navn, setNavn] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [gemt, setGemt] = useState(false);
-  const [fejl, setFejl] = useState('');
+  const [fejlN, setFejl] = useState<Fejl | null>(null);
+  const fejl =
+    fejlN === 'navnForKort' ? g.navnForKort(MIN) : fejlN === 'navnForLangt' ? g.navnForLangt(MAX) : fejlN ? g[fejlN] : '';
 
   const renset = navn.trim();
   const uaendret = renset === initial.trim();
 
   async function gem() {
-    setFejl('');
+    setFejl(null);
     setGemt(false);
-    if (renset.length < MIN) return setFejl(`Navnet skal være mindst ${MIN} tegn.`);
-    if (renset.length > MAX) return setFejl(`Navnet må højst være ${MAX} tegn.`);
+    if (renset.length < MIN) return setFejl('navnForKort');
+    if (renset.length > MAX) return setFejl('navnForLangt');
     setBusy(true);
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('ingen bruger');
+      if (!user) throw new Error('ingen bruger'); // i18n-ok
       const { error } = await sb
         .from('profiles')
         .update({ display_name: renset })
@@ -38,7 +44,8 @@ export default function VisningsnavnForm({ initial }: { initial: string }) {
       setGemt(true);
       router.refresh();
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke gemme.');
+      console.error('Gem visningsnavn:', e?.message ?? e);
+      setFejl('kunneIkkeGemme');
     } finally {
       setBusy(false);
     }
@@ -48,7 +55,7 @@ export default function VisningsnavnForm({ initial }: { initial: string }) {
     <div className="kort mt-6 space-y-4 p-6">
       <div>
         <label className="label" htmlFor="visningsnavn">
-          Dit navn
+          {g.ditNavn}
         </label>
         <input
           id="visningsnavn"
@@ -60,19 +67,16 @@ export default function VisningsnavnForm({ initial }: { initial: string }) {
             setNavn(e.target.value);
             setGemt(false);
           }}
-          placeholder="Fx Venø"
+          placeholder={g.navnPh}
           autoComplete="off"
         />
       </div>
-      <p className="text-xs text-grafit-500">
-        Sådan vises du overalt - på tråde, svar og meldinger. Din mail vises aldrig offentligt.
-        Ændrer du navnet, slår det igennem alle steder med det samme.
-      </p>
+      <p className="text-xs text-grafit-500">{g.navnHjaelp}</p>
       <div className="flex items-center gap-3">
         <button className="btn-primary" disabled={busy || uaendret} onClick={gem}>
-          {busy ? 'Gemmer…' : 'Gem navn'}
+          {busy ? g.gemmer : g.gemNavn}
         </button>
-        {gemt && <span className="text-sm text-loest">Gemt.</span>}
+        {gemt && <span className="text-sm text-loest">{g.gemt}</span>}
         {fejl && <span className="text-sm text-kobber-700">{fejl}</span>}
       </div>
     </div>

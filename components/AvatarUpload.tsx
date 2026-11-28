@@ -12,6 +12,12 @@ import {
   MAKS_BYTES,
   avatarUrl,
 } from '@/lib/billeder';
+import { useOrdbog } from '@/lib/i18n/klient';
+import type { Ordbog } from '@/lib/i18n';
+
+// Fejl gemmes som en vælger (ikke færdig tekst), så en synlig fejl skifter med
+// sproget. Rå storage-/DB-fejl (engelsk) vises aldrig - de logges i konsollen.
+type FejlFn = (t: Ordbog) => string;
 
 // Profilbillede-upload (P22). Center-beskaerer + resizer billedet klient-side
 // til et lille kvadrat (AVATAR_PX) foer upload - ingen crop-UI (laast med
@@ -26,9 +32,13 @@ export default function AvatarUpload({
   navn: string;
 }) {
   const router = useRouter();
+  const t = useOrdbog();
+  const g = t.garage;
   const [path, setPath] = useState<string | null>(initialPath);
   const [busy, setBusy] = useState(false);
-  const [fejl, setFejl] = useState('');
+  const [fejlFn, setFejlFn] = useState<FejlFn | null>(null);
+  const fejl = fejlFn ? fejlFn(t) : '';
+  const setFejl = (f: FejlFn | null) => setFejlFn(() => f);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const url = path ? avatarUrl(path) : null;
@@ -44,23 +54,23 @@ export default function AvatarUpload({
     canvas.width = AVATAR_PX;
     canvas.height = AVATAR_PX;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Kunne ikke behandle billedet.');
+    if (!ctx) throw new Error('canvas-2d');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, AVATAR_PX, AVATAR_PX);
     bitmap.close?.();
     const blob = await new Promise<Blob | null>((res) =>
       canvas.toBlob(res, 'image/jpeg', AVATAR_KVALITET),
     );
-    if (!blob) throw new Error('Kunne ikke behandle billedet.');
+    if (!blob) throw new Error('canvas-blob');
     return blob;
   }
 
   async function vaelg(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
-    setFejl('');
-    if (!TILLADTE_TYPER.includes(file.type)) return setFejl('Kun billeder (JPG, PNG, WebP, GIF).');
-    if (file.size > MAKS_BYTES) return setFejl('Billedet er for stort (maks 5 MB).');
+    setFejl(null);
+    if (!TILLADTE_TYPER.includes(file.type)) return setFejl((o) => o.billeder.kunBilleder);
+    if (file.size > MAKS_BYTES) return setFejl((o) => o.billeder.forStort);
 
     setBusy(true);
     try {
@@ -68,14 +78,24 @@ export default function AvatarUpload({
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('Log ind for at skifte profilbillede.');
+      if (!user) return setFejl((o) => o.garage.logIndForBillede);
 
-      const blob = await tilKvadratBlob(file);
+      let blob: Blob;
+      try {
+        blob = await tilKvadratBlob(file);
+      } catch (e: any) {
+        console.error('Avatar: behandling', e?.message ?? e);
+        return setFejl((o) => o.garage.kunneIkkeBehandle);
+      }
       const nyPath = `${user.id}/${crypto.randomUUID()}.jpg`;
       const { error: upErr } = await sb.storage
         .from(AVATAR_BUCKET)
         .upload(nyPath, blob, { contentType: 'image/jpeg', upsert: false });
-      if (upErr) throw new Error('Upload fejlede: ' + upErr.message);
+      if (upErr) {
+        const besked = upErr.message;
+        console.error('Avatar: upload', besked);
+        return setFejl((o) => o.billeder.uploadFejlede(besked));
+      }
 
       const { error: dbErr } = await sb
         .from('profiles')
@@ -95,7 +115,8 @@ export default function AvatarUpload({
       setPath(nyPath);
       router.refresh();
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke gemme billedet.');
+      console.error('Avatar: gem', e?.message ?? e);
+      setFejl((o) => o.garage.kunneIkkeGemmeBillede);
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -103,14 +124,14 @@ export default function AvatarUpload({
   }
 
   async function fjern() {
-    setFejl('');
+    setFejl(null);
     setBusy(true);
     try {
       const sb = supabaseBrowser();
       const {
         data: { user },
       } = await sb.auth.getUser();
-      if (!user) throw new Error('Log ind for at fjerne profilbilledet.');
+      if (!user) return setFejl((o) => o.garage.logIndForBillede);
 
       const { error } = await sb.from('profiles').update({ avatar_path: null }).eq('id', user.id);
       if (error) throw new Error(error.message);
@@ -120,7 +141,8 @@ export default function AvatarUpload({
       setPath(null);
       router.refresh();
     } catch (e: any) {
-      setFejl(e?.message ?? 'Kunne ikke fjerne billedet.');
+      console.error('Avatar: fjern', e?.message ?? e);
+      setFejl((o) => o.garage.kunneIkkeFjerneBillede);
     } finally {
       setBusy(false);
     }
@@ -129,7 +151,7 @@ export default function AvatarUpload({
   return (
     <div className="kort mt-6 space-y-4 p-6">
       <div>
-        <span className="label">Profilbillede</span>
+        <span className="label">{g.profilbillede}</span>
         <div className="mt-2 flex items-center gap-4">
           <Avatar url={url} navn={navn || null} px={64} />
           <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +161,7 @@ export default function AvatarUpload({
               disabled={busy}
               onClick={() => inputRef.current?.click()}
             >
-              📷 {busy ? 'Arbejder…' : url ? 'Skift billede' : 'Tilføj billede'}
+              📷 {busy ? g.arbejder : url ? g.skiftBillede : g.tilfoejBillede}
             </button>
             {url && (
               <button
@@ -148,7 +170,7 @@ export default function AvatarUpload({
                 disabled={busy}
                 onClick={fjern}
               >
-                Fjern
+                {g.fjern}
               </button>
             )}
           </div>
@@ -161,10 +183,7 @@ export default function AvatarUpload({
           onChange={(e) => vaelg(e.target.files)}
         />
       </div>
-      <p className="text-xs text-grafit-500">
-        Vises som dit ansigt på tråde, svar, kommentarer og beskeder. Billedet beskæres kvadratisk og
-        gøres mindre automatisk. Har du intet billede, vises dit forbogstav.
-      </p>
+      <p className="text-xs text-grafit-500">{g.avatarHjaelp}</p>
       {fejl && <p className="text-sm text-kobber-700">{fejl}</p>}
     </div>
   );

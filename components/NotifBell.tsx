@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/i18n/format';
+import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import type { Notifikation } from '@/lib/types';
 
 // Facebook-agtig klokke: ulaest-badge + dropdown. Supabase Realtime -> badgen
@@ -61,6 +62,8 @@ function mapRow(r: any): Notifikation {
 
 export default function NotifBell({ userId, initialUnread }: Props) {
   const router = useRouter();
+  const sprog = useSprog();
+  const nt = useOrdbog().notif;
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<Notifikation[]>([]);
@@ -211,7 +214,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
       <button
         type="button"
         onClick={toggle}
-        aria-label={unread > 0 ? `Notifikationer (${unread} ulæste)` : 'Notifikationer'}
+        aria-label={nt.klokkeAria(unread)}
         aria-expanded={open}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-grafit-600 hover:bg-grafit-100"
       >
@@ -229,25 +232,23 @@ export default function NotifBell({ userId, initialUnread }: Props) {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-grafit-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-grafit-100 px-3 py-2">
-            <span className="text-sm font-semibold text-grafit-800">Notifikationer</span>
+            <span className="text-sm font-semibold text-grafit-800">{nt.notifikationer}</span>
             {unread > 0 && (
               <button
                 type="button"
                 onClick={markerAlle}
                 className="text-xs text-kobber-700 hover:underline"
               >
-                Markér alle læst
+                {nt.markerAlle}
               </button>
             )}
           </div>
 
           <div className="max-h-[70vh] overflow-y-auto">
             {!loaded ? (
-              <p className="px-3 py-6 text-center text-sm text-grafit-400">Henter …</p>
+              <p className="px-3 py-6 text-center text-sm text-grafit-400">{nt.henter}</p>
             ) : items.length === 0 ? (
-              <p className="px-3 py-6 text-center text-sm text-grafit-400">
-                Ingen notifikationer endnu.
-              </p>
+              <p className="px-3 py-6 text-center text-sm text-grafit-400">{nt.ingenEndnuKlokke}</p>
             ) : (
               <ul className="divide-y divide-grafit-100">
                 {items.map((n) => (
@@ -271,7 +272,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm leading-snug text-grafit-800">{n.tekst}</span>
                         <span className="mt-0.5 block text-xs text-grafit-400">
-                          {relativTid(n.createdAt)}
+                          {relativTid(n.createdAt, sprog)}
                         </span>
                       </span>
                     </button>
@@ -287,7 +288,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
               onClick={() => setOpen(false)}
               className="text-sm font-medium text-kobber-700 hover:underline"
             >
-              Se alle
+              {nt.seAlle}
             </Link>
           </div>
         </div>

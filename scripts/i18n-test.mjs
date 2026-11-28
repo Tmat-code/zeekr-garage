@@ -350,5 +350,68 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   }
 }
 
+// --- U4: konto ---
+{
+  const kilde = fs.readFileSync(path.join(ROD, 'lib/gotrue-fejl.ts'), 'utf8');
+  const fil = path.join(os.tmpdir(), `zg-gotrue-${process.pid}.mjs`);
+  fs.writeFileSync(
+    fil,
+    ts.transpileModule(kilde, {
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+  );
+  const { gotrueFejl: G } = await import(fil);
+  fs.rmSync(fil, { force: true });
+  // Rigtige GoTrue-svar (beskeder + koder), som supabase-js afleverer dem.
+  lig('U4 gotrue: forkert login (besked)', G({ message: 'Invalid login credentials' }), 'forkertLogin');
+  lig('U4 gotrue: forkert login (kode)', G({ code: 'invalid_credentials', message: 'x' }), 'forkertLogin');
+  lig('U4 gotrue: ikke bekræftet', G({ message: 'Email not confirmed' }), 'ikkeBekraeftet');
+  lig('U4 gotrue: findes (signup)', G({ message: 'User already registered' }), 'findesAllerede');
+  lig('U4 gotrue: findes (kode)', G({ code: 'user_already_exists' }), 'findesAllerede');
+  lig('U4 gotrue: findes (mail-skift)', G({ message: 'A user with this email address has already been registered' }), 'findesAllerede');
+  lig('U4 gotrue: svag (længde)', G({ message: 'Password should be at least 6 characters.' }), 'svagKode');
+  lig('U4 gotrue: svag (HIBP)', G({ message: 'Password is known to be weak and easy to guess, please choose a different one.' }), 'svagKode');
+  lig('U4 gotrue: svag (tegn)', G({ message: 'Password should contain at least one character of each: abc, ABC, 123' }), 'svagKode');
+  lig('U4 gotrue: svag (kode)', G({ code: 'weak_password', message: '' }), 'svagKode');
+  lig('U4 gotrue: rate limit', G({ message: 'Email rate limit exceeded' }), 'forMange');
+  lig('U4 gotrue: for security purposes', G({ message: 'For security purposes, you can only request this after 42 seconds.' }), 'forMange');
+  lig('U4 gotrue: ugyldig mail', G({ message: 'Unable to validate email address: invalid format' }), 'mailUgyldig');
+  lig('U4 gotrue: signup lukket', G({ message: 'Signups not allowed for this instance' }), 'opretLukket');
+  lig('U4 gotrue: samme password', G({ message: 'New password should be different from the old password.' }), 'sammeKode');
+  lig('U4 gotrue: samme mail', G({ message: 'New email address should be different from the current email address' }), 'sammeMail');
+  lig('U4 gotrue: udløbet link', G({ code: 'otp_expired', message: 'Email link is invalid or has expired' }), 'linkUdloebet');
+  lig('U4 gotrue: ukendt -> null', G({ message: 'Database error saving new user' }), null);
+  lig('U4 gotrue: tom -> null', [G(null), G(undefined), G({})], [null, null, null]);
+  // Hver nøgle gotrueFejl kan returnere findes på alle sprog.
+  const noegler = [...kilde.matchAll(/^\s*\| '(\w+)'/gm)].map((m) => m[1]);
+  lig('U4 gotrue-nøgler == ordbogens', Object.keys(da.konto.gotrue).sort(), [...noegler].sort());
+  for (const [navn, o] of [['sv', sv], ['en', en]]) {
+    lig(`U4 ${navn}: gotrue-nøgler`, Object.keys(o.konto.gotrue).sort(), [...noegler].sort());
+  }
+  // /login?fejl=-koderne fra /auth/confirm + /auth/callback findes i ordbogen.
+  const ruter = ['app/auth/confirm/route.ts', 'app/auth/callback/route.ts']
+    .map((f) => fs.readFileSync(path.join(ROD, f), 'utf8'))
+    .join('\n');
+  const koder = new Set([...ruter.matchAll(/'(bekraeft|reset|mail|link)'/g)].map((m) => m[1]));
+  for (const k of koder) {
+    lig(`U4 linkFejl '${k}' på alle sprog`, [da, sv, en].every((o) => !!o.konto.linkFejl[k]), true);
+  }
+  lig('U4 confirm-ruten kender alle 4 koder', [...koder].sort(), ['bekraeft', 'link', 'mail', 'reset']);
+  // Flertal + parametre.
+  lig('U4 notif viser', [da.notif.viser(3, 10), sv.notif.viser(3, 10), en.notif.viser(3, 10)], ['viser 3 af 10', 'visar 3 av 10', 'showing 3 of 10']);
+  lig('U4 klokke-aria', [da.notif.klokkeAria(0), sv.notif.klokkeAria(2), en.notif.klokkeAria(1)], ['Notifikationer', 'Notiser (2 olästa)', 'Notifications (1 unread)']);
+  lig('U4 navn for kort', [da.garage.navnForKort(2), en.garage.navnForLangt(40)], ['Navnet skal være mindst 2 tegn.', 'The name can be at most 40 characters.']);
+  // Mail-emner: ingen $ (Compose), ingen { } (Go-skabelonen) og ingen < > & (skabelonen escaper ikke tekst).
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    const alle = [o.mail.kopierLink, ...Object.values(o.mail.bekraeft), ...Object.values(o.mail.nulstil)];
+    lig(`U4 ${navn}: mail-tekster uden $ { } < > &`, alle.filter((t) => /[${}<>&]/.test(t)), []);
+  }
+  // Ingen lange tankestreger i U4's namespaces.
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    const tekst = JSON.stringify([o.konto, o.garage, o.notif, o.mail]);
+    lig(`U4 ${navn}: ingen lange tankestreger`, /[\u2013\u2014]/.test(tekst), false);
+  }
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);
