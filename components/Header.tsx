@@ -17,12 +17,12 @@ export default async function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-grafit-200 bg-white/90 backdrop-blur">
-      <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+      <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="flex items-baseline gap-2">
           <span className="whitespace-nowrap font-display text-lg font-extrabold tracking-tight text-grafit-900">
             {SITE.name}
           </span>
-          <span className="hidden whitespace-nowrap text-xs text-grafit-400 lg:inline">
+          <span className="hidden whitespace-nowrap text-xs text-grafit-400 2xl:inline">
             {t.ramme.tagline}
           </span>
         </Link>

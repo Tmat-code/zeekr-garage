@@ -35,16 +35,21 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
   const t = useOrdbog();
   const [open, setOpen] = useState(false);
   const luk = () => setOpen(false);
+  // P44: den fulde menu fylder mere end headeren har plads til på tablet/smal
+  // laptop (og for staben, med Værkstedet, også på almindelig desktop). Under
+  // brudpunktet bruges burger-menuen. Literal-strenge, så Tailwind ser dem.
+  const vis = erModerator ? 'xl:flex' : 'lg:flex';
+  const skjul = erModerator ? 'xl:hidden' : 'lg:hidden';
 
   return (
     <>
       {/* Desktop-nav */}
-      <nav className="hidden items-center gap-1.5 text-sm sm:flex [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap">
+      <nav className={`hidden items-center gap-1 text-sm ${vis} [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap`}>
         {LINKS.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100"
+            className="rounded-lg px-2.5 py-1.5 text-grafit-600 hover:bg-grafit-100"
           >
             {t.nav[l.noegle]}
           </Link>
@@ -52,7 +57,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
         {erModerator && (
           <Link
             href="/admin"
-            className="inline-flex items-center rounded-lg px-3 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
+            className="inline-flex items-center rounded-lg px-2.5 py-1.5 font-medium text-kobber-700 hover:bg-kobber-100"
             title={aabneRapporter > 0 ? t.nav.aabneRapporter(aabneRapporter) : undefined}
           >
             🔧 {t.nav.vaerkstedet}
@@ -61,10 +66,10 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
         )}
         {indlogget ? (
           <div className="flex items-center gap-2 pl-1">
-            <Link href="/beskeder" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+            <Link href="/beskeder" className="rounded-lg px-2.5 py-1.5 text-grafit-600 hover:bg-grafit-100">
               ✉️ {t.nav.beskeder}
             </Link>
-            <Link href="/garage" className="rounded-lg px-3 py-1.5 text-grafit-600 hover:bg-grafit-100">
+            <Link href="/garage" className="rounded-lg px-2.5 py-1.5 text-grafit-600 hover:bg-grafit-100">
               🚗 {t.nav.minGarage}
             </Link>
             <form action="/logout" method="post">
@@ -86,7 +91,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? t.nav.lukMenu : t.nav.aabnMenu}
         aria-expanded={open}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-grafit-700 hover:bg-grafit-100 sm:hidden"
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-grafit-700 hover:bg-grafit-100 ${skjul}`}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           {open ? (
@@ -106,7 +111,7 @@ export default function Nav({ erModerator, indlogget, aabneRapporter = 0 }: Prop
 
       {/* Mobil: udfoldet panel */}
       {open && (
-        <div className="absolute inset-x-0 top-full border-b border-grafit-200 bg-white shadow-sm sm:hidden">
+        <div className={`absolute inset-x-0 top-full border-b border-grafit-200 bg-white shadow-sm ${skjul}`}>
           <nav className="mx-auto flex max-w-5xl flex-col gap-1 px-4 py-3 text-sm">
             {LINKS.map((l) => (
               <Link
