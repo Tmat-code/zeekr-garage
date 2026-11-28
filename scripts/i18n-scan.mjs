@@ -168,6 +168,42 @@ const SKIVER = {
     'lib/beskeder-fejl.ts',
     'lib/events-fejl.ts',
   ],
+  // U6: Værkstedet, KUN moderator-delen (design valg 2). Bevidst UDE (forbliver
+  // dansk): admin-kun-flader (Links, OTA, Audit, Rapport, AdgangePanel = rolle-
+  // styring, ForsideBeskedEditor, Oprydning-panelerne), struktur-editorerne på
+  // Forum-fanen (ForumEditorSektioner, KategoriStyring, ForumReglerEditor,
+  // TilfoejModel, ModellerPanel - afklaret med Torben 28-11), AdminManual, og
+  // app/admin/admin-actions.ts. Selve ordbogen (lib/i18n/vaerksted/) er
+  // fraregnet som de øvrige ordbøger.
+  U6: [
+    'app/admin/layout.tsx',
+    'app/admin/page.tsx',
+    'app/admin/feedback/page.tsx',
+    'app/admin/forum/page.tsx',
+    'app/admin/beskeder/page.tsx',
+    'app/admin/kontakt/page.tsx',
+    'app/admin/aktivitet/page.tsx',
+    'app/admin/adgange/page.tsx',
+    'app/admin/manual/page.tsx',
+    'app/admin/actions.ts',
+    'app/admin/beskeder-actions.ts',
+    'app/admin/kontakt-actions.ts',
+    'components/admin/AdminNav.tsx',
+    'components/admin/Overblik.tsx',
+    'components/admin/Genveje.tsx',
+    'components/admin/ModereringsTabel.tsx',
+    'components/admin/AktivitetFeed.tsx',
+    'components/admin/BarGraf.tsx',
+    'components/admin/ForumModerering.tsx',
+    'components/admin/ForumRapporter.tsx',
+    'components/admin/AnmeldelserPanel.tsx',
+    'components/admin/KontaktBeskeder.tsx',
+    'components/admin/BrugerAdministration.tsx',
+    'components/admin/ManualVisning.tsx',
+    'components/admin/useVKoer.ts',
+    'lib/vaerksted-fejl.ts',
+    'lib/queries-admin.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

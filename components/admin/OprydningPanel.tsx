@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { taelBekraeftelserFoer, fjernBekraeftelserFoer } from '@/app/admin/actions';
+import { taelBekraeftelserFoer, fjernBekraeftelserFoer } from '@/app/admin/admin-actions';
 
 function iDag(): string {
   return new Date().toLocaleDateString('en-CA'); // yyyy-mm-dd, lokal tid

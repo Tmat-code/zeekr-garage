@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { relativTid } from '@/lib/i18n/format';
+import { ordbog, type UiSprog } from '@/lib/i18n';
+import { vordbog } from '@/lib/i18n/vaerksted';
 import type { AktivitetPost } from '@/lib/queries-admin';
 
 const IKON: Record<AktivitetPost['kind'], string> = {
@@ -9,33 +11,38 @@ const IKON: Record<AktivitetPost['kind'], string> = {
   forum_indlaeg: '↩️',
 };
 
-function tekst(a: AktivitetPost): JSX.Element {
+function tekst(a: AktivitetPost, sprog: UiSprog): JSX.Element {
+  const t = vordbog(sprog).aktivitetFeed;
+  // Typen af en ny melding (Fejl/Ønske) oversættes; øvrige detaljer er
+  // DB-navne (kategori/model) og står som de er.
+  const detalje = a.type ? ordbog(sprog).config.type[a.type].badge : a.detalje;
+  const meta = detalje && <span className="text-grafit-400"> · {detalje}</span>;
   switch (a.kind) {
     case 'melding':
       return (
         <>
-          Ny melding: <span className="font-medium">{a.titel}</span>
-          {a.detalje && <span className="text-grafit-400"> · {a.detalje}</span>}
+          {t.nyMelding} <span className="font-medium">{a.titel ?? t.enMelding}</span>
+          {meta}
         </>
       );
     case 'bekraeftelse':
       return (
         <>
-          Bekræftelse på <span className="font-medium">{a.titel}</span>
-          {a.detalje && <span className="text-grafit-400"> · {a.detalje}</span>}
+          {t.bekraeftelsePaa} <span className="font-medium">{a.titel ?? t.enMelding}</span>
+          {meta}
         </>
       );
     case 'forum_traad':
       return (
         <>
-          Ny tråd: <span className="font-medium">{a.titel}</span>
-          {a.detalje && <span className="text-grafit-400"> · {a.detalje}</span>}
+          {t.nyTraad} <span className="font-medium">{a.titel ?? t.enTraad}</span>
+          {meta}
         </>
       );
     case 'forum_indlaeg':
       return (
         <>
-          Nyt svar i <span className="font-medium">{a.titel}</span>
+          {t.nytSvarI} <span className="font-medium">{a.titel ?? t.enTraad}</span>
         </>
       );
   }
@@ -43,13 +50,15 @@ function tekst(a: AktivitetPost): JSX.Element {
 
 export default function AktivitetFeed({
   poster,
-  tom = 'Ingen aktivitet endnu.',
+  sprog,
+  tom,
 }: {
   poster: AktivitetPost[];
+  sprog: UiSprog;
   tom?: string;
 }) {
   if (poster.length === 0) {
-    return <p className="text-sm text-grafit-500">{tom}</p>;
+    return <p className="text-sm text-grafit-500">{tom ?? vordbog(sprog).aktivitetFeed.ingen}</p>;
   }
 
   return (
@@ -61,8 +70,8 @@ export default function AktivitetFeed({
               {IKON[a.kind]}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-grafit-800">{tekst(a)}</p>
-              <p className="text-xs text-grafit-400">{relativTid(a.created_at)}</p>
+              <p className="text-sm text-grafit-800">{tekst(a, sprog)}</p>
+              <p className="text-xs text-grafit-400">{relativTid(a.created_at, sprog)}</p>
             </div>
           </>
         );

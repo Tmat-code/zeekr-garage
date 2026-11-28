@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   STATUSES,
   SEVERITIES,
-  ISSUE_CATEGORIES,
-  STATUS_STYLE,
-  SEVERITY_STYLE,
+  ISSUE_CATEGORY_SLUGS,
   TYPE_META,
   type Status,
   type Severity,
 } from '@/lib/config';
+import { useOrdbog } from '@/lib/i18n/klient';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import { useVKoer } from '@/components/admin/useVKoer';
 import type { IssueRow } from '@/lib/types';
 import { KILDESPROG } from '@/lib/kildesprog';
 import { SPROG_EGET_NAVN } from '@/lib/i18n/sprog';
@@ -46,9 +47,11 @@ function Felt({ label, children }: { label: string; children: ReactNode }) {
 // kaemper om pladsen med den daglige klassificering.
 function HandlingerMenu({
   disabled,
+  label,
   children,
 }: {
   disabled?: boolean;
+  label: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -115,10 +118,10 @@ function HandlingerMenu({
         ref={knapRef}
         type="button"
         className="rounded-lg border border-grafit-200 px-2.5 py-1 text-base leading-none text-grafit-500 hover:border-grafit-300 hover:text-grafit-700"
-        aria-label="Flere handlinger"
+        aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        title="Flere handlinger"
+        title={label}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={knapTaster}
@@ -138,7 +141,7 @@ function HandlingerMenu({
           <div
             ref={menuRef}
             role="menu"
-            aria-label="Flere handlinger"
+            aria-label={label}
             className="absolute right-0 z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-grafit-200 bg-white py-1 shadow-lg"
             onKeyDown={menuTaster}
             onClick={() => luk(false)}
@@ -177,8 +180,10 @@ function MenuPunkt({
 }
 
 function Raekke({ issue }: { issue: IssueRow }) {
-  const [pending, start] = useTransition();
-  const [fejl, setFejl] = useState<string | null>(null);
+  const t = useOrdbog();
+  const v = useVOrdbog();
+  const f = v.feedback;
+  const { pending, koer, fejl } = useVKoer();
   const [redigerer, setRedigerer] = useState(false);
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
   const [markerer, setMarkerer] = useState(false);
@@ -186,20 +191,10 @@ function Raekke({ issue }: { issue: IssueRow }) {
   const [beskrivelse, setBeskrivelse] = useState(issue.description);
 
   const type = TYPE_META[issue.type];
+  const typeBadge = t.config.type[issue.type]?.badge ?? type.badge;
   const modelTekst = issue.models.map((m) => m.name).join(', ') || '-';
   const kanLoeses =
     issue.status !== 'loest_i_ota' && issue.status !== 'afklaret';
-
-  function koer(fn: () => Promise<void>) {
-    setFejl(null);
-    start(async () => {
-      try {
-        await fn();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
-    });
-  }
 
   return (
     <div
@@ -224,29 +219,30 @@ function Raekke({ issue }: { issue: IssueRow }) {
                 className="input"
                 value={titel}
                 onChange={(e) => setTitel(e.target.value)}
-                placeholder="Titel"
+                placeholder={f.titelPh}
               />
               <textarea
                 className="input min-h-[80px]"
                 value={beskrivelse}
                 onChange={(e) => setBeskrivelse(e.target.value)}
-                placeholder="Beskrivelse"
+                placeholder={f.beskrivelsePh}
               />
               <div className="flex gap-2">
                 <button
                   className="btn-primary !py-1.5 text-sm"
                   disabled={pending}
                   onClick={() =>
-                    koer(async () => {
-                      await gemRedigering(issue.id, {
-                        title: titel,
-                        description: beskrivelse,
-                      });
-                      setRedigerer(false);
-                    })
+                    koer(
+                      () =>
+                        gemRedigering(issue.id, {
+                          title: titel,
+                          description: beskrivelse,
+                        }),
+                      () => setRedigerer(false),
+                    )
                   }
                 >
-                  Gem
+                  {f.gem}
                 </button>
                 <button
                   className="btn-ghost !py-1.5 text-sm"
@@ -256,7 +252,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
                     setRedigerer(false);
                   }}
                 >
-                  Annullér
+                  {f.annuller}
                 </button>
               </div>
             </div>
@@ -264,15 +260,15 @@ function Raekke({ issue }: { issue: IssueRow }) {
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-grafit-900">{issue.title}</span>
-                <span className={`chip ${type.chip}`}>{type.badge}</span>
+                <span className={`chip ${type.chip}`}>{typeBadge}</span>
                 {issue.comments > 0 && (
                   <Link
                     href={`/melding/${issue.id}`}
                     target="_blank"
                     className="inline-flex items-center gap-1 rounded-full bg-kobber-50 px-2 py-0.5 text-xs font-semibold text-kobber-700 hover:bg-kobber-100"
-                    title="Se kommentarer"
+                    title={f.seKommentarer}
                   >
-                    💬 {issue.comments} svar
+                    💬 {f.svar(issue.comments)}
                   </Link>
                 )}
               </div>
@@ -294,7 +290,7 @@ function Raekke({ issue }: { issue: IssueRow }) {
         <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-grafit-100 pt-3">
           {/* Klassificering: de tre dropdowns samlet som én enhed */}
           <div className="flex flex-wrap items-end gap-2">
-            <Felt label="Status">
+            <Felt label={f.status}>
               <select
                 className={selectKlasse}
                 value={issue.status}
@@ -305,13 +301,13 @@ function Raekke({ issue }: { issue: IssueRow }) {
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {STATUS_STYLE[s].label}
+                    {t.config.status[s]}
                   </option>
                 ))}
               </select>
             </Felt>
 
-            <Felt label="Alvor">
+            <Felt label={f.alvor}>
               <select
                 className={selectKlasse}
                 value={issue.severity}
@@ -322,36 +318,36 @@ function Raekke({ issue }: { issue: IssueRow }) {
               >
                 {SEVERITIES.map((s) => (
                   <option key={s} value={s}>
-                    {SEVERITY_STYLE[s].label}
+                    {t.config.alvor[s]}
                   </option>
                 ))}
               </select>
             </Felt>
 
-            <Felt label="Kategori">
+            <Felt label={f.kategori}>
               <select
                 className={selectKlasse}
                 value={issue.category ?? ''}
                 disabled={pending}
                 onChange={(e) => koer(() => saetKategori(issue.id, e.target.value))}
               >
-                <option value="">– ingen –</option>
-                {ISSUE_CATEGORIES.map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.label}
+                <option value="">{f.ingenKategori}</option>
+                {ISSUE_CATEGORY_SLUGS.map((slug) => (
+                  <option key={slug} value={slug}>
+                    {t.config.kategori[slug]}
                   </option>
                 ))}
               </select>
             </Felt>
 
             {/* U3b: kildesprog (auto-detekteret ved oprettelse; ret hvis forkert) */}
-            <Felt label="Sprog">
+            <Felt label={f.sprog}>
               <select
                 className={selectKlasse}
                 value={issue.sprog}
                 disabled={pending}
                 onChange={(e) => koer(() => saetMeldingSprog(issue.id, e.target.value))}
-                title="Meldingens originalsprog - styrer rapport- og titel-oversættelsen"
+                title={f.sprogTitle}
               >
                 {KILDESPROG.map((s) => (
                   <option key={s} value={s}>
@@ -367,56 +363,48 @@ function Raekke({ issue }: { issue: IssueRow }) {
           {/* Handlinger: Markér løst synlig, resten i ⋯-menuen */}
           {bekraeftSlet ? (
             <span className="flex items-center gap-1">
-              <span className="mr-1 text-xs text-grafit-500">Slet denne melding?</span>
+              <span className="mr-1 text-xs text-grafit-500">{f.sletSpoerg}</span>
               <button
                 className="rounded-lg bg-kobber-600 px-2.5 py-1 text-sm font-semibold text-white hover:bg-kobber-700"
                 disabled={pending}
                 onClick={() => koer(() => sletMelding(issue.id))}
               >
-                Bekræft slet
+                {v.faelles.bekraeftSlet}
               </button>
               <button
                 className="btn-ghost !px-2 !py-1 text-sm"
                 onClick={() => setBekraeftSlet(false)}
               >
-                Fortryd
+                {v.faelles.fortryd}
               </button>
             </span>
           ) : markerer ? (
             <span className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-xs text-grafit-500">Løst hvordan?</span>
+              <span className="mr-1 text-xs text-grafit-500">{f.loestHvordan}</span>
               <button
                 className="rounded-lg border px-2.5 py-1 text-sm font-medium hover:bg-grafit-50"
                 style={{ borderColor: LOEST_GROEN, color: LOEST_GROEN }}
                 disabled={pending}
-                onClick={() =>
-                  koer(async () => {
-                    await markerLoest(issue.id);
-                    setMarkerer(false);
-                  })
-                }
-                title="Zeekr har rettet det i en software-opdatering"
+                onClick={() => koer(() => markerLoest(issue.id), () => setMarkerer(false))}
+                title={f.loestIOtaTitle}
               >
-                ✅ Løst i OTA
+                {f.loestIOta}
               </button>
               <button
                 className="rounded-lg border border-grafit-300 px-2.5 py-1 text-sm font-medium text-grafit-700 hover:bg-grafit-50"
                 disabled={pending}
                 onClick={() =>
-                  koer(async () => {
-                    await saetStatus(issue.id, 'afklaret');
-                    setMarkerer(false);
-                  })
+                  koer(() => saetStatus(issue.id, 'afklaret'), () => setMarkerer(false))
                 }
-                title="Afsluttet uden OTA-fix, fx fejlinformeret bruger eller afklaret i en kommentar"
+                title={f.afklaretTitle}
               >
-                💬 Afklaret
+                {f.afklaret}
               </button>
               <button
                 className="btn-ghost !px-2 !py-1 text-sm"
                 onClick={() => setMarkerer(false)}
               >
-                Fortryd
+                {v.faelles.fortryd}
               </button>
             </span>
           ) : (
@@ -428,13 +416,13 @@ function Raekke({ issue }: { issue: IssueRow }) {
                   disabled={pending}
                   onClick={() => setMarkerer(true)}
                 >
-                  ✅ Markér løst
+                  {f.markerLoest}
                 </button>
               )}
-              <HandlingerMenu disabled={pending}>
-                <MenuPunkt onClick={() => setRedigerer(true)}>✏️ Redigér</MenuPunkt>
+              <HandlingerMenu disabled={pending} label={f.flereHandlinger}>
+                <MenuPunkt onClick={() => setRedigerer(true)}>{f.rediger}</MenuPunkt>
                 <MenuPunkt danger onClick={() => setBekraeftSlet(true)}>
-                  🗑 Slet
+                  {f.slet}
                 </MenuPunkt>
               </HandlingerMenu>
             </div>
@@ -448,11 +436,12 @@ function Raekke({ issue }: { issue: IssueRow }) {
 }
 
 export default function ModereringsTabel({ issues }: { issues: IssueRow[] }) {
+  const v = useVOrdbog();
   // Sorteret som bugherrer: flest stemmer oeverst.
   const sorteret = [...issues].sort((a, b) => b.confirmations - a.confirmations);
 
   if (sorteret.length === 0) {
-    return <p className="text-sm text-grafit-500">Ingen meldinger endnu.</p>;
+    return <p className="text-sm text-grafit-500">{v.feedback.ingenMeldinger}</p>;
   }
 
   return (

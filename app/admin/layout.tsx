@@ -3,14 +3,9 @@ import Link from 'next/link';
 import { adminKontekst, rolleErAdmin, rolleErModerator, rolleErSuperadmin } from '@/lib/admin';
 import { getAabneRapporterAntal } from '@/lib/queries-admin';
 import AdminNav from '@/components/admin/AdminNav';
+import { hentVOrdbog } from '@/lib/i18n/vaerksted/server';
 
 export const dynamic = 'force-dynamic';
-
-const ROLLE_LABEL: Record<string, string> = {
-  superadmin: 'superadmin',
-  admin: 'admin',
-  moderator: 'moderator',
-};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, rolle, displayName } = await adminKontekst();
@@ -20,7 +15,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/');
   }
 
-  const aabneRapporter = await getAabneRapporterAntal();
+  const [aabneRapporter, v] = await Promise.all([getAabneRapporterAntal(), hentVOrdbog()]);
+  const rolleLabel = (v.roller as Record<string, string>)[rolle ?? ''] ?? rolle;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
@@ -29,27 +25,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div>
           <Link href="/admin" className="flex items-center gap-2">
             <span className="text-xl font-semibold tracking-tight text-grafit-900">
-              🔧 Værkstedet
+              🔧 {v.navn}
             </span>
           </Link>
           <p className="mt-0.5 text-sm text-grafit-500">
-            Logget ind som{' '}
+            {v.ramme.loggetIndSom}{' '}
             <span className="font-medium text-grafit-700">
               {displayName || user.email}
             </span>{' '}
             <span className="chip bg-kobber-100 text-kobber-800">
-              {ROLLE_LABEL[rolle ?? ''] ?? rolle}
+              {rolleLabel}
             </span>
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/" className="btn-ghost !py-1.5 text-sm">
-            ← Til forsiden
+            {v.ramme.tilForsiden}
           </Link>
           <form action="/logout" method="post">
             <button className="btn-ghost !py-1.5 text-sm" type="submit">
-              Log ud
+              {v.ramme.logUd}
             </button>
           </form>
         </div>

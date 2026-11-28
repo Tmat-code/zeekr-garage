@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { AdminStats, ForumOverblik } from '@/lib/queries-admin';
+import type { VOrdbog } from '@/lib/i18n/vaerksted';
 
 function Tile({ tal, label }: { tal: number; label: string }) {
   return (
@@ -21,27 +22,40 @@ function OmraadeOverskrift({ titel, href, aabnLabel }: { titel: string; href: st
   );
 }
 
-export default function Overblik({ stats, forum }: { stats: AdminStats; forum: ForumOverblik }) {
+export default function Overblik({
+  v,
+  stats,
+  forum,
+}: {
+  v: VOrdbog;
+  stats: AdminStats;
+  forum: ForumOverblik;
+}) {
+  const o = v.overblik;
   const aabne = stats.perStatus.ny + stats.perStatus.bekraeftet;
 
   return (
     <section className="rounded-2xl border-2 border-kobber-200 bg-white p-5 sm:p-6">
-      <h2 className="mb-4 text-lg font-semibold text-grafit-900">Overblik</h2>
+      <h2 className="mb-4 text-lg font-semibold text-grafit-900">{o.titel}</h2>
 
-      <OmraadeOverskrift titel="Feedback" href="/admin/feedback" aabnLabel="Åbn Feedback" />
+      <OmraadeOverskrift
+        titel={v.nav.feedback}
+        href="/admin/feedback"
+        aabnLabel={o.aabn(v.nav.feedback)}
+      />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tile tal={stats.meldinger} label="Meldinger i alt" />
-        <Tile tal={stats.bekraeftelser} label="Bekræftelser i alt" />
-        <Tile tal={aabne} label="Åbne (ny + bekræftet)" />
-        <Tile tal={stats.perStatus.loest_i_ota} label="Løst i OTA" />
+        <Tile tal={stats.meldinger} label={o.meldinger} />
+        <Tile tal={stats.bekraeftelser} label={o.bekraeftelser} />
+        <Tile tal={aabne} label={o.aabne} />
+        <Tile tal={stats.perStatus.loest_i_ota} label={o.loestIOta} />
       </div>
 
       <div className="mt-5">
-        <OmraadeOverskrift titel="Forum" href="/admin/forum" aabnLabel="Åbn Forum" />
+        <OmraadeOverskrift titel={v.nav.forum} href="/admin/forum" aabnLabel={o.aabn(v.nav.forum)} />
         <div className="grid grid-cols-3 gap-3">
-          <Tile tal={forum.kategorier} label="Kategorier" />
-          <Tile tal={forum.traade} label="Tråde" />
-          <Tile tal={forum.indlaeg} label="Indlæg" />
+          <Tile tal={forum.kategorier} label={o.kategorier} />
+          <Tile tal={forum.traade} label={o.traade} />
+          <Tile tal={forum.indlaeg} label={o.indlaeg} />
         </div>
       </div>
     </section>

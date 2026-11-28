@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import type { VOrdbog } from '@/lib/i18n/vaerksted';
+
+type Noegle = keyof VOrdbog['genveje'] & keyof VOrdbog['nav'];
 
 type Genvej = {
   href: string;
   ikon: string;
-  titel: string;
-  tekst: string;
+  noegle: Noegle;
   fremhaev?: boolean;
   kunAdmin?: boolean;
 };
@@ -13,20 +15,21 @@ type Genvej = {
 // foerst. Rummet vokser naturligt, saa P20/P21's nye flader (rapport-ko, Log)
 // kan slottes ind uden omlaegning.
 const GENVEJE: Genvej[] = [
-  { href: '/admin/feedback', ikon: '🗒️', titel: 'Feedback', tekst: 'Moderér meldinger + oprydning', fremhaev: true },
-  { href: '/admin/forum', ikon: '💬', titel: 'Forum', tekst: 'Tråde, kategorier og regler' },
-  { href: '/admin/beskeder', ikon: '🚩', titel: 'Anmeldelser', tekst: 'Anmeldte private beskeder' },
-  { href: '/admin/rapport', ikon: '📮', titel: 'Rapport', tekst: 'Saml Zeekr-rapport (PDF/CSV)' },
-  { href: '/admin/aktivitet', ikon: '📈', titel: 'Aktivitet', tekst: 'Mønstre over tid' },
-  { href: '/admin/adgange', ikon: '👥', titel: 'Adgange', tekst: 'Brugere og roller' },
-  { href: '/admin/links', ikon: '🔗', titel: 'Links', tekst: 'Nyttige links på /links', kunAdmin: true },
+  { href: '/admin/feedback', ikon: '🗒️', noegle: 'feedback', fremhaev: true },
+  { href: '/admin/forum', ikon: '💬', noegle: 'forum' },
+  { href: '/admin/beskeder', ikon: '🚩', noegle: 'anmeldelser' },
+  { href: '/admin/kontakt', ikon: '📨', noegle: 'kontakt' },
+  { href: '/admin/rapport', ikon: '📮', noegle: 'rapport' },
+  { href: '/admin/aktivitet', ikon: '📈', noegle: 'aktivitet' },
+  { href: '/admin/adgange', ikon: '👥', noegle: 'adgange' },
+  { href: '/admin/links', ikon: '🔗', noegle: 'links', kunAdmin: true },
 ];
 
-export default function Genveje({ erAdmin = false }: { erAdmin?: boolean }) {
+export default function Genveje({ v, erAdmin = false }: { v: VOrdbog; erAdmin?: boolean }) {
   const genveje = erAdmin ? GENVEJE : GENVEJE.filter((g) => !g.kunAdmin);
   return (
     <section className="rounded-2xl border border-grafit-200 bg-grafit-50 p-5 sm:p-6">
-      <h2 className="mb-4 text-lg font-semibold text-grafit-900">Genveje</h2>
+      <h2 className="mb-4 text-lg font-semibold text-grafit-900">{v.genveje.titel}</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {genveje.map((g) => (
           <Link
@@ -40,8 +43,8 @@ export default function Genveje({ erAdmin = false }: { erAdmin?: boolean }) {
               {g.ikon}
             </span>
             <div className="min-w-0">
-              <div className="font-semibold text-grafit-900">{g.titel}</div>
-              <div className="text-sm text-grafit-500">{g.tekst}</div>
+              <div className="font-semibold text-grafit-900">{v.nav[g.noegle]}</div>
+              <div className="text-sm text-grafit-500">{v.genveje[g.noegle]}</div>
             </div>
           </Link>
         ))}

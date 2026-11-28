@@ -1,5 +1,5 @@
 import { supabaseServer } from '@/lib/supabase/server';
-import { STATUSES, type Status } from '@/lib/config';
+import { STATUSES, type IssueType, type Status } from '@/lib/config';
 
 // =========================================================================
 // Overblik - tal til stat-tiles
@@ -69,8 +69,13 @@ export async function getForumOverblik(): Promise<ForumOverblik> {
 // =========================================================================
 export type AktivitetPost = {
   kind: 'melding' | 'bekraeftelse' | 'forum_traad' | 'forum_indlaeg';
-  titel: string;
+  // null = titlen mangler (slettet melding/tråd) - komponenten viser en
+  // oversat fallback ("en melding"/"en tråd").
+  titel: string | null;
+  // Kategori- eller modelnavn (DB-indhold). For en ny melding: null - typen
+  // står i `type` og oversættes i komponenten (U6).
   detalje: string | null;
+  type?: IssueType;
   created_at: string;
   href: string | null;
 };
@@ -97,7 +102,8 @@ export async function getFeedbackAktivitet(graense = 12): Promise<AktivitetPost[
     feed.push({
       kind: 'melding',
       titel: r.title,
-      detalje: r.type === 'oenske' ? 'Ønske' : 'Fejl',
+      detalje: null,
+      type: r.type === 'oenske' ? 'oenske' : 'fejl',
       created_at: r.created_at,
       href: `/melding/${r.id}`,
     });
@@ -106,7 +112,7 @@ export async function getFeedbackAktivitet(graense = 12): Promise<AktivitetPost[
   for (const r of (bek.data ?? []) as any[]) {
     feed.push({
       kind: 'bekraeftelse',
-      titel: r.issues?.title ?? 'en melding',
+      titel: r.issues?.title ?? null,
       detalje: r.models?.name ?? null,
       created_at: r.created_at,
       href: r.issue_id ? `/melding/${r.issue_id}` : null,
@@ -157,7 +163,7 @@ export async function getForumAktivitet(graense = 12): Promise<AktivitetPost[]> 
     const katSlug = th.kategori?.slug ?? null;
     feed.push({
       kind: 'forum_indlaeg',
-      titel: th.title ?? 'en tråd',
+      titel: th.title ?? null,
       detalje: null,
       created_at: r.created_at,
       href: katSlug ? `/forum/${katSlug}/${th.slug}` : null,
@@ -282,13 +288,13 @@ export type ForumRapport = {
   kilde: string;
   handled: boolean;
   createdAt: string;
-  reporterNavn: string;
+  reporterNavn: string | null; // null = ukendt -> "En ejer" på læserens sprog
   kategoriSlug: string | null;
   traadSlug: string | null;
   traadTitel: string | null;
   indhold: string | null;
   forfatterId: string | null;
-  forfatterNavn: string;
+  forfatterNavn: string | null;
   erFjernet: boolean;
 };
 
@@ -328,13 +334,13 @@ export async function getForumRapporter(
       kilde: r.kilde ?? 'bruger',
       handled: r.handled ?? false,
       createdAt: r.created_at,
-      reporterNavn: r.reporter_navn ?? 'En ejer',
+      reporterNavn: r.reporter_navn ?? null,
       kategoriSlug: r.kategori_slug ?? null,
       traadSlug: r.traad_slug ?? null,
       traadTitel: r.traad_titel ?? null,
       indhold: r.indhold ?? null,
       forfatterId: r.forfatter_id ?? null,
-      forfatterNavn: r.forfatter_navn ?? 'En ejer',
+      forfatterNavn: r.forfatter_navn ?? null,
       erFjernet: r.er_fjernet ?? false,
     })),
     total: rows.length > 0 ? Number(rows[0].total) : 0,
@@ -636,7 +642,7 @@ export type BeskedAnmeldelse = {
   reason: string | null;
   handled: boolean;
   createdAt: string;
-  anmelderNavn: string;
+  anmelderNavn: string | null;
   beskedBody: string | null;
   beskedSenderId: string | null;
   beskedSenderNavn: string | null;
@@ -655,7 +661,7 @@ export async function getBeskedAnmeldelser(): Promise<BeskedAnmeldelse[]> {
     reason: r.reason ?? null,
     handled: !!r.handled,
     createdAt: r.created_at,
-    anmelderNavn: r.reporter_navn ?? 'En ejer',
+    anmelderNavn: r.reporter_navn ?? null,
     beskedBody: r.besked_body ?? null,
     beskedSenderId: r.besked_sender_id ?? null,
     beskedSenderNavn: r.besked_sender_navn ?? null,

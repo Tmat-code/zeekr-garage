@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { taelForaeldreloeseFiler, rydForaeldreloeseFiler } from '@/app/admin/actions';
+import { taelForaeldreloeseFiler, rydForaeldreloeseFiler } from '@/app/admin/admin-actions';
 
 function ord(n: number): string {
   return n === 1 ? 'fil' : 'filer';

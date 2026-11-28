@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { relativTid } from '@/lib/i18n/format';
+import { relativTid, DATO_LOCALE } from '@/lib/i18n/format';
+import { useSprog } from '@/lib/i18n/klient';
+import type { UiSprog } from '@/lib/i18n/sprog';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import type { VOrdbog } from '@/lib/i18n/vaerksted';
+import { useVKoer, type HentFejl } from '@/components/admin/useVKoer';
 import type { BrugerOverblik, BrugerSide, BrugerStatus } from '@/lib/queries-admin';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import {
@@ -18,29 +23,23 @@ const SIDE = 25;
 type Handling = 'advar' | 'suspender' | 'ban' | 'anonymiser' | null;
 
 // Suspensions-længder (dage) som hurtige valg.
-const DAGE_VALG = [
-  { v: 1, label: '1 dag' },
-  { v: 3, label: '3 dage' },
-  { v: 7, label: '7 dage' },
-  { v: 14, label: '14 dage' },
-  { v: 30, label: '30 dage' },
-  { v: 90, label: '90 dage' },
-];
+const DAGE_VALG = [1, 3, 7, 14, 30, 90];
 
-function kortDato(iso: string): string {
-  return new Date(iso).toLocaleDateString('da-DK', {
+function kortDato(iso: string, sprog: UiSprog): string {
+  return new Date(iso).toLocaleDateString(DATO_LOCALE[sprog], {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'Europe/Copenhagen',
   });
 }
 
-function StatusBadge({ b }: { b: BrugerOverblik }) {
+function StatusBadge({ b, t, sprog }: { b: BrugerOverblik; t: VOrdbog['brugere']; sprog: UiSprog }) {
   const anonymiseret = b.status === 'bannet' && !b.displayName;
   const tekst: Record<BrugerStatus, string> = {
-    aktiv: 'Aktiv',
-    suspenderet: b.spaerretTil ? `Suspenderet til ${kortDato(b.spaerretTil)}` : 'Suspenderet',
-    bannet: anonymiseret ? 'Anonymiseret' : 'Bannet',
+    aktiv: t.aktiv,
+    suspenderet: b.spaerretTil ? t.suspenderetTil(kortDato(b.spaerretTil, sprog)) : t.suspenderet,
+    bannet: anonymiseret ? t.anonymiseret : t.bannet,
   };
   const klasse: Record<BrugerStatus, string> = {
     aktiv: 'bg-grafit-100 text-grafit-500',
@@ -50,8 +49,8 @@ function StatusBadge({ b }: { b: BrugerOverblik }) {
   return <span className={`chip ${klasse[b.status]}`}>{tekst[b.status]}</span>;
 }
 
-function RolleBadge({ rolle }: { rolle: string | null }) {
-  if (!rolle) return <span className="chip bg-grafit-100 text-grafit-400">ingen rolle</span>;
+function RolleBadge({ rolle, v }: { rolle: string | null; v: VOrdbog }) {
+  if (!rolle) return <span className="chip bg-grafit-100 text-grafit-400">{v.brugere.ingenRolle}</span>;
   return (
     <span
       className={`chip ${
@@ -62,7 +61,7 @@ function RolleBadge({ rolle }: { rolle: string | null }) {
             : 'bg-grafit-200 text-grafit-700'
       }`}
     >
-      {rolle}
+      {(v.roller as Record<string, string>)[rolle] ?? rolle}
     </span>
   );
 }
@@ -78,10 +77,12 @@ function BrugerRaekke({
   erAdmin: boolean;
   onHandlet: () => void;
 }) {
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const t = v.brugere;
   const [handling, setHandling] = useState<Handling>(null);
   const [dage, setDage] = useState(7);
-  const [fejl, setFejl] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const { pending, koer: koerHandling, fejl, nulstilFejl } = useVKoer();
 
   const erMaalAdmin = b.rolle === 'admin' || b.rolle === 'superadmin';
   const spaerret = b.status !== 'aktiv';
@@ -90,21 +91,17 @@ function BrugerRaekke({
   // anonymiseret konto (RPC'erne afviser ogsaa self + admin).
   const kanHandle = !erMig && !erMaalAdmin && !anonymiseret;
 
-  function koer(fn: () => Promise<void>) {
-    setFejl(null);
-    start(async () => {
-      try {
-        await fn();
-        setHandling(null);
-        onHandlet();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
+  // Lykkes handlingen: luk panelet + genhent listen. Fejler den: panelet
+  // bliver stående (med grund/fritekst) og fejlen vises på moderatorens sprog.
+  function koer(fn: () => Promise<unknown>) {
+    koerHandling(fn as () => Promise<void>, () => {
+      setHandling(null);
+      onHandlet();
     });
   }
 
   function toggle(h: Exclude<Handling, null>) {
-    setFejl(null);
+    nulstilFejl();
     setHandling((cur) => (cur === h ? null : h));
   }
 
@@ -114,18 +111,18 @@ function BrugerRaekke({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-grafit-900">
-              {b.displayName || (anonymiseret ? '(anonymiseret)' : b.email)}
+              {b.displayName || (anonymiseret ? t.anonymiseretNavn : b.email)}
             </span>
-            <RolleBadge rolle={b.rolle} />
-            <StatusBadge b={b} />
-            {erMig && <span className="text-xs text-grafit-400">(dig)</span>}
+            <RolleBadge rolle={b.rolle} v={v} />
+            <StatusBadge b={b} t={t} sprog={sprog} />
+            {erMig && <span className="text-xs text-grafit-400">{t.dig}</span>}
           </div>
           <p className="truncate text-xs text-grafit-400">
             {b.email}
             {' · '}
-            oprettet {relativTid(b.oprettet)}
+            {t.oprettet(relativTid(b.oprettet, sprog))}
             {' · '}
-            {b.sidstLogget ? `sidst logget ind ${relativTid(b.sidstLogget)}` : 'aldrig logget ind'}
+            {b.sidstLogget ? t.sidstLogget(relativTid(b.sidstLogget, sprog)) : t.aldrigLogget}
           </p>
         </div>
       </div>
@@ -138,7 +135,7 @@ function BrugerRaekke({
             disabled={pending}
             onClick={() => toggle('advar')}
           >
-            🛡 Advar
+            {t.advar}
           </button>
           {!spaerret && (
             <button
@@ -146,7 +143,7 @@ function BrugerRaekke({
               disabled={pending}
               onClick={() => toggle('suspender')}
             >
-              ⏸ Suspendér
+              {t.suspender}
             </button>
           )}
           {erAdmin && !spaerret && (
@@ -155,7 +152,7 @@ function BrugerRaekke({
               disabled={pending}
               onClick={() => toggle('ban')}
             >
-              ⛔ Ban
+              {t.ban}
             </button>
           )}
           {erAdmin && spaerret && (
@@ -164,7 +161,7 @@ function BrugerRaekke({
               disabled={pending}
               onClick={() => koer(() => ophaevBruger(b.id))}
             >
-              ✅ Ophæv spærring
+              {t.ophaev}
             </button>
           )}
           {erAdmin && (
@@ -173,17 +170,13 @@ function BrugerRaekke({
               disabled={pending}
               onClick={() => toggle('anonymiser')}
             >
-              👤 Anonymisér
+              {t.anonymiser}
             </button>
           )}
         </div>
       ) : (
         <p className="mt-2 text-xs text-grafit-400">
-          {erMig
-            ? 'Du kan ikke sanktionere din egen konto.'
-            : erMaalAdmin
-              ? 'En admin kan ikke sanktioneres - fjern admin-rollen først.'
-              : 'Kontoen er anonymiseret.'}
+          {erMig ? t.egenKonto : erMaalAdmin ? t.maalErAdmin : t.kontoAnonymiseret}
         </p>
       )}
 
@@ -191,7 +184,7 @@ function BrugerRaekke({
       {handling === 'advar' && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Send advarsel"
+          submitLabel={t.sendAdvarsel}
           onCancel={() => setHandling(null)}
           onSubmit={(grund, fritekst) => koer(() => modAdvarBruger(b.id, grund, fritekst))}
         />
@@ -201,7 +194,7 @@ function BrugerRaekke({
       {handling === 'suspender' && (
         <div className="mt-2 space-y-2 rounded-xl border border-grafit-200 bg-grafit-50 p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-grafit-600">Varighed:</span>
+            <span className="text-sm text-grafit-600">{t.varighed}</span>
             <select
               className="rounded-lg border border-grafit-300 bg-white px-2 py-1 text-sm"
               value={dage}
@@ -209,15 +202,15 @@ function BrugerRaekke({
               onChange={(e) => setDage(Number(e.target.value))}
             >
               {DAGE_VALG.map((d) => (
-                <option key={d.v} value={d.v}>
-                  {d.label}
+                <option key={d} value={d}>
+                  {t.dage(d)}
                 </option>
               ))}
             </select>
           </div>
           <GrundVaelger
             pending={pending}
-            submitLabel="Suspendér + giv besked"
+            submitLabel={t.suspenderSubmit}
             onCancel={() => setHandling(null)}
             onSubmit={(grund, fritekst) => koer(() => suspenderBruger(b.id, dage, grund, fritekst))}
           />
@@ -227,12 +220,10 @@ function BrugerRaekke({
       {/* Ban - permanent skrive-spærre. */}
       {handling === 'ban' && (
         <div className="mt-2 rounded-xl border border-kobber-200 bg-kobber-50/50 p-3">
-          <p className="mb-1 text-sm text-grafit-700">
-            Permanent skrive-spærre. Brugeren kan stadig læse, men ikke bidrage. Kan ophæves igen.
-          </p>
+          <p className="mb-1 text-sm text-grafit-700">{t.banForklaring}</p>
           <GrundVaelger
             pending={pending}
-            submitLabel="Ban + giv besked"
+            submitLabel={t.banSubmit}
             onCancel={() => setHandling(null)}
             onSubmit={(grund, fritekst) => koer(() => banBruger(b.id, grund, fritekst))}
           />
@@ -242,17 +233,12 @@ function BrugerRaekke({
       {/* Anonymisér - destruktiv PII-rydning (men beholder biler/bekræftelser). */}
       {handling === 'anonymiser' && (
         <div className="mt-2 rounded-xl border border-kobber-300 bg-kobber-50 p-3">
-          <p className="mb-1 text-sm font-medium text-kobber-900">
-            Rydder persondata (navn, e-mail, VIN/noter) og spærrer permanent.
-          </p>
-          <p className="mb-1 text-xs text-grafit-600">
-            Biler, bekræftelser og forum-indlæg bevares (de er QA-signalet) - men bliver
-            forfatterløse i visningen. Handlingen kan ikke fortrydes.
-          </p>
+          <p className="mb-1 text-sm font-medium text-kobber-900">{t.anonymForklaring}</p>
+          <p className="mb-1 text-xs text-grafit-600">{t.anonymForklaring2}</p>
           <GrundVaelger
             pending={pending}
             startGrund="andet"
-            submitLabel="Anonymisér personen"
+            submitLabel={t.anonymSubmit}
             onCancel={() => setHandling(null)}
             onSubmit={(grund, fritekst) => koer(() => anonymiserBruger(b.id, grund, fritekst))}
           />
@@ -278,9 +264,11 @@ export default function BrugerAdministration({
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState('nyeste');
 
+  const v = useVOrdbog();
+  const t = v.brugere;
   const [brugere, setBrugere] = useState<BrugerOverblik[]>(initial.brugere);
   const [total, setTotal] = useState(initial.total);
-  const [fejl, setFejl] = useState<string | null>(null);
+  const [fejl, setFejl] = useState<HentFejl>(null);
   const [pending, start] = useTransition();
 
   function filtre(offset: number) {
@@ -300,10 +288,11 @@ export default function BrugerAdministration({
     start(async () => {
       try {
         const r = await hentBrugere(filtre(0));
-        setBrugere(r.brugere);
-        setTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente brugere.');
+        if (!r.ok) return setFejl(r.fejl);
+        setBrugere(r.data.brugere);
+        setTotal(r.data.total);
+      } catch {
+        setFejl('kontekst');
       }
     });
   }
@@ -313,10 +302,11 @@ export default function BrugerAdministration({
     start(async () => {
       try {
         const r = await hentBrugere(filtre(brugere.length));
-        setBrugere((cur) => [...cur, ...r.brugere]);
-        setTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente flere.');
+        if (!r.ok) return setFejl(r.fejl);
+        setBrugere((cur) => [...cur, ...r.data.brugere]);
+        setTotal(r.data.total);
+      } catch {
+        setFejl('kontekst');
       }
     });
   }
@@ -325,13 +315,9 @@ export default function BrugerAdministration({
     <section className="rounded-2xl border border-grafit-200 bg-white p-5 sm:p-6">
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden>🧑‍🔧</span>
-        <h3 className="text-lg font-semibold text-grafit-900">Brugere</h3>
+        <h3 className="text-lg font-semibold text-grafit-900">{t.titel}</h3>
       </div>
-      <p className="mb-3 text-sm text-grafit-500">
-        Overblik over alle oprettede brugere. Søg og filtrér, og handl på en bruger:{' '}
-        advar eller suspendér{erAdmin ? ', ban, ophæv eller anonymisér' : ''}. Hver handling giver
-        brugeren en officiel besked med grunden og lander i moderations-loggen.
-      </p>
+      <p className="mb-3 text-sm text-grafit-500">{t.intro(erAdmin)}</p>
 
       {/* Søg + filtre */}
       <form
@@ -342,61 +328,61 @@ export default function BrugerAdministration({
         }}
       >
         <div className="min-w-[180px] flex-1">
-          <label className="label">Navn eller email</label>
+          <label className="label">{t.navnEllerEmail}</label>
           <input
             type="search"
             className="input"
-            placeholder="fx Mette eller mette@..."
+            placeholder={t.soegPh}
             value={soeg}
             onChange={(e) => setSoeg(e.target.value)}
           />
         </div>
         <div>
-          <label className="label">Rolle</label>
+          <label className="label">{t.rolle}</label>
           <select
             className="rounded-lg border border-grafit-300 bg-white px-2 py-2.5 text-sm"
             value={rolle}
             onChange={(e) => setRolle(e.target.value)}
           >
-            <option value="">Alle</option>
-            <option value="ingen">Uden rolle</option>
-            <option value="moderator">Moderator</option>
-            <option value="admin">Admin</option>
+            <option value="">{v.faelles.alle}</option>
+            <option value="ingen">{t.udenRolle}</option>
+            <option value="moderator">{t.rolleModerator}</option>
+            <option value="admin">{t.rolleAdmin}</option>
           </select>
         </div>
         <div>
-          <label className="label">Status</label>
+          <label className="label">{t.status}</label>
           <select
             className="rounded-lg border border-grafit-300 bg-white px-2 py-2.5 text-sm"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="">Alle</option>
-            <option value="aktiv">Aktiv</option>
-            <option value="suspenderet">Suspenderet</option>
-            <option value="bannet">Bannet</option>
+            <option value="">{v.faelles.alle}</option>
+            <option value="aktiv">{t.aktiv}</option>
+            <option value="suspenderet">{t.suspenderet}</option>
+            <option value="bannet">{t.bannet}</option>
           </select>
         </div>
         <div>
-          <label className="label">Sortér</label>
+          <label className="label">{t.sorter}</label>
           <select
             className="rounded-lg border border-grafit-300 bg-white px-2 py-2.5 text-sm"
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
-            <option value="nyeste">Nyeste</option>
-            <option value="aktiv">Sidst aktive</option>
-            <option value="navn">Navn</option>
+            <option value="nyeste">{t.nyeste}</option>
+            <option value="aktiv">{t.sidstAktive}</option>
+            <option value="navn">{t.navn}</option>
           </select>
         </div>
         <button type="submit" className="btn-primary !py-2.5" disabled={pending}>
-          Søg
+          {v.faelles.soeg}
         </button>
       </form>
 
       <div className="mt-4">
         {brugere.length === 0 ? (
-          <p className="text-sm text-grafit-500">Ingen brugere matcher.</p>
+          <p className="text-sm text-grafit-500">{t.ingenMatcher}</p>
         ) : (
           <>
             <div className="space-y-2">
@@ -411,18 +397,20 @@ export default function BrugerAdministration({
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between">
-              <p className="text-xs text-grafit-400">
-                Viser {brugere.length} af {total}
-              </p>
+              <p className="text-xs text-grafit-400">{v.faelles.viser(brugere.length, total)}</p>
               {brugere.length < total && (
                 <button className="btn-ghost !py-1.5 text-sm" disabled={pending} onClick={visFlere}>
-                  Vis flere
+                  {v.faelles.visFlere}
                 </button>
               )}
             </div>
           </>
         )}
-        {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
+        {fejl && (
+          <p className="mt-2 text-sm text-kobber-700">
+            {fejl === 'kontekst' ? t.kunneIkkeHente : v.fejl[fejl]}
+          </p>
+        )}
       </div>
     </section>
   );

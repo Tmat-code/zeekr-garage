@@ -3,6 +3,9 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/i18n/format';
+import { useSprog } from '@/lib/i18n/klient';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import { useVKoer, type HentFejl } from '@/components/admin/useVKoer';
 import type {
   AdminForumTraad,
   AdminForumIndlaeg,
@@ -15,22 +18,6 @@ import GrundVaelger from '@/components/forum/GrundVaelger';
 
 const SIDE = 25;
 
-function useKoer() {
-  const [pending, start] = useTransition();
-  const [fejl, setFejl] = useState<string | null>(null);
-  const koer = (fn: () => Promise<void>) => {
-    setFejl(null);
-    start(async () => {
-      try {
-        await fn();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
-    });
-  };
-  return { pending, fejl, koer };
-}
-
 // Lille maerke pr. raekke der "kraever opmaerksomhed" - synligt ogsaa i
 // "Alle"-visningen, saa signalet ikke forsvinder naar filteret er slaaet fra.
 function OpmMaerker({
@@ -40,23 +27,24 @@ function OpmMaerker({
   harRapport: boolean;
   forfatterSpaerret: boolean;
 }) {
+  const m = useVOrdbog().forumMod;
   if (!harRapport && !forfatterSpaerret) return null;
   return (
     <>
       {harRapport && (
         <span
-          title="Har en åben rapport"
+          title={m.harRapportTitle}
           className="rounded-full bg-kobber-50 px-1.5 py-0.5 text-[11px] font-medium text-kobber-700"
         >
-          ⚑ rapport
+          {m.rapportMaerke}
         </span>
       )}
       {forfatterSpaerret && (
         <span
-          title="Forfatteren er spærret lige nu"
+          title={m.spaerretTitle}
           className="rounded-full bg-kobber-100 px-1.5 py-0.5 text-[11px] font-medium text-kobber-800"
         >
-          🚫 spærret
+          {m.spaerretMaerke}
         </span>
       )}
     </>
@@ -68,7 +56,10 @@ function opmRamme(harRapport: boolean, forfatterSpaerret: boolean): string {
 }
 
 function TraadRaekke({ t, onHandlet }: { t: AdminForumTraad; onHandlet: () => void }) {
-  const { pending, fejl, koer } = useKoer();
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const m = v.forumMod;
+  const { pending, fejl, koer } = useVKoer();
   const [fjerner, setFjerner] = useState(false);
   const url = `/forum/${t.kategoriSlug}/${t.slug}`;
 
@@ -81,16 +72,16 @@ function TraadRaekke({ t, onHandlet }: { t: AdminForumTraad; onHandlet: () => vo
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            {t.isPinned && <span title="Fastgjort">📌</span>}
-            {t.isLocked && <span title="Låst">🔒</span>}
+            {t.isPinned && <span title={m.fastgjort}>📌</span>}
+            {t.isLocked && <span title={m.laast}>🔒</span>}
             <Link href={url} className="font-medium text-grafit-900 hover:text-kobber-700">
               {t.title}
             </Link>
             <OpmMaerker harRapport={t.harRapport} forfatterSpaerret={t.forfatterSpaerret} />
           </div>
           <p className="mt-0.5 text-xs text-grafit-500">
-            {t.kategoriNavn} · {t.forfatter || 'Ejer'} · {t.replyCount} svar · {t.viewCount} visninger ·{' '}
-            {relativTid(t.lastPostAt)}
+            {t.kategoriNavn} · {t.forfatter || v.faelles.ejer} · {m.svar(t.replyCount)} ·{' '}
+            {m.visninger(t.viewCount)} · {relativTid(t.lastPostAt, sprog)}
           </p>
         </div>
       </div>
@@ -99,37 +90,39 @@ function TraadRaekke({ t, onHandlet }: { t: AdminForumTraad; onHandlet: () => vo
         <button
           className="btn-ghost !py-1 text-sm"
           disabled={pending}
-          onClick={() => koer(() => saetFastgjort(t.id, t.kategoriSlug, t.slug, !t.isPinned).then(onHandlet))}
+          onClick={() => koer(() => saetFastgjort(t.id, t.kategoriSlug, t.slug, !t.isPinned), onHandlet)}
         >
-          {t.isPinned ? 'Fjern fastgør.' : '📌 Fastgør'}
+          {t.isPinned ? m.fjernFastgoer : m.fastgoer}
         </button>
         <button
           className="btn-ghost !py-1 text-sm"
           disabled={pending}
-          onClick={() => koer(() => saetLaast(t.id, t.kategoriSlug, t.slug, !t.isLocked).then(onHandlet))}
+          onClick={() => koer(() => saetLaast(t.id, t.kategoriSlug, t.slug, !t.isLocked), onHandlet)}
         >
-          {t.isLocked ? 'Lås op' : '🔒 Lås'}
+          {t.isLocked ? m.laasOp : m.laas}
         </button>
         <span className="flex-1" />
         <button
           className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
           onClick={() => setFjerner((v) => !v)}
         >
-          🗑 Fjern tråd
+          {m.fjernTraad}
         </button>
       </div>
 
       {fjerner && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Fjern tråd + giv besked"
+          submitLabel={m.fjernTraadSubmit}
           onCancel={() => setFjerner(false)}
           onSubmit={(grund, fritekst) =>
-            koer(async () => {
-              await modFjernTraad(t.id, t.kategoriSlug, grund, fritekst);
-              setFjerner(false);
-              onHandlet();
-            })
+            koer(
+              () => modFjernTraad(t.id, t.kategoriSlug, grund, fritekst),
+              () => {
+                setFjerner(false);
+                onHandlet();
+              },
+            )
           }
         />
       )}
@@ -139,7 +132,10 @@ function TraadRaekke({ t, onHandlet }: { t: AdminForumTraad; onHandlet: () => vo
 }
 
 function IndlaegRaekke({ p, onHandlet }: { p: AdminForumIndlaeg; onHandlet: () => void }) {
-  const { pending, fejl, koer } = useKoer();
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const m = v.forumMod;
+  const { pending, fejl, koer } = useVKoer();
   const [fjerner, setFjerner] = useState(false);
   const url = `/forum/${p.kategoriSlug}/${p.traadSlug}`;
 
@@ -150,11 +146,12 @@ function IndlaegRaekke({ p, onHandlet }: { p: AdminForumIndlaeg; onHandlet: () =
       }`}
     >
       <p className="text-xs text-grafit-500">
-        {p.forfatter || 'Ejer'} i{' '}
+        {p.forfatter || v.faelles.ejer} {m.iTraad}{' '}
         <Link href={url} className="font-medium text-grafit-700 hover:text-kobber-700">
           {p.traadTitel}
         </Link>{' '}
-        {p.isOpening && <span className="text-grafit-400">(åbning)</span>} · {relativTid(p.createdAt)}
+        {p.isOpening && <span className="text-grafit-400">{m.aabning}</span>} ·{' '}
+        {relativTid(p.createdAt, sprog)}
       </p>
       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
         <OpmMaerker harRapport={p.harRapport} forfatterSpaerret={p.forfatterSpaerret} />
@@ -164,13 +161,13 @@ function IndlaegRaekke({ p, onHandlet }: { p: AdminForumIndlaeg; onHandlet: () =
       <div className="mt-2 flex items-center gap-2 text-sm">
         <span className="flex-1" />
         {p.isOpening ? (
-          <span className="text-xs text-grafit-400">Åbnings-indlæg - brug “Fjern tråd”</span>
+          <span className="text-xs text-grafit-400">{m.aabningsIndlaeg}</span>
         ) : (
           <button
             className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
             onClick={() => setFjerner((v) => !v)}
           >
-            🗑 Fjern
+            {m.fjern}
           </button>
         )}
       </div>
@@ -178,14 +175,16 @@ function IndlaegRaekke({ p, onHandlet }: { p: AdminForumIndlaeg; onHandlet: () =
       {!p.isOpening && fjerner && (
         <GrundVaelger
           pending={pending}
-          submitLabel="Fjern indlæg + giv besked"
+          submitLabel={m.fjernIndlaegSubmit}
           onCancel={() => setFjerner(false)}
           onSubmit={(grund, fritekst) =>
-            koer(async () => {
-              await modFjernIndlaeg(p.id, p.kategoriSlug, p.traadSlug, grund, fritekst);
-              setFjerner(false);
-              onHandlet();
-            })
+            koer(
+              () => modFjernIndlaeg(p.id, p.kategoriSlug, p.traadSlug, grund, fritekst),
+              () => {
+                setFjerner(false);
+                onHandlet();
+              },
+            )
           }
         />
       )}
@@ -201,6 +200,8 @@ export default function ForumModerering({
   initialTraade: ForumModTraadSide;
   initialIndlaeg: ForumModIndlaegSide;
 }) {
+  const v = useVOrdbog();
+  const m = v.forumMod;
   // Delt soege-/filter-tilstand for begge kolonner.
   const [soeg, setSoeg] = useState('');
   const [kunOpm, setKunOpm] = useState(false);
@@ -210,72 +211,76 @@ export default function ForumModerering({
   const [indlaeg, setIndlaeg] = useState<AdminForumIndlaeg[]>(initialIndlaeg.indlaeg);
   const [indlaegTotal, setIndlaegTotal] = useState(initialIndlaeg.total);
 
-  const [fejl, setFejl] = useState<string | null>(null);
+  // Fejl som NØGLE (slås op ved render -> skifter med sproget).
+  const [traadFejl, setTraadFejl] = useState<HentFejl>(null);
+  const [indlaegFejl, setIndlaegFejl] = useState<HentFejl>(null);
   const [pendingT, startT] = useTransition();
   const [pendingI, startI] = useTransition();
 
-  function filtre(offset: number) {
-    return { soeg: soeg.trim(), kunOpm, limit: SIDE, offset };
-  }
-
-  // reset=true: ny soegning/filtrering (eller opdatering efter en handling) fra
-  // offset 0. reset=false: "vis flere" - hent naeste side og haeng paa.
-  function hentTraade(reset: boolean) {
-    setFejl(null);
+  // offset 0 + reset: ny soegning/filtrering (eller opdatering efter en
+  // handling). reset=false: "vis flere" - hent naeste side og haeng paa.
+  function hentTraadeMed(opm: boolean, reset: boolean) {
+    setTraadFejl(null);
     startT(async () => {
       try {
-        const r = await hentForumTraade(filtre(reset ? 0 : traade.length));
-        setTraade((cur) => (reset ? r.traade : [...cur, ...r.traade]));
-        setTraadTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente tråde.');
+        const r = await hentForumTraade({
+          soeg: soeg.trim(),
+          kunOpm: opm,
+          limit: SIDE,
+          offset: reset ? 0 : traade.length,
+        });
+        if (!r.ok) return setTraadFejl(r.fejl);
+        setTraade((cur) => (reset ? r.data.traade : [...cur, ...r.data.traade]));
+        setTraadTotal(r.data.total);
+      } catch {
+        setTraadFejl('kontekst');
       }
     });
   }
 
-  function hentIndlaeg(reset: boolean) {
-    setFejl(null);
+  function hentIndlaegMed(opm: boolean, reset: boolean) {
+    setIndlaegFejl(null);
     startI(async () => {
       try {
-        const r = await hentForumIndlaeg(filtre(reset ? 0 : indlaeg.length));
-        setIndlaeg((cur) => (reset ? r.indlaeg : [...cur, ...r.indlaeg]));
-        setIndlaegTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente indlæg.');
+        const r = await hentForumIndlaeg({
+          soeg: soeg.trim(),
+          kunOpm: opm,
+          limit: SIDE,
+          offset: reset ? 0 : indlaeg.length,
+        });
+        if (!r.ok) return setIndlaegFejl(r.fejl);
+        setIndlaeg((cur) => (reset ? r.data.indlaeg : [...cur, ...r.data.indlaeg]));
+        setIndlaegTotal(r.data.total);
+      } catch {
+        setIndlaegFejl('kontekst');
       }
     });
   }
+
+  const hentTraade = (reset: boolean) => hentTraadeMed(kunOpm, reset);
+  const hentIndlaeg = (reset: boolean) => hentIndlaegMed(kunOpm, reset);
 
   function soegBegge() {
     hentTraade(true);
     hentIndlaeg(true);
   }
 
-  function saetFilter(v: boolean) {
-    setKunOpm(v);
+  function saetFilter(ny: boolean) {
+    setKunOpm(ny);
     // Hent med den nye vaerdi med det samme (state er asynkron, saa send eksplicit).
-    setFejl(null);
-    startT(async () => {
-      try {
-        const r = await hentForumTraade({ soeg: soeg.trim(), kunOpm: v, limit: SIDE, offset: 0 });
-        setTraade(r.traade);
-        setTraadTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente tråde.');
-      }
-    });
-    startI(async () => {
-      try {
-        const r = await hentForumIndlaeg({ soeg: soeg.trim(), kunOpm: v, limit: SIDE, offset: 0 });
-        setIndlaeg(r.indlaeg);
-        setIndlaegTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente indlæg.');
-      }
-    });
+    hentTraadeMed(ny, true);
+    hentIndlaegMed(ny, true);
   }
 
   const filtreret = kunOpm || soeg.trim() !== '';
+  const fejlTekst = (f: HentFejl, kontekst: string) =>
+    f === null ? null : f === 'kontekst' ? kontekst : v.fejl[f];
+  const fejl = [
+    fejlTekst(traadFejl, m.kunneIkkeHenteTraade),
+    fejlTekst(indlaegFejl, m.kunneIkkeHenteIndlaeg),
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div>
@@ -288,22 +293,22 @@ export default function ForumModerering({
             soegBegge();
           }}
         >
-          <label className="label">Søg i titel eller forfatter</label>
+          <label className="label">{m.soegLabel}</label>
           <div className="flex gap-2">
             <input
               type="search"
               className="input"
-              placeholder="fx dæktryk eller et navn"
+              placeholder={m.soegPh}
               value={soeg}
               onChange={(e) => setSoeg(e.target.value)}
             />
             <button type="submit" className="btn-primary !py-2.5" disabled={pendingT || pendingI}>
-              Søg
+              {v.faelles.soeg}
             </button>
           </div>
         </form>
         <div>
-          <label className="label">Vis</label>
+          <label className="label">{m.vis}</label>
           <div className="inline-flex overflow-hidden rounded-lg border border-grafit-300">
             <button
               type="button"
@@ -312,7 +317,7 @@ export default function ForumModerering({
                 kunOpm ? 'bg-white text-grafit-600 hover:bg-grafit-50' : 'bg-kobber-50 text-kobber-800'
               }`}
             >
-              Alle
+              {v.faelles.alle}
             </button>
             <button
               type="button"
@@ -321,25 +326,22 @@ export default function ForumModerering({
                 kunOpm ? 'bg-kobber-50 text-kobber-800' : 'bg-white text-grafit-600 hover:bg-grafit-50'
               }`}
             >
-              ⚑ Kræver opmærksomhed
+              {m.kraeverOpm}
             </button>
           </div>
         </div>
       </div>
-      <p className="mb-4 text-xs text-grafit-400">
-        "Kræver opmærksomhed" = tråde/indlæg der enten har en åben rapport, eller er skrevet af en
-        bruger der lige nu er spærret.
-      </p>
+      <p className="mb-4 text-xs text-grafit-400">{m.opmForklaring}</p>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Traade */}
         <div className="min-w-0">
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-grafit-400">
-            Tråde (viser {traade.length} af {traadTotal})
+            {m.traadeOverskrift(traade.length, traadTotal)}
           </h3>
           {traade.length === 0 ? (
             <p className="text-sm text-grafit-500">
-              {filtreret ? 'Ingen tråde matcher.' : 'Ingen tråde endnu.'}
+              {filtreret ? m.ingenTraadeMatcher : m.ingenTraade}
             </p>
           ) : (
             <>
@@ -354,7 +356,7 @@ export default function ForumModerering({
                   disabled={pendingT}
                   onClick={() => hentTraade(false)}
                 >
-                  Vis flere tråde
+                  {m.visFlereTraade}
                 </button>
               )}
             </>
@@ -364,11 +366,11 @@ export default function ForumModerering({
         {/* Indlaeg */}
         <div className="min-w-0">
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-grafit-400">
-            Indlæg (viser {indlaeg.length} af {indlaegTotal})
+            {m.indlaegOverskrift(indlaeg.length, indlaegTotal)}
           </h3>
           {indlaeg.length === 0 ? (
             <p className="text-sm text-grafit-500">
-              {filtreret ? 'Ingen indlæg matcher.' : 'Ingen indlæg endnu.'}
+              {filtreret ? m.ingenIndlaegMatcher : m.ingenIndlaeg}
             </p>
           ) : (
             <>
@@ -383,7 +385,7 @@ export default function ForumModerering({
                   disabled={pendingI}
                   onClick={() => hentIndlaeg(false)}
                 >
-                  Vis flere indlæg
+                  {m.visFlereIndlaeg}
                 </button>
               )}
             </>

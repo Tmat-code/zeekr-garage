@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { relativTid } from '@/lib/i18n/format';
 import type { AdgangBruger, AdgangInvitation, AlleBruger } from '@/lib/queries-admin';
-import { inviterBruger, saetRolle, fjernInvitation, soegBrugere } from '@/app/admin/actions';
+import { inviterBruger, saetRolle, fjernInvitation, soegBrugere } from '@/app/admin/admin-actions';
 
 function RolleBadge({ rolle }: { rolle: string }) {
   return (

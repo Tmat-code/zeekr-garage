@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import type { VOrdbog } from '@/lib/i18n/vaerksted';
 
 type Fane = {
   href: string;
   ikon: string;
-  label: string;
+  label: Exclude<keyof VOrdbog['nav'], 'aabneRapporter'>;
   kunAdmin?: boolean;
   kunSuperadmin?: boolean;
 };
@@ -16,18 +18,18 @@ type Fane = {
 // ind og wrapper til naeste linje. kunAdmin-faner skjules helt for
 // moderatorer (de skal ikke se, at der findes et admin-lag).
 const FANER: Fane[] = [
-  { href: '/admin', ikon: '📊', label: 'Overblik' },
-  { href: '/admin/feedback', ikon: '🗒️', label: 'Feedback' },
-  { href: '/admin/rapport', ikon: '📮', label: 'Rapport' },
-  { href: '/admin/forum', ikon: '💬', label: 'Forum' },
-  { href: '/admin/links', ikon: '🔗', label: 'Links', kunAdmin: true },
-  { href: '/admin/ota', ikon: '📦', label: 'OTA', kunAdmin: true },
-  { href: '/admin/beskeder', ikon: '🚩', label: 'Anmeldelser' },
-  { href: '/admin/kontakt', ikon: '📨', label: 'Kontakt' },
-  { href: '/admin/aktivitet', ikon: '📈', label: 'Aktivitet' },
-  { href: '/admin/adgange', ikon: '👥', label: 'Adgange' },
-  { href: '/admin/audit', ikon: '🕵️', label: 'Audit', kunSuperadmin: true },
-  { href: '/admin/manual', ikon: '📖', label: 'Manual' },
+  { href: '/admin', ikon: '📊', label: 'overblik' },
+  { href: '/admin/feedback', ikon: '🗒️', label: 'feedback' },
+  { href: '/admin/rapport', ikon: '📮', label: 'rapport' },
+  { href: '/admin/forum', ikon: '💬', label: 'forum' },
+  { href: '/admin/links', ikon: '🔗', label: 'links', kunAdmin: true },
+  { href: '/admin/ota', ikon: '📦', label: 'ota', kunAdmin: true },
+  { href: '/admin/beskeder', ikon: '🚩', label: 'anmeldelser' },
+  { href: '/admin/kontakt', ikon: '📨', label: 'kontakt' },
+  { href: '/admin/aktivitet', ikon: '📈', label: 'aktivitet' },
+  { href: '/admin/adgange', ikon: '👥', label: 'adgange' },
+  { href: '/admin/audit', ikon: '🕵️', label: 'audit', kunSuperadmin: true },
+  { href: '/admin/manual', ikon: '📖', label: 'manual' },
 ];
 
 function erAktiv(pathname: string, href: string): boolean {
@@ -46,6 +48,7 @@ export default function AdminNav({
   erSuperadmin?: boolean;
 }) {
   const pathname = usePathname();
+  const v = useVOrdbog();
   // kunAdmin-faner skjules for moderatorer; kunSuperadmin-faner (Audit) vises kun
   // for superadmin. (superadmin er superset, saa erAdmin er ogsaa sand for den.)
   const faner = FANER.filter(
@@ -70,9 +73,11 @@ export default function AdminNav({
             }`}
           >
             <span aria-hidden>{f.ikon}</span>
-            {f.label}
+            {v.nav[f.label]}
             {badge > 0 && (
-              <span className="ml-0.5 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-kobber-600 px-1 text-[10px] font-bold leading-4 text-white">
+              <span
+                title={v.nav.aabneRapporter(badge)}
+                className="ml-0.5 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-kobber-600 px-1 text-[10px] font-bold leading-4 text-white">
                 {badge > 9 ? '9+' : badge}
               </span>
             )}

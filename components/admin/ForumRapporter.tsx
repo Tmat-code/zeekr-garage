@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/i18n/format';
 import { grundLabel } from '@/lib/moderering';
+import { useSprog } from '@/lib/i18n/klient';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import { useVKoer, type HentFejl } from '@/components/admin/useVKoer';
 import type { ForumRapport, ForumRapportSide } from '@/lib/queries-admin';
 import GrundVaelger from '@/components/forum/GrundVaelger';
 import { modFjernTraad, modFjernIndlaeg, modAdvarBruger, afvisRapport } from '@/app/forum/actions';
@@ -14,40 +17,32 @@ const SIDE = 20;
 type Handling = 'fjern' | 'advar' | null;
 
 function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void }) {
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const t = v.rapporter;
   const [handling, setHandling] = useState<Handling>(null);
-  const [fejl, setFejl] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const { pending, koer, fejl } = useVKoer();
+  const enEjer = v.faelles.enEjer;
 
   const erPost = !!r.postId;
   const url =
     r.kategoriSlug && r.traadSlug ? `/forum/${r.kategoriSlug}/${r.traadSlug}` : null;
 
-  function koer(fn: () => Promise<void>) {
-    setFejl(null);
-    start(async () => {
-      try {
-        await fn();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
-    });
-  }
-
   return (
     <div className={`rounded-xl border border-grafit-200 bg-white p-4 ${pending ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-center gap-2 text-xs text-grafit-500">
         <span className="rounded-full bg-kobber-50 px-2 py-0.5 font-medium text-kobber-700">
-          {erPost ? 'Indlæg' : 'Tråd'}
+          {erPost ? t.indlaeg : t.traad}
         </span>
-        <span>Grund: {grundLabel(r.reason)}</span>
+        <span>{t.grund(grundLabel(r.reason, sprog))}</span>
         {r.kilde === 'ai' && (
-          <span className="rounded-full bg-grafit-100 px-2 py-0.5 text-grafit-600">AI-flag</span>
+          <span className="rounded-full bg-grafit-100 px-2 py-0.5 text-grafit-600">{t.aiFlag}</span>
         )}
-        <span>· rapporteret af {r.reporterNavn}</span>
-        <span>· {relativTid(r.createdAt)}</span>
+        <span>{t.rapporteretAf(r.reporterNavn ?? enEjer)}</span>
+        <span>· {relativTid(r.createdAt, sprog)}</span>
         {r.erFjernet && (
           <span className="rounded-full bg-grafit-100 px-2 py-0.5 text-grafit-500">
-            allerede fjernet
+            {t.alleredeFjernet}
           </span>
         )}
       </div>
@@ -55,12 +50,12 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
       <p className="mt-1.5 text-sm text-grafit-500">
         {url ? (
           <Link href={url} className="font-medium text-grafit-800 hover:text-kobber-700">
-            {r.traadTitel || 'Tråd'}
+            {r.traadTitel || t.traad}
           </Link>
         ) : (
-          <span className="font-medium text-grafit-800">{r.traadTitel || 'Tråd'}</span>
+          <span className="font-medium text-grafit-800">{r.traadTitel || t.traad}</span>
         )}{' '}
-        · forfatter: {r.forfatterNavn}
+        {t.forfatter(r.forfatterNavn ?? enEjer)}
       </p>
 
       {r.indhold && (
@@ -75,7 +70,7 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
           disabled={pending}
           onClick={() => setHandling((h) => (h === 'fjern' ? null : 'fjern'))}
         >
-          🗑 {erPost ? 'Fjern indlæg' : 'Fjern tråd'}
+          {erPost ? t.fjernIndlaeg : t.fjernTraad}
         </button>
         {r.forfatterId && (
           <button
@@ -83,16 +78,16 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
             disabled={pending}
             onClick={() => setHandling((h) => (h === 'advar' ? null : 'advar'))}
           >
-            🛡 Advar forfatter
+            {t.advarForfatter}
           </button>
         )}
         <span className="flex-1" />
         <button
           className="btn-ghost !py-1 text-sm"
           disabled={pending}
-          onClick={() => koer(() => afvisRapport(r.reportId).then(onHandlet))}
+          onClick={() => koer(() => afvisRapport(r.reportId), onHandlet)}
         >
-          Afvis rapport
+          {t.afvis}
         </button>
       </div>
 
@@ -101,25 +96,26 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
         <GrundVaelger
           pending={pending}
           startGrund={r.reason ?? 'tone'}
-          submitLabel={erPost ? 'Fjern indlæg + giv besked' : 'Fjern tråd + giv besked'}
+          submitLabel={erPost ? t.fjernIndlaegSubmit : t.fjernTraadSubmit}
           onCancel={() => setHandling(null)}
           onSubmit={(grund, fritekst) =>
-            koer(async () => {
-              if (erPost) {
-                await modFjernIndlaeg(
-                  r.postId!,
-                  r.kategoriSlug ?? '',
-                  r.traadSlug ?? '',
-                  grund,
-                  fritekst,
-                  r.reportId,
-                );
-              } else {
-                await modFjernTraad(r.threadId!, r.kategoriSlug ?? '', grund, fritekst, r.reportId);
-              }
-              setHandling(null);
-              onHandlet();
-            })
+            koer(
+              () =>
+                erPost
+                  ? modFjernIndlaeg(
+                      r.postId!,
+                      r.kategoriSlug ?? '',
+                      r.traadSlug ?? '',
+                      grund,
+                      fritekst,
+                      r.reportId,
+                    )
+                  : modFjernTraad(r.threadId!, r.kategoriSlug ?? '', grund, fritekst, r.reportId),
+              () => {
+                setHandling(null);
+                onHandlet();
+              },
+            )
           }
         />
       )}
@@ -129,14 +125,16 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
         <GrundVaelger
           pending={pending}
           startGrund={r.reason ?? 'tone'}
-          submitLabel="Send advarsel"
+          submitLabel={t.sendAdvarsel}
           onCancel={() => setHandling(null)}
           onSubmit={(grund, fritekst) =>
-            koer(async () => {
-              await modAdvarBruger(r.forfatterId!, grund, fritekst, r.reportId);
-              setHandling(null);
-              onHandlet();
-            })
+            koer(
+              () => modAdvarBruger(r.forfatterId!, grund, fritekst, r.reportId),
+              () => {
+                setHandling(null);
+                onHandlet();
+              },
+            )
           }
         />
       )}
@@ -147,9 +145,10 @@ function RapportKort({ r, onHandlet }: { r: ForumRapport; onHandlet: () => void 
 }
 
 export default function ForumRapporter({ initial }: { initial: ForumRapportSide }) {
+  const v = useVOrdbog();
   const [rapporter, setRapporter] = useState<ForumRapport[]>(initial.rapporter);
   const [total, setTotal] = useState(initial.total);
-  const [fejl, setFejl] = useState<string | null>(null);
+  const [fejl, setFejl] = useState<HentFejl>(null);
   const [pending, start] = useTransition();
 
   // reset=true: hent fra side 1 (efter en handling - et håndteret punkt falder
@@ -159,16 +158,17 @@ export default function ForumRapporter({ initial }: { initial: ForumRapportSide 
     start(async () => {
       try {
         const r = await hentForumRapporter({ limit: SIDE, offset: reset ? 0 : rapporter.length });
-        setRapporter((cur) => (reset ? r.rapporter : [...cur, ...r.rapporter]));
-        setTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente rapporter.');
+        if (!r.ok) return setFejl(r.fejl);
+        setRapporter((cur) => (reset ? r.data.rapporter : [...cur, ...r.data.rapporter]));
+        setTotal(r.data.total);
+      } catch {
+        setFejl('kontekst');
       }
     });
   }
 
   if (rapporter.length === 0) {
-    return <p className="text-sm text-grafit-500">Ingen åbne rapporter. 🎉</p>;
+    return <p className="text-sm text-grafit-500">{v.rapporter.ingenAabne}</p>;
   }
 
   return (
@@ -180,13 +180,15 @@ export default function ForumRapporter({ initial }: { initial: ForumRapportSide 
       </div>
       {rapporter.length < total && (
         <button className="btn-ghost mt-3 !py-1.5 text-sm" disabled={pending} onClick={() => hent(false)}>
-          Vis flere rapporter
+          {v.rapporter.visFlere}
         </button>
       )}
-      <p className="mt-2 text-xs text-grafit-400">
-        Viser {rapporter.length} af {total}
-      </p>
-      {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
+      <p className="mt-2 text-xs text-grafit-400">{v.faelles.viser(rapporter.length, total)}</p>
+      {fejl && (
+        <p className="mt-2 text-sm text-kobber-700">
+          {fejl === 'kontekst' ? v.rapporter.kunneIkkeHente : v.fejl[fejl]}
+        </p>
+      )}
     </div>
   );
 }

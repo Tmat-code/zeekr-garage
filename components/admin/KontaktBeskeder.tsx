@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { relativTid } from '@/lib/i18n/format';
+import { useSprog } from '@/lib/i18n/klient';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import { useVKoer, type HentFejl } from '@/components/admin/useVKoer';
 import type { KontaktBesked, KontaktSide } from '@/lib/queries-admin';
 import { saetKontaktBehandlet, hentKontaktBeskeder } from '@/app/admin/kontakt-actions';
 
@@ -14,20 +17,17 @@ function BeskedKort({
   b: KontaktBesked;
   onToggle: (id: string, behandlet: boolean) => void;
 }) {
-  const [fejl, setFejl] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const k = v.kontakt;
+  const { pending, koer, fejl } = useVKoer();
 
   function toggle() {
-    setFejl(null);
     const ny = !b.behandlet;
-    start(async () => {
-      try {
-        await saetKontaktBehandlet(b.id, ny);
-        onToggle(b.id, ny);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
-    });
+    koer(
+      () => saetKontaktBehandlet(b.id, ny),
+      () => onToggle(b.id, ny),
+    );
   }
 
   return (
@@ -39,15 +39,15 @@ function BeskedKort({
       <div className="flex flex-wrap items-center gap-2 text-xs text-grafit-500">
         {b.behandlet ? (
           <span className="rounded-full bg-grafit-100 px-2 py-0.5 font-medium text-grafit-600">
-            Behandlet
+            {k.behandlet}
           </span>
         ) : (
           <span className="rounded-full bg-kobber-50 px-2 py-0.5 font-medium text-kobber-700">
-            Ny
+            {v.faelles.ny}
           </span>
         )}
         <span className="font-medium text-grafit-700">{b.navn}</span>
-        <span>· {relativTid(b.createdAt)}</span>
+        <span>· {relativTid(b.createdAt, sprog)}</span>
         {b.svarMail && (
           <span>
             ·{' '}
@@ -67,7 +67,7 @@ function BeskedKort({
           disabled={pending}
           onClick={toggle}
         >
-          {b.behandlet ? '↩ Markér ubehandlet' : '✓ Markér behandlet'}
+          {b.behandlet ? k.markerUbehandlet : k.markerBehandlet}
         </button>
         {fejl && <span className="text-xs text-kobber-700">{fejl}</span>}
       </div>
@@ -76,9 +76,10 @@ function BeskedKort({
 }
 
 export default function KontaktBeskeder({ initial }: { initial: KontaktSide }) {
+  const v = useVOrdbog();
   const [beskeder, setBeskeder] = useState<KontaktBesked[]>(initial.beskeder);
   const [total, setTotal] = useState(initial.total);
-  const [fejl, setFejl] = useState<string | null>(null);
+  const [fejl, setFejl] = useState<HentFejl>(null);
   const [pending, start] = useTransition();
 
   function visFlere() {
@@ -86,10 +87,11 @@ export default function KontaktBeskeder({ initial }: { initial: KontaktSide }) {
     start(async () => {
       try {
         const r = await hentKontaktBeskeder({ limit: SIDE, offset: beskeder.length });
-        setBeskeder((cur) => [...cur, ...r.beskeder]);
-        setTotal(r.total);
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Kunne ikke hente henvendelser.');
+        if (!r.ok) return setFejl(r.fejl);
+        setBeskeder((cur) => [...cur, ...r.data.beskeder]);
+        setTotal(r.data.total);
+      } catch {
+        setFejl('kontekst');
       }
     });
   }
@@ -101,7 +103,7 @@ export default function KontaktBeskeder({ initial }: { initial: KontaktSide }) {
   }
 
   if (beskeder.length === 0) {
-    return <p className="text-sm text-grafit-500">Ingen henvendelser endnu. 🎉</p>;
+    return <p className="text-sm text-grafit-500">{v.kontakt.ingen}</p>;
   }
 
   return (
@@ -113,13 +115,15 @@ export default function KontaktBeskeder({ initial }: { initial: KontaktSide }) {
       </div>
       {beskeder.length < total && (
         <button className="btn-ghost mt-3 !py-1.5 text-sm" disabled={pending} onClick={visFlere}>
-          Vis flere henvendelser
+          {v.kontakt.visFlere}
         </button>
       )}
-      <p className="mt-2 text-xs text-grafit-400">
-        Viser {beskeder.length} af {total}
-      </p>
-      {fejl && <p className="mt-2 text-sm text-kobber-700">{fejl}</p>}
+      <p className="mt-2 text-xs text-grafit-400">{v.faelles.viser(beskeder.length, total)}</p>
+      {fejl && (
+        <p className="mt-2 text-sm text-kobber-700">
+          {fejl === 'kontekst' ? v.kontakt.kunneIkkeHente : v.fejl[fejl]}
+        </p>
+      )}
     </div>
   );
 }

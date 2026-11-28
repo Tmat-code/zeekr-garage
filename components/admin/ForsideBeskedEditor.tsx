@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import type { ForsideBesked } from '@/lib/queries';
-import { gemForsideBesked } from '@/app/admin/actions';
+import { gemForsideBesked } from '@/app/admin/admin-actions';
 
 export default function ForsideBeskedEditor({ initial }: { initial: ForsideBesked }) {
   const [message, setMessage] = useState(initial.message);

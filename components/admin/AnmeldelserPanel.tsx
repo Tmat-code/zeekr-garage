@@ -1,29 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { relativTid } from '@/lib/i18n/format';
+import { useSprog } from '@/lib/i18n/klient';
+import { useVOrdbog } from '@/lib/i18n/vaerksted/klient';
+import { useVKoer } from '@/components/admin/useVKoer';
 import type { BeskedAnmeldelse } from '@/lib/queries-admin';
 import { saetAnmeldelseHaandteret, sletAnmeldtBesked } from '@/app/admin/beskeder-actions';
 
-function useKoer() {
-  const [pending, start] = useTransition();
-  const [fejl, setFejl] = useState<string | null>(null);
-  const koer = (fn: () => Promise<void>) => {
-    setFejl(null);
-    start(async () => {
-      try {
-        await fn();
-      } catch (e: any) {
-        setFejl(e?.message ?? 'Noget gik galt.');
-      }
-    });
-  };
-  return { pending, fejl, koer };
-}
-
 function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
-  const { pending, fejl, koer } = useKoer();
+  const sprog = useSprog();
+  const v = useVOrdbog();
+  const t = v.anmeldelser;
+  const { pending, fejl, koer } = useVKoer();
   const [bekraeftSlet, setBekraeftSlet] = useState(false);
 
   // Besked-tilstand: findes endnu / allerede slettet / anmeldelse uden besked.
@@ -38,23 +28,23 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
     >
       <div className="flex flex-wrap items-center gap-2">
         {a.handled ? (
-          <span className="chip bg-grafit-100 text-grafit-600">Håndteret</span>
+          <span className="chip bg-grafit-100 text-grafit-600">{t.haandteret}</span>
         ) : (
-          <span className="chip bg-kobber-100 text-kobber-800">Ny</span>
+          <span className="chip bg-kobber-100 text-kobber-800">{v.faelles.ny}</span>
         )}
         <span className="text-xs text-grafit-500">
-          Anmeldt af {a.anmelderNavn} · {relativTid(a.createdAt)}
+          {t.anmeldtAf(a.anmelderNavn ?? v.faelles.enEjer, relativTid(a.createdAt, sprog))}
         </span>
       </div>
 
       {a.reason && (
         <p className="mt-2 text-sm text-grafit-800">
-          <span className="font-medium text-grafit-500">Begrundelse: </span>
+          <span className="font-medium text-grafit-500">{t.begrundelse} </span>
           {a.reason}
         </p>
       )}
       {!a.reason && (
-        <p className="mt-2 text-sm italic text-grafit-400">Ingen begrundelse angivet.</p>
+        <p className="mt-2 text-sm italic text-grafit-400">{t.ingenBegrundelse}</p>
       )}
 
       {/* Den anmeldte besked */}
@@ -62,20 +52,17 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
         {harBesked ? (
           <>
             <p className="text-xs text-grafit-500">
-              {a.beskedSenderNavn || 'En ejer'} skrev · {a.beskedCreatedAt ? relativTid(a.beskedCreatedAt) : ''}
+              {t.skrev(a.beskedSenderNavn || v.faelles.enEjer)}
+              {a.beskedCreatedAt ? ` · ${relativTid(a.beskedCreatedAt, sprog)}` : ''}
             </p>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-grafit-900">
               {a.beskedBody}
             </p>
           </>
         ) : beskedSlettet ? (
-          <p className="text-sm italic text-grafit-400">
-            Beskeden er slettet. Anmeldelsen står som historik.
-          </p>
+          <p className="text-sm italic text-grafit-400">{t.beskedSlettet}</p>
         ) : (
-          <p className="text-sm italic text-grafit-400">
-            Hele samtalen er anmeldt (ingen enkelt besked udpeget).
-          </p>
+          <p className="text-sm italic text-grafit-400">{t.helSamtale}</p>
         )}
       </div>
 
@@ -83,7 +70,7 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
         {a.conversationId && (
           <Link href={`/beskeder/${a.conversationId}`} className="btn-ghost !py-1 text-sm">
-            Åbn samtale
+            {t.aabnSamtale}
           </Link>
         )}
         <span className="flex-1" />
@@ -93,7 +80,7 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
           disabled={pending}
           onClick={() => koer(() => saetAnmeldelseHaandteret(a.id, !a.handled))}
         >
-          {a.handled ? 'Markér som ny' : '✓ Markér håndteret'}
+          {a.handled ? t.markerNy : t.markerHaandteret}
         </button>
 
         {harBesked &&
@@ -104,13 +91,13 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
                 disabled={pending}
                 onClick={() => koer(() => sletAnmeldtBesked(a.id, a.messageId as string))}
               >
-                Bekræft slet
+                {v.faelles.bekraeftSlet}
               </button>
               <button
                 className="btn-ghost !px-2 !py-1 text-sm"
                 onClick={() => setBekraeftSlet(false)}
               >
-                Fortryd
+                {v.faelles.fortryd}
               </button>
             </span>
           ) : (
@@ -118,7 +105,7 @@ function AnmeldelseKort({ a }: { a: BeskedAnmeldelse }) {
               className="rounded-lg border border-grafit-200 px-2.5 py-1 text-sm font-medium text-grafit-500 hover:border-kobber-500 hover:text-kobber-700"
               onClick={() => setBekraeftSlet(true)}
             >
-              🗑 Slet besked
+              {t.sletBesked}
             </button>
           ))}
       </div>
@@ -132,6 +119,8 @@ export default function AnmeldelserPanel({
 }: {
   anmeldelser: BeskedAnmeldelse[];
 }) {
+  const v = useVOrdbog();
+  const t = v.anmeldelser;
   const [visHaandterede, setVisHaandterede] = useState(false);
 
   const nye = anmeldelser.filter((a) => !a.handled);
@@ -141,22 +130,20 @@ export default function AnmeldelserPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="chip bg-kobber-100 text-kobber-800">{nye.length} nye</span>
-        <span className="chip bg-grafit-100 text-grafit-600">{haandterede.length} håndterede</span>
+        <span className="chip bg-kobber-100 text-kobber-800">{t.nye(nye.length)}</span>
+        <span className="chip bg-grafit-100 text-grafit-600">{t.haandterede(haandterede.length)}</span>
         <span className="flex-1" />
         <button
           className="btn-ghost !py-1 text-sm"
           onClick={() => setVisHaandterede((v) => !v)}
         >
-          {visHaandterede ? 'Vis kun nye' : 'Vis alle'}
+          {visHaandterede ? t.visKunNye : t.visAlle}
         </button>
       </div>
 
       {vist.length === 0 ? (
         <p className="rounded-xl border border-grafit-200 bg-white px-4 py-8 text-center text-sm text-grafit-500">
-          {visHaandterede
-            ? 'Ingen anmeldelser endnu.'
-            : 'Ingen nye anmeldelser. Alt er håndteret. 👍'}
+          {visHaandterede ? t.ingenEndnu : t.ingenNye}
         </p>
       ) : (
         <div className="space-y-2.5">

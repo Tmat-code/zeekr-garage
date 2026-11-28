@@ -486,5 +486,114 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   }
 }
 
+// --- U6: Værkstedet, moderator-delen ---
+{
+  async function hentMod(rel, navn) {
+    const kilde = fs.readFileSync(path.join(ROD, rel), 'utf8');
+    const fil = path.join(os.tmpdir(), `zg-u6-${navn}-${process.pid}.mjs`);
+    fs.writeFileSync(
+      fil,
+      ts.transpileModule(kilde, {
+        compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+      }).outputText,
+    );
+    const m = await import(fil);
+    fs.rmSync(fil, { force: true });
+    return m;
+  }
+  const VF = await hentMod('lib/vaerksted-fejl.ts', 'vfejl');
+  const { vda } = await hentMod('lib/i18n/vaerksted/da.ts', 'vda');
+  const { vsv } = await hentMod('lib/i18n/vaerksted/sv.ts', 'vsv');
+  const { ven } = await hentMod('lib/i18n/vaerksted/en.ts', 'ven');
+  const V = [['da', vda], ['sv', vsv], ['en', ven]];
+
+  // Samme nøgle-træ på alle sprog (tsc fanger det også - her også runtime).
+  function noegler(o, sti = '') {
+    if (Array.isArray(o) || typeof o !== 'object' || o === null) return [sti];
+    return Object.keys(o).sort().flatMap((k) => noegler(o[k], sti ? `${sti}.${k}` : k));
+  }
+  for (const [navn, o] of V) {
+    lig(`U6 ${navn}: samme nøgler som da`, noegler(o), noegler(vda));
+    lig(`U6 ${navn}: fejl == VAERKSTED_FEJL`, Object.keys(o.fejl).sort(), [...VF.VAERKSTED_FEJL].sort());
+    lig(`U6 ${navn}: alle fejl-tekster ikke-tomme`, Object.values(o.fejl).every((t) => typeof t === 'string' && t.length > 3), true);
+  }
+
+  // Moderator-manualen: samme kort + samme blok-struktur på alle sprog, og
+  // markup (**, _, `) er balanceret, så renderen ikke efterlader løse tegn.
+  const struktur = (o) =>
+    o.manual.kort.map((k) => [k.ikon, k.blokke.map((b) => Object.keys(b)[0] + (b.liste ? b.liste.length : b.situationer ? b.situationer.length : ''))]);
+  for (const [navn, o] of V) {
+    lig(`U6 ${navn}: manual-struktur == da`, JSON.stringify(struktur(o)), JSON.stringify(struktur(vda)));
+    const tekster = o.manual.kort.flatMap((k) =>
+      k.blokke.flatMap((b) => [b.p, b.note, b.afsnit, ...(b.liste ?? []).flatMap((p) => [p.navn, p.tekst]), ...(b.situationer ?? []).flatMap((x) => [x.naar, x.tekst])]),
+    ).filter(Boolean);
+    const ubalanceret = tekster.filter((t) => (t.split('**').length - 1) % 2 || (t.split('`').length - 1) % 2 || (t.replace(/\*\*/g, '').split('_').length - 1) % 2);
+    lig(`U6 ${navn}: manual-markup balanceret`, ubalanceret, []);
+  }
+  lig('U6 manual har Kontakt-kort', vda.manual.kort.some((k) => k.ikon === '📨'), true);
+  lig('U6 manual-nav nævner Kontakt + Manual', ['Kontakt', 'Manual'].every((x) => JSON.stringify(vda.manual.kort[1]).includes(x)), true);
+
+  // De rigtige raise exception-tekster fra de RPC'er moderator-fladerne kalder
+  // -> nøgle (aldrig null).
+  const fn = ['mod_suspender_bruger', 'admin_ban_bruger', 'admin_ophaev', 'admin_anonymiser', 'kontakt_saet_behandlet'];
+  const sqlFiler = [
+    'supabase/migrations/20261124140000_bruger_sanktioner.sql',
+    'supabase/migrations/20261124210000_p32_audit_superadmin.sql',
+    'supabase/migrations/20261126130000_kontakt_beskeder.sql',
+  ].map((f) => fs.readFileSync(path.join(ROD, f), 'utf8'));
+  const raises = new Set();
+  for (const sql of sqlFiler) {
+    const blokke = sql.split(/create or replace function public\./i);
+    for (const b of blokke) {
+      if (!fn.some((n) => b.startsWith(n + '('))) continue;
+      for (const m of b.matchAll(/raise exception\s+'([^']+)'/g)) raises.add(m[1]);
+    }
+  }
+  const R = [...raises];
+  lig('U6 fandt RPC-fejltekster i SQL', R.length >= 12, true);
+  lig('U6 alle RPC-fejltekster genkendes', R.filter((r) => VF.vFejlFraDb(r) === null), []);
+  const F = VF.vFejlFraDb;
+  lig('U6 adgang', [F('Kun moderator/admin.'), F('Kun admin.'), F('Kun stab.'), F('new row violates row-level security policy for table "issues"')], ['ingenAdgang', 'ingenAdgang', 'ingenAdgang', 'ingenAdgang']);
+  lig('U6 egen konto / admin-mål', [F('Du kan ikke suspendere din egen konto.'), F('En admin/superadmin kan ikke suspenderes - fjern rollen foerst.'), F('En admin kan ikke bannes - fjern admin-rollen foerst.')], ['egenKonto', 'maalErAdmin', 'maalErAdmin']);
+  lig('U6 dage / grund / findes ikke', [F('Antal dage skal vaere mellem 1 og 3650.'), F('Ugyldig grund.'), F('Brugeren findes ikke.'), F('Henvendelsen findes ikke.')], ['ugyldigeDage', 'ugyldigGrund', 'brugerFindesIkke', 'henvendelseFindesIkke']);
+  lig('U6 ukendt/tom -> null', [F('duplicate key value'), F(''), F(null), F(undefined)], [null, null, null, null]);
+  lig('U6 erVFejl', [VF.erVFejl('ingenAdgang'), VF.erVFejl('IngenAdgang'), VF.erVFejl(1)], [true, false, false]);
+  lig('U6 gyldigeDage', [0, 1, 7, 3650, 3651, 2.5, '7', NaN].map(VF.gyldigeDage), [false, true, true, true, false, false, false, false]);
+
+  // Flertal + parametre.
+  lig('U6 dage', [vda.brugere.dage(1), vda.brugere.dage(7), vsv.brugere.dage(1), vsv.brugere.dage(3), ven.brugere.dage(1), ven.brugere.dage(30)], ['1 dag', '7 dage', '1 dag', '3 dagar', '1 day', '30 days']);
+  lig('U6 visninger', [vda.forumMod.visninger(1), vda.forumMod.visninger(4), vsv.forumMod.visninger(2), ven.forumMod.visninger(1)], ['1 visning', '4 visninger', '2 visningar', '1 view']);
+  lig('U6 en svar', [ven.forumMod.svar(1), ven.forumMod.svar(3), ven.feedback.svar(1)], ['1 reply', '3 replies', '1 reply']);
+  lig('U6 deploy', [vda.aktivitet.deploy('04', null).includes('kl. 04') && !vda.aktivitet.deploy('04', null).includes('travlest'), ven.aktivitet.deploy('04', '20').includes('busiest at 20:00')], [true, true]);
+  lig('U6 viser / metaTitel', [vsv.faelles.viser(3, 9), ven.metaTitel('Overview'), vda.metaTitel(vda.nav.feedback)], ['Visar 3 av 9', 'Overview - Workshop', 'Feedback - Værkstedet']);
+  lig('U6 intro admin vs. moderator', [vda.brugere.intro(false).includes('ban'), vda.brugere.intro(true).includes('ban')], [false, true]);
+
+  // Ingen lange tankestreger i Værksted-ordbogen (inkl. funktions-output).
+  for (const [navn, o] of V) {
+    const tekst = JSON.stringify(o) + [o.brugere.intro(true), o.aktivitet.deploy('04', '20'), o.forumSide.modTaeller(1, 2)].join();
+    lig(`U6 ${navn}: ingen lange tankestreger`, /[–—]/.test(tekst), false);
+  }
+
+  // Isolation: Værksted-ordbogen importeres kun under app/admin + components/admin.
+  function alleFiler(dir) {
+    return fs.readdirSync(path.join(ROD, dir), { withFileTypes: true }).flatMap((d) => {
+      const rel = path.join(dir, d.name);
+      if (d.isDirectory()) return d.name === 'node_modules' ? [] : alleFiler(rel);
+      return /\.(ts|tsx)$/.test(d.name) ? [rel] : [];
+    });
+  }
+  const udenfor = ['app', 'components', 'lib']
+    .flatMap(alleFiler)
+    .filter((f) => !f.startsWith('app/admin/') && !f.startsWith('components/admin/') && !f.startsWith('lib/i18n/vaerksted/'))
+    .filter((f) => /(from|import)\s*\(?\s*['"][^'"]*i18n\/vaerksted/.test(fs.readFileSync(path.join(ROD, f), 'utf8')));
+  lig('U6 vaerksted-ordbogen kun importeret i Værkstedet', udenfor, []);
+
+  // U6-actions sender ikke længere rå DB-fejl videre.
+  for (const f of ['app/admin/actions.ts', 'app/admin/beskeder-actions.ts', 'app/admin/kontakt-actions.ts']) {
+    const k = fs.readFileSync(path.join(ROD, f), 'utf8');
+    lig(`U6 ${f}: ingen throw new Error(...message)`, /throw new Error\((error|e|sletFejl)\??\.message/.test(k), false);
+  }
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);
