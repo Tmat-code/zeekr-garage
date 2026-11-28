@@ -125,7 +125,7 @@ for (const t of typer) {
   }
   // Ukendt sprog-værdi lander aldrig i output (heller ikke escaped).
   tjek(`${t}: ukendt sprog ikke i output`, !res[`${t}/body/ukendt`].includes('script'));
-  tjek(`${t}: emne uden $-variabler (Compose)`, !fs.readFileSync(path.join(TMP, `${t}.emne`), 'utf8').includes('$'));
+  tjek(`${t}: emne uden $ og " (Compose/.env)`, !/[$"]/.test(fs.readFileSync(path.join(TMP, `${t}.emne`), 'utf8')));
 }
 
 // Dansk = byte-for-byte samme tekster som de gamle hardcodede skabeloner.

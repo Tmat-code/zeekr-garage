@@ -53,7 +53,10 @@ function html(type: MailType, sprog: UiSprog): string {
 // Go-udtryk: er brugerens sprog (user_metadata.sprog) lig `s`? `with` springer
 // over når sprog mangler (nil/tom), og printf gør en evt. ikke-streng-værdi til
 // tekst, så `eq` aldrig fejler på typen.
-const ER = (s: string) => `eq (printf "%v" .) "${s}"`; // i18n-ok
+// `q` = citat-tegnet. Emnet (Coolify-env) bruger backticks (Go raw strings), så
+// værdien hverken indeholder `"` eller `$` - den overlever .env-citering og
+// Compose-interpolation uændret.
+const ER = (s: string, q = '"') => `eq (printf ${q}%v${q} .) ${q}${s}${q}`; // i18n-ok
 
 // Hele skabelonen: sv/en hvis valgt, ellers dansk (også for gamle brugere uden
 // sprog i metadata).
@@ -63,17 +66,17 @@ export function goSkabelon(type: MailType): string {
 
 // Værdien til MAILER_SUBJECTS_CONFIRMATION / MAILER_SUBJECTS_RECOVERY i Coolify.
 export function goEmne(type: MailType): string {
-  return vaelgSprog((s) => ORDBOGER[s].mail[type].emne);
+  return vaelgSprog((s) => ORDBOGER[s].mail[type].emne, '`');
 }
 
 // `{{ with .Data.sprog }}{{ if sv }}..{{ else if en }}..{{ else }}DA{{ end }}{{ else }}DA{{ end }}`
 // - ydre else = intet sprog i metadata (eller ingen metadata).
-function vaelgSprog(indhold: (s: UiSprog) => string): string {
+function vaelgSprog(indhold: (s: UiSprog) => string, q = '"'): string {
   const andre = UI_SPROG.filter((s) => s !== 'da');
   const da = indhold('da');
   let ud = '{{ with .Data.sprog }}'; // i18n-ok
   andre.forEach((s, i) => {
-    ud += `{{ ${i === 0 ? 'if' : 'else if'} ${ER(s)} }}${indhold(s)}`; // i18n-ok
+    ud += `{{ ${i === 0 ? 'if' : 'else if'} ${ER(s, q)} }}${indhold(s)}`; // i18n-ok
   });
   return `${ud}{{ else }}${da}{{ end }}{{ else }}${da}{{ end }}`; // i18n-ok
 }
