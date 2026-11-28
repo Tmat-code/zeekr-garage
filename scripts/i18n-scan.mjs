@@ -227,6 +227,19 @@ const SKIVER = {
     'components/admin/ForumModerering.tsx',
     'components/admin/AktivitetFeed.tsx',
   ],
+  // U8: notifikationer (klokke + /notifikationer renderer fra type + params),
+  // mail-skift-mailen (GoTrue) og event-mailen pr. modtagerens sprog. Selve
+  // trigger-teksterne bor i SQL (dansk fallback) - ikke i koden.
+  U8: [
+    'lib/notif-tekst.ts',
+    'lib/notifikationer.ts',
+    'components/NotifBell.tsx',
+    'components/NotifikationerListe.tsx',
+    'lib/mail-skabelon.ts',
+    'app/auth/email-change-email/route.ts',
+    'lib/event-mail.ts',
+    'app/events/actions.ts',
+  ],
 };
 
 const IGNORER_ATTR = new Set([

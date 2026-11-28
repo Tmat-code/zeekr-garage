@@ -1,4 +1,5 @@
 // U4: GoTrue-mailskabeloner (bekræft konto + nulstil password) på da/sv/en.
+// U8: + mail-skift (email_change), samme mekanik.
 //
 // GoTrue henter skabelonen fra vores URL (MAILER_TEMPLATES_*) og kører den som
 // Go html/template med { SiteURL, TokenHash, Data = user_metadata, ... }. Vi
@@ -16,19 +17,26 @@
 
 import { ORDBOGER, UI_SPROG, type UiSprog } from '@/lib/i18n';
 
-export type MailType = 'bekraeft' | 'nulstil';
+export type MailType = 'bekraeft' | 'nulstil' | 'mailskift';
 
 // NB: `$.` (skabelonens rod), ikke `.` - sprog-valget sker inde i en
 // `{{ with .Data.sprog }}`, som binder `.` om til sprog-værdien.
 const LINK: Record<MailType, string> = {
   bekraeft: '{{ $.SiteURL }}/auth/confirm?token_hash={{ $.TokenHash }}&type=signup&next=/', // i18n-ok
   nulstil: '{{ $.SiteURL }}/auth/confirm?token_hash={{ $.TokenHash }}&type=recovery&next=/nulstil', // i18n-ok
+  // Med "secure email change" sender GoTrue én mail til HVER adresse, hver med
+  // sit eget TokenHash - skabelonen er den samme, så `$.TokenHash` er rigtig i begge.
+  mailskift: '{{ $.SiteURL }}/auth/confirm?token_hash={{ $.TokenHash }}&type=email_change&next=/garage', // i18n-ok
 };
 
 function html(type: MailType, sprog: UiSprog): string {
   const m = ORDBOGER[sprog].mail;
-  const t = m[type];
+  const t: { titel: string; intro: string; knap: string; ignorer: string; note?: string } = m[type];
   const link = LINK[type];
+  // Kun mail-skift har en ekstra note (sendes til begge adresser).
+  const note = t.note
+    ? `\n      <p style="margin:0 0 14px;color:#6b7280;font-size:13px;">${t.note}</p>` // i18n-ok
+    : '';
   // Ramme-HTML (ingen tekst - teksterne kommer fra ordbogen).
   return /* i18n-ok */ `<!doctype html>
 <html lang="${sprog}">
@@ -41,7 +49,7 @@ function html(type: MailType, sprog: UiSprog): string {
            style="display:inline-block;background:#b45309;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:9px;font-weight:600;">
           ${t.knap}
         </a>
-      </p>
+      </p>${note}
       <p style="margin:0 0 4px;color:#6b7280;font-size:13px;">${m.kopierLink}</p>
       <p style="margin:0 0 22px;font-size:12px;word-break:break-all;color:#78716c;">${link}</p>
       <p style="margin:0;color:#9ca3af;font-size:12px;">${t.ignorer}</p>
@@ -64,7 +72,7 @@ export function goSkabelon(type: MailType): string {
   return vaelgSprog((s) => html(type, s));
 }
 
-// Værdien til MAILER_SUBJECTS_CONFIRMATION / MAILER_SUBJECTS_RECOVERY i Coolify.
+// Værdien til MAILER_SUBJECTS_CONFIRMATION / _RECOVERY / _EMAIL_CHANGE i Coolify.
 export function goEmne(type: MailType): string {
   return vaelgSprog((s) => ORDBOGER[s].mail[type].emne, '`');
 }

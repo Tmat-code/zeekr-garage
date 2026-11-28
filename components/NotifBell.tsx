@@ -7,6 +7,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/i18n/format';
 import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import type { Notifikation } from '@/lib/types';
+import { NOTIF_KOLONNER, notifTekst } from '@/lib/notif-tekst';
 
 // Facebook-agtig klokke: ulaest-badge + dropdown. Supabase Realtime -> badgen
 // opdaterer live uden refresh. SSR giver start-tallet (ingen tom-blink).
@@ -54,6 +55,7 @@ function mapRow(r: any): Notifikation {
     id: r.id,
     type: r.type,
     tekst: r.tekst,
+    params: r.params ?? null,
     href: r.href,
     erLaest: r.er_laest ?? false,
     createdAt: r.created_at,
@@ -123,7 +125,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
     const [{ data }, { count }] = await Promise.all([
       sb
         .from('notifications')
-        .select('id, type, tekst, href, er_laest, created_at')
+        .select(NOTIF_KOLONNER)
         .eq('modtager_id', userId)
         .order('created_at', { ascending: false })
         .limit(15),
@@ -270,7 +272,7 @@ export default function NotifBell({ userId, initialUnread }: Props) {
                         {ikonFor(n.type)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm leading-snug text-grafit-800">{n.tekst}</span>
+                        <span className="block text-sm leading-snug text-grafit-800">{notifTekst(n, nt.tekster)}</span>
                         <span className="mt-0.5 block text-xs text-grafit-400">
                           {relativTid(n.createdAt, sprog)}
                         </span>

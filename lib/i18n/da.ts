@@ -812,6 +812,44 @@ export const da = {
     kunneIkkeHente: 'Kunne ikke hente notifikationer.',
     kunneIkkeSlette: 'Kunne ikke slette - prøv igen.',
     kunneIkkeRydde: 'Kunne ikke rydde de læste - prøv igen.',
+    // U8: selve notifikations-teksterne, renderet pr. læser ud fra type + params
+    // (lib/notif-tekst.ts). DANSK = ordret som triggerne skriver `tekst` (testet
+    // mod den lokale Postgres). Navne/titler/emner/fritekst er indhold og står
+    // som brugeren skrev dem.
+    tekster: {
+      enEjer: 'En ejer',
+      holdet: 'Holdet',
+      enGruppe: 'en gruppe',
+      // Grunden i løbende tekst (små bogstaver, som triggernes mod_grund_tekst).
+      grund: {
+        dublet: 'dublet',
+        tone: 'tone',
+        'off-topic': 'off-topic',
+        spam: 'spam',
+        andet: 'andet',
+      } satisfies Record<ModGrund, string>,
+      grundMedFritekst: (grund: string, fritekst: string | null) => (fritekst ? `${grund} (${fritekst})` : grund),
+      // Dato for en suspension (dansk tid): 05-12-2026 kl. 14:30
+      dato: (p: { d: string; m: string; y: string; t: string; min: string }) => `${p.d}-${p.m}-${p.y} kl. ${p.t}:${p.min}`,
+      forumSvar: (navn: string, titel: string) => `${navn} svarede i "${titel}"`,
+      forumSvarDirekte: (navn: string, titel: string) => `${navn} svarede på dit indlæg i "${titel}"`,
+      omtale: (navn: string, titel: string) => `${navn} nævnte dig i "${titel}"`,
+      besked: (navn: string) => `${navn} sendte dig en besked`,
+      gruppeBesked: (navn: string, gruppe: string) => `${navn} skrev i ${gruppe}`,
+      nytEvent: (navn: string, titel: string) => `${navn} oprettede et nyt event: "${titel}"`,
+      fjernTraad: (titel: string, grund: string) => `Din tråd "${titel}" blev fjernet - grund: ${grund}`,
+      fjernIndlaeg: (titel: string, grund: string) => `Dit indlæg i "${titel}" blev fjernet - grund: ${grund}`,
+      fjernAvatar: (grund: string) => `Dit profilbillede blev fjernet - grund: ${grund}`,
+      suspender: (til: string, grund: string) =>
+        `Din konto er suspenderet til ${til} - grund: ${grund}. Du kan stadig læse, men ikke bidrage, indtil da.`,
+      ban: (grund: string) => `Din konto er permanent spærret - grund: ${grund}. Du kan stadig læse, men ikke længere bidrage.`,
+      ophaev: 'Din spærring er ophævet. Du kan bidrage igen.',
+      advarsel: (grund: string) => `Du har fået en advarsel fra moderationen - grund: ${grund}`,
+      rapport: (navn: string, hvad: 'indlaeg' | 'traad', titel: string | null, grund: string) =>
+        `${navn} rapporterede ${hvad === 'indlaeg' ? 'et indlæg' : 'en tråd'}${titel !== null ? ` i "${titel}"` : ''} - grund: ${grund}`,
+      kontakt: (emne: string) => `Ny henvendelse via Kontakt: "${emne}"`,
+      ota: (version: string) => `Ny software til din Zeekr: ${version}`,
+    },
   },
 
   // U4 (rykket frem fra U8): GoTrue-mailene for bekræft konto + nulstil password.
@@ -835,6 +873,15 @@ export const da = {
       intro: 'Du har bedt om at nulstille passwordet til din Zeekr Garage-konto. Klik på knappen for at vælge et nyt:',
       knap: 'Vælg nyt password',
       ignorer: 'Har du ikke selv bedt om dette, kan du roligt ignorere mailen - dit password bliver ikke ændret.',
+    },
+    // U8: mail-skift (GoTrue email_change). Dansk = ordret den gamle skabelon.
+    mailskift: {
+      emne: 'Bekræft din nye e-mail - Zeekr Garage',
+      titel: 'Bekræft din nye e-mail',
+      intro: 'Der er bedt om at skifte e-mailadressen på din Zeekr Garage-konto. Klik for at bekræfte:',
+      knap: 'Bekræft e-mail',
+      note: 'Af sikkerhed sendes denne bekræftelse til både din nuværende og din nye adresse. Mailen skifter først når begge er bekræftet.',
+      ignorer: 'Har du ikke selv bedt om dette, så ignorér mailen - din adresse bliver ikke ændret.',
     },
   },
   // U5: beskeder (indbakke, samtale, ny besked, grupper). Fejl er nøgler fra
@@ -990,6 +1037,14 @@ export const da = {
           : `Opdateringen er slået op og mailet til ${n} tilmeldte.`,
       ingenTilmeldte: 'Opdateringen er slået op. Ingen mails sendt (ingen tilmeldte med e-mail).',
       mailFejl: 'Opdateringen er slået op, men mailen kunne ikke sendes.',
+    },
+    // U8: mailen til de tilmeldte ved en opdatering (Resend BCC, én mail pr.
+    // sprog-gruppe). Ren tekst - HTML-rammen + escaping ligger i lib/event-mail.ts.
+    mail: {
+      emne: (titel: string, site: string) => `Opdatering: ${titel} - ${site}`,
+      opdateringTil: 'Der er en ny opdatering til',
+      seEventet: (domaene: string) => `Se eventet på ${domaene}`,
+      fod: (site: string) => `Du får denne mail, fordi du er tilmeldt eventet på ${site}.`,
     },
     fejl: {
       kunModerator: 'Kun moderatorer og admins kan det.',

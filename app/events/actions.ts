@@ -6,6 +6,8 @@ import { erModerator } from '@/lib/admin';
 import { sendMailBcc } from '@/lib/email';
 import { SITE } from '@/lib/config';
 import { validerEvent, type EventFejl, type OpdateringGrund } from '@/lib/events-fejl';
+import { bygEventMail, grupperModtagere } from '@/lib/event-mail';
+import { ORDBOGER, UI_SPROG } from '@/lib/i18n';
 
 // U5: fejl gives tilbage som NØGLER (lib/events-fejl.ts) - aldrig som tekst eller
 // rå DB-fejl. Klienten slår teksten op på læserens sprog ved render.
@@ -171,35 +173,51 @@ export async function sendOpdatering(
     .insert({ event_id: eventId, body: tekst, created_by: user.id });
   if (error) return dbNej('opdatering', error, 'kunneIkkeSende');
 
-  // Hent de tilmeldtes emails. NB: selve mailen er stadig DANSK for alle (U8:
-  // kræver at RPC'en også giver modtagerens sprog, så der kan sendes pr.
-  // sprog-gruppe). `info` er teknisk diagnose til serverloggen, ikke UI. (security-definer RPC, moderator-gated) og mail dem.
+  // Hent de tilmeldte (mail + sprog) og send én BCC-mail pr. sprog-gruppe (U8).
+  // RPC'en er security definer + moderator-gated. Findes den nye RPC ikke endnu
+  // (kode deployet før migrationen), bruges den gamle mail-liste, alle på dansk.
+  // `info` er teknisk diagnose til serverloggen, ikke UI.
   let sent = 0;
   let info = '';
   try {
-    const { data: emails, error: rpcErr } = await sb.rpc('event_deltager_emails', {
-      e_id: eventId,
-    });
-    if (rpcErr) {
-      info = `RPC-fejl: ${rpcErr.message}`;
+    let rows: unknown = null;
+    const ny = await sb.rpc('event_deltager_modtagere', { e_id: eventId });
+    if (!ny.error) {
+      rows = ny.data;
     } else {
-      // Robust mod både scalar-array (["a@b"]) og objekt-array ([{event_deltager_emails:"a@b"}]).
-      const liste = ((emails ?? []) as any[])
-        .map((x) => (typeof x === 'string' ? x : x?.event_deltager_emails ?? x?.email))
-        .filter((m: any) => typeof m === 'string' && m.includes('@'));
-      if (liste.length === 0) {
+      const gl = await sb.rpc('event_deltager_emails', { e_id: eventId });
+      if (gl.error) {
+        info = `RPC-fejl: ${ny.error.message} / ${gl.error.message}`; // i18n-ok (log)
+      } else {
+        // Robust mod både scalar-array (["a@b"]) og objekt-array ([{event_deltager_emails:"a@b"}]).
+        rows = ((gl.data ?? []) as any[]).map((x) => ({
+          email: typeof x === 'string' ? x : x?.event_deltager_emails ?? x?.email,
+          sprog: 'da',
+        }));
+      }
+    }
+    if (!info) {
+      const grupper = grupperModtagere(rows);
+      const ialt = UI_SPROG.reduce((n, sp) => n + grupper[sp].length, 0);
+      if (ialt === 0) {
         info = 'ingen tilmeldte med email'; // i18n-ok (log)
       } else {
         const link = `https://${SITE.domain}/events/${slug}`;
-        // i18n-ok (U8): event-mailen er dansk indtil U8.
-        const html =
-          `<p>Der er en ny opdatering til <strong>${escapeHtml(title)}</strong>:</p>` + // i18n-ok (U8)
-          `<p style="white-space:pre-line">${escapeHtml(tekst)}</p>` + // i18n-ok (U8)
-          `<p><a href="${link}">Se eventet på ${SITE.domain}</a></p>` + // i18n-ok (U8)
-          `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${SITE.name}.</p>`; // i18n-ok (U8)
-        const res = await sendMailBcc(liste, `Opdatering: ${title} - ${SITE.name}`, html); // i18n-ok (U8)
-        sent = res.sent;
-        info = res.info;
+        const fejlInfo: string[] = [];
+        for (const sp of UI_SPROG) {
+          if (grupper[sp].length === 0) continue;
+          const { emne, html } = bygEventMail(ORDBOGER[sp].events.mail, {
+            titel: title,
+            tekst,
+            link,
+            domaene: SITE.domain,
+            site: SITE.name,
+          });
+          const res = await sendMailBcc(grupper[sp], emne, html);
+          sent += res.sent;
+          if (res.info !== 'ok') fejlInfo.push(`${sp}: ${res.info}`);
+        }
+        info = fejlInfo.length ? fejlInfo.join(' | ') : 'ok';
       }
     }
   } catch (e: any) {
@@ -213,12 +231,4 @@ export async function sendOpdatering(
   }
   console.error('[events] opdaterings-mail:', info);
   return { ok: true, data: { sent: 0, grund: 'mailFejl' } };
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

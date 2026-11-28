@@ -1,5 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import type { Notifikation } from '@/lib/types';
+import { NOTIF_KOLONNER } from '@/lib/notif-tekst';
 
 // Antal ulaeste notifikationer for den indloggede bruger (til badge ved SSR,
 // saa klokken ikke blinker tom foer klienten har hentet). 0 hvis ikke logget ind.
@@ -29,7 +30,7 @@ export async function getNotifikationer(limit = 15): Promise<Notifikation[]> {
 
   const { data } = await sb
     .from('notifications')
-    .select('id, type, tekst, href, er_laest, created_at')
+    .select(NOTIF_KOLONNER)
     .eq('modtager_id', user.id)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -38,6 +39,7 @@ export async function getNotifikationer(limit = 15): Promise<Notifikation[]> {
     id: r.id,
     type: r.type,
     tekst: r.tekst,
+    params: r.params ?? null,
     href: r.href,
     erLaest: r.er_laest ?? false,
     createdAt: r.created_at,
@@ -64,7 +66,7 @@ export async function getNotifikationerSide(limit = 20): Promise<NotifikationSid
   const [{ data, count }, { count: ulaest }] = await Promise.all([
     sb
       .from('notifications')
-      .select('id, type, tekst, href, er_laest, created_at', { count: 'exact' })
+      .select(NOTIF_KOLONNER, { count: 'exact' })
       .eq('modtager_id', user.id)
       .order('created_at', { ascending: false })
       .range(0, limit - 1),
@@ -80,6 +82,7 @@ export async function getNotifikationerSide(limit = 20): Promise<NotifikationSid
       id: r.id,
       type: r.type,
       tekst: r.tekst,
+      params: r.params ?? null,
       href: r.href,
       erLaest: r.er_laest ?? false,
       createdAt: r.created_at,

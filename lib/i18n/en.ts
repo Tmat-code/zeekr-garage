@@ -755,6 +755,39 @@ export const en: Ordbog = {
     kunneIkkeHente: 'Could not load notifications.',
     kunneIkkeSlette: 'Could not delete - please try again.',
     kunneIkkeRydde: 'Could not clear the read ones - please try again.',
+    tekster: {
+      enEjer: 'An owner',
+      holdet: 'The team',
+      enGruppe: 'a group',
+      grund: {
+        dublet: 'duplicate',
+        tone: 'tone',
+        'off-topic': 'off-topic',
+        spam: 'spam',
+        andet: 'other',
+      },
+      grundMedFritekst: (grund, fritekst) => (fritekst ? `${grund} (${fritekst})` : grund),
+      // 05/12/2026 at 14:30
+      dato: (p) => `${p.d}/${p.m}/${p.y} at ${p.t}:${p.min}`,
+      forumSvar: (navn, titel) => `${navn} replied in "${titel}"`,
+      forumSvarDirekte: (navn, titel) => `${navn} replied to your post in "${titel}"`,
+      omtale: (navn, titel) => `${navn} mentioned you in "${titel}"`,
+      besked: (navn) => `${navn} sent you a message`,
+      gruppeBesked: (navn, gruppe) => `${navn} wrote in ${gruppe}`,
+      nytEvent: (navn, titel) => `${navn} created a new event: "${titel}"`,
+      fjernTraad: (titel, grund) => `Your thread "${titel}" was removed - reason: ${grund}`,
+      fjernIndlaeg: (titel, grund) => `Your post in "${titel}" was removed - reason: ${grund}`,
+      fjernAvatar: (grund) => `Your profile picture was removed - reason: ${grund}`,
+      suspender: (til, grund) =>
+        `Your account is suspended until ${til} - reason: ${grund}. You can still read, but not contribute, until then.`,
+      ban: (grund) => `Your account is permanently banned - reason: ${grund}. You can still read, but no longer contribute.`,
+      ophaev: 'Your account restriction has been lifted. You can contribute again.',
+      advarsel: (grund) => `You have received a warning from the moderators - reason: ${grund}`,
+      rapport: (navn, hvad, titel, grund) =>
+        `${navn} reported ${hvad === 'indlaeg' ? 'a post' : 'a thread'}${titel !== null ? ` in "${titel}"` : ''} - reason: ${grund}`,
+      kontakt: (emne) => `New message via Contact: "${emne}"`,
+      ota: (version) => `New software for your Zeekr: ${version}`,
+    },
   },
 
   mail: {
@@ -773,6 +806,14 @@ export const en: Ordbog = {
       intro: 'You asked to reset the password for your Zeekr Garage account. Click the button to choose a new one:',
       knap: 'Choose a new password',
       ignorer: "If you didn't ask for this yourself, you can safely ignore this email - your password won't be changed.",
+    },
+    mailskift: {
+      emne: 'Confirm your new email - Zeekr Garage',
+      titel: 'Confirm your new email',
+      intro: 'A change of the email address on your Zeekr Garage account has been requested. Click to confirm:',
+      knap: 'Confirm email',
+      note: 'For security, this confirmation is sent to both your current and your new address. The address only changes once both are confirmed.',
+      ignorer: "If you didn't ask for this yourself, just ignore this email - your address won't be changed.",
     },
   },
   beskeder: {
@@ -921,6 +962,12 @@ export const en: Ordbog = {
           : `The update is posted and emailed to ${n} people signed up.`,
       ingenTilmeldte: 'The update is posted. No emails sent (nobody signed up with an email).',
       mailFejl: 'The update is posted, but the email could not be sent.',
+    },
+    mail: {
+      emne: (titel, site) => `Update: ${titel} - ${site}`,
+      opdateringTil: 'There is a new update for',
+      seEventet: (domaene) => `View the event on ${domaene}`,
+      fod: (site) => `You are receiving this email because you signed up for the event on ${site}.`,
     },
     fejl: {
       kunModerator: 'Only moderators and admins can do that.',

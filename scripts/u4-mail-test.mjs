@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// U4: render GoTrue-mailskabelonerne (bekræft + nulstil) og deres emner med den
+// U4: render GoTrue-mailskabelonerne (bekræft + nulstil; U8: + mail-skift) og deres emner med den
 // RIGTIGE Go html/template-motor - samme pakke og samme data-form som GoTrue
 // (internal/mailer/templatemailer: "Data" = user.UserMetaData, map[string]any).
 // Kræver `go` på PATH. Kør: node scripts/u4-mail-test.mjs [--emner]
-//   --emner  udskriv kun de to emne-værdier til Coolify (MAILER_SUBJECTS_*)
+//   --emner  udskriv kun emne-værdierne til Coolify (MAILER_SUBJECTS_*)
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -23,11 +23,12 @@ const { ORDBOGER } = jiti(path.join(ROD, 'lib/i18n/index.ts'));
 if (process.argv.includes('--emner')) {
   console.log('MAILER_SUBJECTS_CONFIRMATION=' + goEmne('bekraeft'));
   console.log('MAILER_SUBJECTS_RECOVERY=' + goEmne('nulstil'));
+  console.log('MAILER_SUBJECTS_EMAIL_CHANGE=' + goEmne('mailskift'));
   process.exit(0);
 }
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'zg-mail-'));
-const typer = ['bekraeft', 'nulstil'];
+const typer = ['bekraeft', 'nulstil', 'mailskift'];
 for (const t of typer) {
   fs.writeFileSync(path.join(TMP, `${t}.body`), goSkabelon(t));
   fs.writeFileSync(path.join(TMP, `${t}.emne`), goEmne(t));
@@ -56,7 +57,7 @@ func main() {
 		"tal":     {"sprog": 42},
 	}
 	ud := map[string]string{}
-	for _, typ := range []string{"bekraeft", "nulstil"} {
+	for _, typ := range []string{"bekraeft", "nulstil", "mailskift"} {
 		for _, del := range []string{"body", "emne"} {
 			b, _ := os.ReadFile(filepath.Join(dir, typ+"."+del))
 			tpl, err := template.New(typ + del).Parse(string(b))
@@ -115,8 +116,9 @@ for (const t of typer) {
     tjek(`${t}/${c}: knap på ${sp}`, body.includes(m[t].knap));
     tjek(`${t}/${c}: kun ét dokument`, body.split('<!doctype html>').length === 2);
     tjek(`${t}/${c}: emne`, emne === m[t].emne, JSON.stringify(emne));
-    const type = t === 'bekraeft' ? 'signup' : 'recovery';
-    const naeste = t === 'bekraeft' ? '/' : '/nulstil';
+    const type = { bekraeft: 'signup', nulstil: 'recovery', mailskift: 'email_change' }[t];
+    const naeste = { bekraeft: '/', nulstil: '/nulstil', mailskift: '/garage' }[t];
+    if (m[t].note) tjek(`${t}/${c}: note på ${sp}`, body.includes(`>${m[t].note}</p>`));
     tjek(
       `${t}/${c}: link udfyldt`,
       body.includes(`href="https://zeekr-garage.dk/auth/confirm?token_hash=abc123&type=${type}&next=${naeste}"`),
@@ -131,9 +133,18 @@ for (const t of typer) {
 // Dansk = byte-for-byte samme tekster som de gamle hardcodede skabeloner.
 tjek('da bekræft titel uændret', res['bekraeft/body/da'].includes('<h2 style="margin:0 0 12px;font-size:20px;">Bekræft din konto</h2>'));
 tjek('da nulstil knap uændret', res['nulstil/body/da'].includes('Vælg nyt password'));
+// U8: mail-skift - dansk ordret som den gamle hardcodede skabelon.
+for (const del of [
+  '<h2 style="margin:0 0 12px;font-size:20px;">Bekræft din nye e-mail</h2>',
+  '<p style="margin:0 0 18px;">Der er bedt om at skifte e-mailadressen på din Zeekr Garage-konto. Klik for at bekræfte:</p>',
+  '<p style="margin:0 0 14px;color:#6b7280;font-size:13px;">Af sikkerhed sendes denne bekræftelse til både din nuværende og din nye adresse. Mailen skifter først når begge er bekræftet.</p>',
+  '<p style="margin:0;color:#9ca3af;font-size:12px;">Har du ikke selv bedt om dette, så ignorér mailen - din adresse bliver ikke ændret.</p>',
+]) tjek('da mail-skift uændret: ' + del.slice(-40), res['mailskift/body/da'].includes(del));
+tjek('bekræft/nulstil har ingen note', !res['bekraeft/body/da'].includes('margin:0 0 14px') && !res['nulstil/body/sv'].includes('margin:0 0 14px'));
 
 fs.writeFileSync(path.join(os.tmpdir(), 'zg-mail-sv-bekraeft.html'), res['bekraeft/body/sv']);
 fs.writeFileSync(path.join(os.tmpdir(), 'zg-mail-en-nulstil.html'), res['nulstil/body/en']);
+fs.writeFileSync(path.join(os.tmpdir(), 'zg-mail-sv-mailskift.html'), res['mailskift/body/sv']);
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

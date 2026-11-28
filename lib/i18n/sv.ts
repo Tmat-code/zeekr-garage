@@ -756,6 +756,39 @@ export const sv: Ordbog = {
     kunneIkkeHente: 'Det gick inte att hämta notiserna.',
     kunneIkkeSlette: 'Det gick inte att ta bort - försök igen.',
     kunneIkkeRydde: 'Det gick inte att rensa de lästa - försök igen.',
+    tekster: {
+      enEjer: 'En ägare',
+      holdet: 'Teamet',
+      enGruppe: 'en grupp',
+      grund: {
+        dublet: 'dubblett',
+        tone: 'ton',
+        'off-topic': 'off-topic',
+        spam: 'spam',
+        andet: 'annat',
+      },
+      grundMedFritekst: (grund, fritekst) => (fritekst ? `${grund} (${fritekst})` : grund),
+      // 2026-12-05 kl. 14:30
+      dato: (p) => `${p.y}-${p.m}-${p.d} kl. ${p.t}:${p.min}`,
+      forumSvar: (navn, titel) => `${navn} svarade i "${titel}"`,
+      forumSvarDirekte: (navn, titel) => `${navn} svarade på ditt inlägg i "${titel}"`,
+      omtale: (navn, titel) => `${navn} nämnde dig i "${titel}"`,
+      besked: (navn) => `${navn} skickade ett meddelande till dig`,
+      gruppeBesked: (navn, gruppe) => `${navn} skrev i ${gruppe}`,
+      nytEvent: (navn, titel) => `${navn} skapade ett nytt evenemang: "${titel}"`,
+      fjernTraad: (titel, grund) => `Din tråd "${titel}" har tagits bort - anledning: ${grund}`,
+      fjernIndlaeg: (titel, grund) => `Ditt inlägg i "${titel}" har tagits bort - anledning: ${grund}`,
+      fjernAvatar: (grund) => `Din profilbild har tagits bort - anledning: ${grund}`,
+      suspender: (til, grund) =>
+        `Ditt konto är avstängt till ${til} - anledning: ${grund}. Du kan fortfarande läsa, men inte bidra, fram till dess.`,
+      ban: (grund) => `Ditt konto är permanent spärrat - anledning: ${grund}. Du kan fortfarande läsa, men inte längre bidra.`,
+      ophaev: 'Din spärr har hävts. Du kan bidra igen.',
+      advarsel: (grund) => `Du har fått en varning från moderatorerna - anledning: ${grund}`,
+      rapport: (navn, hvad, titel, grund) =>
+        `${navn} rapporterade ${hvad === 'indlaeg' ? 'ett inlägg' : 'en tråd'}${titel !== null ? ` i "${titel}"` : ''} - anledning: ${grund}`,
+      kontakt: (emne) => `Nytt ärende via Kontakt: "${emne}"`,
+      ota: (version) => `Ny programvara till din Zeekr: ${version}`,
+    },
   },
 
   mail: {
@@ -774,6 +807,14 @@ export const sv: Ordbog = {
       intro: 'Du har bett om att återställa lösenordet till ditt Zeekr Garage-konto. Klicka på knappen för att välja ett nytt:',
       knap: 'Välj nytt lösenord',
       ignorer: 'Har du inte själv bett om detta kan du lugnt ignorera mejlet - ditt lösenord ändras inte.',
+    },
+    mailskift: {
+      emne: 'Bekräfta din nya e-postadress - Zeekr Garage',
+      titel: 'Bekräfta din nya e-postadress',
+      intro: 'Någon har bett om att byta e-postadressen för ditt Zeekr Garage-konto. Klicka för att bekräfta:',
+      knap: 'Bekräfta e-postadressen',
+      note: 'Av säkerhetsskäl skickas den här bekräftelsen till både din nuvarande och din nya adress. Adressen byts först när båda är bekräftade.',
+      ignorer: 'Har du inte själv bett om detta kan du ignorera mejlet - din adress ändras inte.',
     },
   },
   beskeder: {
@@ -922,6 +963,12 @@ export const sv: Ordbog = {
           : `Uppdateringen är publicerad och mejlad till ${n} anmälda.`,
       ingenTilmeldte: 'Uppdateringen är publicerad. Inga mejl skickade (inga anmälda med e-post).',
       mailFejl: 'Uppdateringen är publicerad, men mejlet kunde inte skickas.',
+    },
+    mail: {
+      emne: (titel, site) => `Uppdatering: ${titel} - ${site}`,
+      opdateringTil: 'Det finns en ny uppdatering för',
+      seEventet: (domaene) => `Se evenemanget på ${domaene}`,
+      fod: (site) => `Du får det här mejlet eftersom du är anmäld till evenemanget på ${site}.`,
     },
     fejl: {
       kunModerator: 'Bara moderatorer och administratörer kan göra det.',

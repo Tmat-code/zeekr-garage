@@ -6,6 +6,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { relativTid } from '@/lib/i18n/format';
 import { useOrdbog, useSprog } from '@/lib/i18n/klient';
 import type { Notifikation } from '@/lib/types';
+import { NOTIF_KOLONNER, notifTekst } from '@/lib/notif-tekst';
 import type { NotifikationSide } from '@/lib/notifikationer';
 
 // Hele notifikations-listen med selv-administration (modsat klokke-dropdownen,
@@ -55,6 +56,7 @@ function mapRow(r: any): Notifikation {
     id: r.id,
     type: r.type,
     tekst: r.tekst,
+    params: r.params ?? null,
     href: r.href,
     erLaest: r.er_laest ?? false,
     createdAt: r.created_at,
@@ -97,7 +99,7 @@ export default function NotifikationerListe({ userId, initial }: Props) {
         const [{ data, count, error }, { count: ulaestCount }] = await Promise.all([
           sb
             .from('notifications')
-            .select('id, type, tekst, href, er_laest, created_at', { count: 'exact' })
+            .select(NOTIF_KOLONNER, { count: 'exact' })
             .eq('modtager_id', userId)
             .order('created_at', { ascending: false })
             .range(fra, fra + SIDE - 1),
@@ -289,7 +291,7 @@ export default function NotifikationerListe({ userId, initial }: Props) {
                   {ikonFor(n.type)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm leading-snug text-grafit-800">{n.tekst}</span>
+                  <span className="block text-sm leading-snug text-grafit-800">{notifTekst(n, nt.tekster)}</span>
                   <span className="mt-0.5 block text-xs text-grafit-400">{relativTid(n.createdAt, sprog)}</span>
                 </span>
               </button>

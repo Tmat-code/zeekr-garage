@@ -671,5 +671,147 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
   fs.rmSync(TMP, { recursive: true, force: true });
 }
 
+// --- U8: notifikationer + mails ---
+{
+  async function hent8(rel, navn) {
+    const kilde = fs.readFileSync(path.join(ROD, rel), 'utf8');
+    const fil = path.join(os.tmpdir(), `zg-${navn}-${process.pid}.mjs`);
+    fs.writeFileSync(fil, ts.transpileModule(kilde, {
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+    }).outputText);
+    const m = await import(fil);
+    fs.rmSync(fil, { force: true });
+    return m;
+  }
+  const N = await hent8('lib/notif-tekst.ts', 'notif-tekst');
+  const EM = await hent8('lib/event-mail.ts', 'event-mail');
+  const T = { da: da.notif.tekster, sv: sv.notif.tekster, en: en.notif.tekster };
+  const r = (type, params, sp, tekst = 'DANSK-FALLBACK') => N.notifTekst({ type, tekst, params }, T[sp]);
+
+  // Hver type x sprog (dansk = ordret som trigger-teksten).
+  const tilfaelde = [
+    ['forum_svar', { navn: 'Venø', titel: 'Bremser', direkte: false },
+      ['Venø svarede i "Bremser"', 'Venø svarade i "Bremser"', 'Venø replied in "Bremser"']],
+    ['forum_svar', { navn: 'Venø', titel: 'Bremser', direkte: true },
+      ['Venø svarede på dit indlæg i "Bremser"', 'Venø svarade på ditt inlägg i "Bremser"', 'Venø replied to your post in "Bremser"']],
+    ['forum_svar', { titel: 'Bremser', direkte: false },
+      ['En ejer svarede i "Bremser"', 'En ägare svarade i "Bremser"', 'An owner replied in "Bremser"']],
+    ['mention', { navn: 'Venø', titel: 'Bremser' },
+      ['Venø nævnte dig i "Bremser"', 'Venø nämnde dig i "Bremser"', 'Venø mentioned you in "Bremser"']],
+    ['pb_besked', { navn: 'Venø', gruppe: false },
+      ['Venø sendte dig en besked', 'Venø skickade ett meddelande till dig', 'Venø sent you a message']],
+    ['pb_besked', { navn: 'Venø', gruppe: true, gruppenavn: '7GT Sjælland' },
+      ['Venø skrev i 7GT Sjælland', 'Venø skrev i 7GT Sjælland', 'Venø wrote in 7GT Sjælland']],
+    ['pb_besked', { gruppe: true },
+      ['En ejer skrev i en gruppe', 'En ägare skrev i en grupp', 'An owner wrote in a group']],
+    ['nyt_event', { titel: 'Træf i Roskilde' },
+      ['Holdet oprettede et nyt event: "Træf i Roskilde"', 'Teamet skapade ett nytt evenemang: "Träf i Roskilde"'.replace('Träf', 'Træf'), 'The team created a new event: "Træf i Roskilde"']],
+    ['advarsel', { grund: 'tone', fritekst: 'Hold en god tone' },
+      ['Du har fået en advarsel fra moderationen - grund: tone (Hold en god tone)', 'Du har fått en varning från moderatorerna - anledning: ton (Hold en god tone)', 'You have received a warning from the moderators - reason: tone (Hold en god tone)']],
+    ['forum_rapport', { navn: 'Venø', hvad: 'indlaeg', titel: 'Bremser', grund: 'spam' },
+      ['Venø rapporterede et indlæg i "Bremser" - grund: spam', 'Venø rapporterade ett inlägg i "Bremser" - anledning: spam', 'Venø reported a post in "Bremser" - reason: spam']],
+    ['forum_rapport', { hvad: 'traad', grund: 'andet' },
+      ['En ejer rapporterede en tråd - grund: andet', 'En ägare rapporterade en tråd - anledning: annat', 'An owner reported a thread - reason: other']],
+    ['kontakt', { emne: 'Fejl på siden' },
+      ['Ny henvendelse via Kontakt: "Fejl på siden"', 'Nytt ärende via Kontakt: "Fejl på siden"', 'New message via Contact: "Fejl på siden"']],
+    ['ota', { version: '3.0.4' },
+      ['Ny software til din Zeekr: 3.0.4', 'Ny programvara till din Zeekr: 3.0.4', 'New software for your Zeekr: 3.0.4']],
+    ['moderation', { v: 'fjern_traad', titel: 'Bremser', grund: 'dublet' },
+      ['Din tråd "Bremser" blev fjernet - grund: dublet', 'Din tråd "Bremser" har tagits bort - anledning: dubblett', 'Your thread "Bremser" was removed - reason: duplicate']],
+    ['moderation', { v: 'fjern_indlaeg', titel: 'Bremser', grund: 'off-topic', fritekst: 'Se reglerne' },
+      ['Dit indlæg i "Bremser" blev fjernet - grund: off-topic (Se reglerne)', 'Ditt inlägg i "Bremser" har tagits bort - anledning: off-topic (Se reglerne)', 'Your post in "Bremser" was removed - reason: off-topic (Se reglerne)']],
+    ['moderation', { v: 'fjern_avatar', grund: 'andet' },
+      ['Dit profilbillede blev fjernet - grund: andet', 'Din profilbild har tagits bort - anledning: annat', 'Your profile picture was removed - reason: other']],
+    // 2026-12-05T13:30Z = 14:30 dansk vintertid; 2026-07-01T12:05Z = 14:05 sommertid.
+    ['moderation', { v: 'suspender', til: '2026-12-05T13:30:00+00:00', grund: 'spam' },
+      ['Din konto er suspenderet til 05-12-2026 kl. 14:30 - grund: spam. Du kan stadig læse, men ikke bidrage, indtil da.',
+       'Ditt konto är avstängt till 2026-12-05 kl. 14:30 - anledning: spam. Du kan fortfarande läsa, men inte bidra, fram till dess.',
+       'Your account is suspended until 05/12/2026 at 14:30 - reason: spam. You can still read, but not contribute, until then.']],
+    ['moderation', { v: 'suspender', til: '2026-07-01T12:05:00.123456+00:00', grund: 'tone' },
+      ['Din konto er suspenderet til 01-07-2026 kl. 14:05 - grund: tone. Du kan stadig læse, men ikke bidrage, indtil da.', null, null]],
+    ['moderation', { v: 'ban', grund: 'spam', fritekst: 'Reklame' },
+      ['Din konto er permanent spærret - grund: spam (Reklame). Du kan stadig læse, men ikke længere bidrage.',
+       'Ditt konto är permanent spärrat - anledning: spam (Reklame). Du kan fortfarande läsa, men inte längre bidra.',
+       'Your account is permanently banned - reason: spam (Reklame). You can still read, but no longer contribute.']],
+    ['moderation', { v: 'ophaev' },
+      ['Din spærring er ophævet. Du kan bidrage igen.', 'Din spärr har hävts. Du kan bidra igen.', 'Your account restriction has been lifted. You can contribute again.']],
+  ];
+  for (const [type, params, forv] of tilfaelde) {
+    ['da', 'sv', 'en'].forEach((sp, i) => {
+      if (forv[i] !== null) lig(`U8 ${type}/${params.v ?? ''}${params.direkte ? '/direkte' : ''} ${sp}`, r(type, params, sp), forv[i]);
+    });
+  }
+  // Alle 9 typer har en renderer (ingen falder til fallback med gyldige params).
+  const typer9 = new Set(tilfaelde.map((x) => x[0]));
+  lig('U8 alle 9 typer dækket', [...typer9].sort(), ['advarsel', 'forum_rapport', 'forum_svar', 'kontakt', 'mention', 'moderation', 'nyt_event', 'ota', 'pb_besked']);
+
+  // Fallback: gamle rækker, ukendte typer/varianter, manglende/forkerte felter.
+  const F = 'Gammel dansk tekst';
+  const fb = [
+    ['forum_svar', null], ['forum_svar', undefined], ['forum_svar', 'streng'], ['forum_svar', ['a']],
+    ['forum_svar', {}], ['forum_svar', { navn: 'X', titel: '' }], ['forum_svar', { navn: 'X', titel: 42 }],
+    ['ukendt_type', { navn: 'X' }], ['moderation', { v: 'noget_nyt' }], ['moderation', {}],
+    ['moderation', { v: 'fjern_traad', titel: 'T' }], ['moderation', { v: 'fjern_traad', titel: 'T', grund: 'ny-grund' }],
+    ['moderation', { v: 'suspender', grund: 'spam' }], ['moderation', { v: 'suspender', til: 'ikke-en-dato', grund: 'spam' }],
+    ['forum_rapport', { hvad: 'billede', grund: 'spam' }], ['forum_rapport', { hvad: 'traad' }],
+    ['kontakt', { emne: '   ' }], ['ota', {}], ['nyt_event', { navn: 'X' }], ['advarsel', { fritekst: 'x' }],
+  ];
+  for (const [type, params] of fb) {
+    for (const sp of ['da', 'sv', 'en']) lig(`U8 fallback ${type} ${JSON.stringify(params)} ${sp}`, r(type, params, sp, F), F);
+  }
+  // Fritekst/titler er indhold: ordret, ingen escaping (React escaper ved render).
+  lig('U8 indhold ordret', r('forum_svar', { navn: '<b>Ø</b>', titel: 'A & "B"', direkte: false }, 'en'), '<b>Ø</b> replied in "A & "B""');
+  // Grund-labels: samme nøgler som modGrund på alle sprog.
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    lig(`U8 ${navn}: grund-nøgler == modGrund`, Object.keys(o.notif.tekster.grund).sort(), Object.keys(o.modGrund).sort());
+  }
+
+  // SQL: hver notif-funktion i migrationen fylder params, og de typer/varianter
+  // rendereren kender, er dem triggerne skriver.
+  const SQL8 = fs.readFileSync(path.join(ROD, 'supabase/migrations/20261128120000_u8_notifikationer_i18n.sql'), 'utf8');
+  const fn8 = [...SQL8.matchAll(/create or replace function public\.(\w+)\(/g)].map((m) => m[1]);
+  lig('U8 migration: alle 13 notif-funktioner + event-RPC', fn8.sort(), ['admin_ban_bruger', 'admin_ophaev', 'admin_opret_ota', 'event_after_insert', 'event_deltager_modtagere',
+    'forum_post_notify', 'forum_rapport_notify', 'kontakt_notify', 'message_after_insert', 'mod_advar_bruger', 'mod_fjern_avatar', 'mod_fjern_indlaeg', 'mod_fjern_traad', 'mod_suspender_bruger']);
+  const inserts = SQL8.match(/insert into public\.notifications \([^)]*\)/g) ?? [];
+  lig('U8 migration: alle notif-inserts har params', [inserts.length, inserts.filter((x) => !x.includes('params')).length], [14, 0]);
+  lig('U8 migration: moderations-varianter == renderer', [...SQL8.matchAll(/'v', '(\w+)'/g)].map((m) => m[1]).sort(),
+    ['ban', 'fjern_avatar', 'fjern_indlaeg', 'fjern_traad', 'ophaev', 'suspender']);
+  lig('U8 migration: ingen lange tankestreger', /[–—]/.test(SQL8), false);
+
+  // Mail-skift-teksterne: ingen $ { } < > & (skabelonen escaper ikke selv).
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    lig(`U8 ${navn}: mail-skift-tekster rene`, Object.values(o.mail.mailskift).filter((t) => /[${}<>&]/.test(t)), []);
+  }
+
+  // Event-mailen: gruppering pr. sprog + dansk krop ordret som før U8.
+  lig('U8 grupper modtagere', EM.grupperModtagere([
+    { email: 'a@x.dk', sprog: 'da' }, { email: 'b@x.se', sprog: 'sv' }, { email: 'c@x.com', sprog: 'en' },
+    { email: 'd@x.no', sprog: 'nb' }, { email: 'e@x.dk', sprog: null }, { email: 'A@x.dk', sprog: 'sv' },
+    { email: 'ikke-mail', sprog: 'sv' }, { sprog: 'en' }, null,
+  ]), { da: ['a@x.dk', 'd@x.no', 'e@x.dk'], sv: ['b@x.se'], en: ['c@x.com'] });
+  lig('U8 grupper tom/ugyldig', [EM.grupperModtagere(null), EM.grupperModtagere({})], [{ da: [], sv: [], en: [] }, { da: [], sv: [], en: [] }]);
+  const a8 = { titel: 'Træf <Roskilde> & "kaffe"', tekst: 'Vi mødes kl. 10\nHusk <termokande>', link: 'https://zeekr-garage.dk/events/traef', domaene: 'zeekr-garage.dk', site: 'Zeekr Garage' };
+  const esc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const gammel = `<p>Der er en ny opdatering til <strong>${esc(a8.titel)}</strong>:</p>` +
+    `<p style="white-space:pre-line">${esc(a8.tekst)}</p>` +
+    `<p><a href="${a8.link}">Se eventet på ${a8.domaene}</a></p>` +
+    `<hr><p style="color:#888;font-size:12px">Du får denne mail, fordi du er tilmeldt eventet på ${a8.site}.</p>`;
+  const daMail = EM.bygEventMail(da.events.mail, a8);
+  lig('U8 event-mail da == gammel krop', daMail.html, gammel);
+  lig('U8 event-mail da emne == gammelt', daMail.emne, `Opdatering: ${a8.titel} - Zeekr Garage`);
+  const svMail = EM.bygEventMail(sv.events.mail, a8);
+  const enMail = EM.bygEventMail(en.events.mail, a8);
+  lig('U8 event-mail sv/en', [svMail.emne, svMail.html.includes('Det finns en ny uppdatering för <strong>'), svMail.html.includes('Se evenemanget på'),
+    enMail.emne, enMail.html.includes('View the event on zeekr-garage.dk'), enMail.html.includes('&lt;termokande&gt;')],
+    ['Uppdatering: Træf <Roskilde> & "kaffe" - Zeekr Garage', true, true, 'Update: Træf <Roskilde> & "kaffe" - Zeekr Garage', true, true]);
+
+  // Ingen lange tankestreger i U8-teksterne (inkl. funktions-output).
+  for (const [navn, o] of [['da', da], ['sv', sv], ['en', en]]) {
+    const ud = tilfaelde.map(([type, params]) => N.notifTekst({ type, tekst: '', params }, o.notif.tekster)).join('|')
+      + JSON.stringify(o.mail.mailskift) + EM.bygEventMail(o.events.mail, a8).html + o.events.mail.emne('x', 'y');
+    lig(`U8 ${navn}: ingen lange tankestreger`, /[–—]/.test(ud), false);
+  }
+}
+
 console.log(`\n${ok}/${ok + fejl} assertioner grønne.`);
 process.exit(fejl ? 1 : 0);

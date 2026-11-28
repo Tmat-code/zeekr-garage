@@ -348,7 +348,8 @@ export type SamtaleDetalje = {
 export type Notifikation = {
   id: string;
   type: string;        // forum_svar | pb_besked | nyt_event | mention | ...
-  tekst: string;       // denormaliseret visningstekst
+  tekst: string;       // denormaliseret visningstekst (dansk - fallback fra U8)
+  params: Record<string, unknown> | null; // U8: byggesten til teksten paa laeserens sprog (lib/notif-tekst.ts)
   href: string;        // hvor klik foerer hen
   erLaest: boolean;
   createdAt: string;
