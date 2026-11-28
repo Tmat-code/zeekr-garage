@@ -37,6 +37,9 @@ export default function MinGarageForm({
   const [biler, setBiler] = useState<GarageBil[]>(initialCars);
   const [ny, setNy] = useState<BilValg>({ modelId: '', variantId: '', ejerIkke: false });
   const [busy, setBusy] = useState(false);
+  // P44: to-trins fjern. Bilens "mig med" forsvinder med den (cascade), så et
+  // fejlklik må ikke kunne slette stemmer i ét hug.
+  const [bekraeftFjern, setBekraeftFjern] = useState<string | null>(null);
   // Noegle, ikke tekst: en synlig fejl skifter med sproget. Raa DB-fejl
   // (RLS/Postgres, engelsk) vises aldrig - de logges i konsollen.
   const [fejlN, setFejl] = useState<Fejl | null>(null);
@@ -108,6 +111,7 @@ export default function MinGarageForm({
   }
 
   async function fjern(carId: string) {
+    setBekraeftFjern(null);
     setFejl(null);
     setBusy(true);
     try {
@@ -148,13 +152,33 @@ export default function MinGarageForm({
                   <span className="font-medium">{b.modelName}</span>
                   {b.variantName && <span className="text-grafit-500"> · {b.variantName}</span>}
                 </span>
-                <button
-                  onClick={() => fjern(b.carId)}
-                  disabled={busy}
-                  className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs text-kobber-700"
-                >
-                  {g.fjern}
-                </button>
+                {bekraeftFjern === b.carId ? (
+                  <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <span className="text-xs text-grafit-600">{g.fjernSpoerg}</span>
+                    <button
+                      onClick={() => fjern(b.carId)}
+                      disabled={busy}
+                      className="btn-ghost !px-2.5 !py-1 text-xs font-semibold text-kobber-700"
+                    >
+                      {g.fjernJa}
+                    </button>
+                    <button
+                      onClick={() => setBekraeftFjern(null)}
+                      disabled={busy}
+                      className="btn-ghost !px-2.5 !py-1 text-xs"
+                    >
+                      {g.fjernNej}
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setBekraeftFjern(b.carId)}
+                    disabled={busy}
+                    className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs text-kobber-700"
+                  >
+                    {g.fjern}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

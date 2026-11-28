@@ -69,6 +69,14 @@ export const da = {
     filtrerModel: 'Filtrér efter model',
   },
 
+  ikkeFundet: {
+    metaTitel: 'Siden findes ikke',
+    titel: 'Siden findes ikke',
+    tekst: 'Linket kan være forkert, eller indholdet er flyttet eller fjernet.',
+    forside: 'Til forsiden',
+    forum: 'Åbn forummet',
+  },
+
   // "Mig med"-knappen (bekræft en melding med sin bil).
   stem: {
     stemt: 'stemt',
@@ -745,6 +753,9 @@ export const da = {
     gemmer: 'Gemmer…',
     gemt: 'Gemt.',
     fjern: 'Fjern',
+    fjernSpoerg: 'Fjern bilen? Dens "mig med" forsvinder også.',
+    fjernJa: 'Ja, fjern',
+    fjernNej: 'Annullér',
     // Profilbillede
     profilbillede: 'Profilbillede',
     arbejder: 'Arbejder…',

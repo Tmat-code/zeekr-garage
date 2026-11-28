@@ -57,6 +57,14 @@ export const sv: Ordbog = {
     filtrerModel: 'Filtrera efter modell',
   },
 
+  ikkeFundet: {
+    metaTitel: 'Sidan finns inte',
+    titel: 'Sidan finns inte',
+    tekst: 'Länken kan vara fel, eller så har innehållet flyttats eller tagits bort.',
+    forside: 'Till startsidan',
+    forum: 'Öppna forumet',
+  },
+
   stem: {
     stemt: 'röstat',
     migMed: 'jag med',
@@ -694,6 +702,9 @@ export const sv: Ordbog = {
     gemmer: 'Sparar…',
     gemt: 'Sparat.',
     fjern: 'Ta bort',
+    fjernSpoerg: 'Ta bort bilen? Dess "jag med" försvinner också.',
+    fjernJa: 'Ja, ta bort',
+    fjernNej: 'Avbryt',
     profilbillede: 'Profilbild',
     arbejder: 'Arbetar…',
     skiftBillede: 'Byt bild',
@@ -705,7 +716,7 @@ export const sv: Ordbog = {
     kunneIkkeFjerneBillede: 'Det gick inte att ta bort bilden.',
     logIndForBillede: 'Logga in för att byta profilbild.',
     ditNavn: 'Ditt namn',
-    navnPh: 'T.ex. Venø',
+    navnPh: 'T.ex. Lina',
     navnHjaelp:
       'Så visas du överallt - på trådar, svar och ärenden. Din e-postadress visas aldrig offentligt. Ändrar du namnet slår det igenom överallt direkt.',
     gemNavn: 'Spara namn',
@@ -911,7 +922,7 @@ export const sv: Ordbog = {
     intro:
       'Träffar, bilturer och meetups för ägare. Anmäl dig, så vet vi vilka som kommer - och du får besked om något är nytt.',
     holdetInfo:
-      'Evenemangen skapas av teamet bakom Garaget. Har du en bra idé till en träff, skriv i forumet under “Træf, køreture & events”.',
+      'Evenemangen skapas av teamet bakom Garaget. Har du en bra idé till en träff, skriv i forumet under “Träffar, turer & evenemang”.',
     opret: 'Skapa evenemang',
     kommende: 'Kommande',
     ingenKommende: 'Inga kommande evenemang än.',

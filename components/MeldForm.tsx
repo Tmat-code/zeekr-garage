@@ -106,7 +106,9 @@ export default function MeldForm({
         /* ignoreres */
       }
 
-      router.push('/');
+      // P44: land på den nye melding (før: forsiden uden kvittering, så man
+      // ikke kunne se, at meldingen var kommet ind, eller finde den igen).
+      router.push(`/melding/${issue.id}`);
       router.refresh();
     } catch {
       setFejl(t.faellesFejl.nogetGikGalt);

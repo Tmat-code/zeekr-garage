@@ -56,6 +56,14 @@ export const en: Ordbog = {
     filtrerModel: 'Filter by model',
   },
 
+  ikkeFundet: {
+    metaTitel: 'Page not found',
+    titel: 'Page not found',
+    tekst: 'The link may be wrong, or the content has been moved or removed.',
+    forside: 'Go to the front page',
+    forum: 'Open the forum',
+  },
+
   stem: {
     stemt: 'voted',
     migMed: 'me too',
@@ -386,7 +394,7 @@ export const en: Ordbog = {
     henvisLink: 'Report a bug',
     henvisEfter: '. Wishes or bugs about ',
     henvisSiden: 'the site itself',
-    henvisSlut: ' belong in the forum group "Om Zeekr Garage".',
+    henvisSlut: ' belong in the forum group "About Zeekr Garage".',
     logIndTitel: 'Log in to write to the team',
     logIndTekst:
       'We keep the channel for logged-in owners, so we know who we are talking to and avoid spam.',
@@ -693,6 +701,9 @@ export const en: Ordbog = {
     gemmer: 'Saving…',
     gemt: 'Saved.',
     fjern: 'Remove',
+    fjernSpoerg: 'Remove the car? Its "me too" votes go with it.',
+    fjernJa: 'Yes, remove',
+    fjernNej: 'Cancel',
     profilbillede: 'Profile picture',
     arbejder: 'Working…',
     skiftBillede: 'Change picture',
@@ -704,7 +715,7 @@ export const en: Ordbog = {
     kunneIkkeFjerneBillede: 'Could not remove the picture.',
     logIndForBillede: 'Log in to change your profile picture.',
     ditNavn: 'Your name',
-    navnPh: 'E.g. Venø',
+    navnPh: 'E.g. Alex',
     navnHjaelp:
       'This is how you appear everywhere - on threads, replies and reports. Your email is never shown publicly. If you change your name, it updates everywhere straight away.',
     gemNavn: 'Save name',
@@ -910,7 +921,7 @@ export const en: Ordbog = {
     intro:
       "Meetups, drives and gatherings for owners. Sign up so we know who's coming - and you'll be notified if there's news.",
     holdetInfo:
-      'Events are created by the team behind the Garage. Got a good idea for a meetup? Write in the forum under “Træf, køreture & events”.',
+      'Events are created by the team behind the Garage. Got a good idea for a meetup? Write in the forum under “Meets, drives & events”.',
     opret: 'Create event',
     kommende: 'Upcoming',
     ingenKommende: 'No upcoming events yet.',
