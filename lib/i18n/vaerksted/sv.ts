@@ -123,7 +123,7 @@ export const vsv: VOrdbog = {
     original: 'Original',
     flyttet: (s, d, k, b) =>
       `${s} ${s === 1 ? 'röst' : 'röster'} flyttade` +
-      (d > 0 ? ` (${d} från samma bil borttagna)` : '') +
+      (d > 0 ? ` (${d} från samma bil ${d === 1 ? 'borttagen' : 'borttagna'})` : '') +
       ` · ${k} ${k === 1 ? 'kommentar' : 'kommentarer'} · ${b} ${b === 1 ? 'bild' : 'bilder'}`,
     af: (navn, dato) => `${navn ?? 'Okänd'} · ${dato}`,
     fortrydKnap: '↩ Ångra',

@@ -572,7 +572,7 @@ lig('U2 profilbillede uden navn', [da.billeder.profilbillede(null), en.billeder.
     F('Sammenlaegningen er allerede fortrudt.'),
     F('Dubletten peger ikke laengere paa originalen - fortryd manuelt.'),
   ], ['ingenAdgang', 'meldingFindesIkke', 'samlSelv', 'samlImporteret', 'samlAllerede', 'samlAllerede', 'samlOriginalSkjult', 'samlHarIndlagte', 'samlTypeForskel', 'sammenlaegningFindesIkke', 'alleredeFortrudt', 'fortrydManuelt']);
-  lig('P43 flyttet-tekst', [vda.feedback.flyttet(1, 0, 1, 0), vda.feedback.flyttet(3, 2, 0, 1), ven.feedback.flyttet(2, 1, 2, 2), vsv.feedback.stemmer(1)], ['1 stemme flyttet · 1 kommentar · 0 billeder', '3 stemmer flyttet (2 fra samme bil fjernet) · 0 kommentarer · 1 billede', '2 votes moved (1 from the same car removed) · 2 comments · 2 images', '1 röst']);
+  lig('P43 flyttet-tekst', [vda.feedback.flyttet(1, 0, 1, 0), vda.feedback.flyttet(3, 2, 0, 1), ven.feedback.flyttet(2, 1, 2, 2), vsv.feedback.stemmer(1), vsv.feedback.flyttet(0, 1, 1, 0), vsv.feedback.flyttet(2, 2, 0, 0)], ['1 stemme flyttet · 1 kommentar · 0 billeder', '3 stemmer flyttet (2 fra samme bil fjernet) · 0 kommentarer · 1 billede', '2 votes moved (1 from the same car removed) · 2 comments · 2 images', '1 röst', '0 röster flyttade (1 från samma bil borttagen) · 1 kommentar · 0 bilder', '2 röster flyttade (2 från samma bil borttagna) · 0 kommentarer · 0 bilder']);
   lig('U6 ukendt/tom -> null', [F('duplicate key value'), F(''), F(null), F(undefined)], [null, null, null, null]);
   lig('U6 erVFejl', [VF.erVFejl('ingenAdgang'), VF.erVFejl('IngenAdgang'), VF.erVFejl(1)], [true, false, false]);
   lig('U6 gyldigeDage', [0, 1, 7, 3650, 3651, 2.5, '7', NaN].map(VF.gyldigeDage), [false, true, true, true, false, false, false, false]);
